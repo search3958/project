@@ -48,29 +48,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 });
 
-function sendWebhookNotification(text) {
-    const webhookUrl = 'https://discord.com/api/webhooks/1251487084951244871/gL7Y1S3RagPJPoSusvPF6CeYdxvc17e81J2algmpZfESlFQTWJ72V8FFSltRW8K1nXVT';
-    const deviceName = '技術的テスト・V1'; // デバイス名を設定
 
-    const message = {
-        content: `メモ:${deviceName} 内容:${text}`
-    };
-
-    fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Success:', data);
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
-}
 </script>
 
 </body>
