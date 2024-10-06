@@ -366,7 +366,7 @@ mainColorPicker.addEventListener('input', (event) => {
 if (response.ok) {
             showNotification('Webhook', '送信完了')
                     document.getElementById('textInput67890').value = ''; // テキストボックスをクリア
-                    document.getElementById('webhookUrl12345').value = ''; // WebHook URLをクリア
+                    document.getElementById('webhookUrl12345').value = ''; // WebHook URLをクリ
                 } else {
                   showNotification('Webhook', '送信失敗:' + response.statusText);
                    }
