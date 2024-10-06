@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lock Screen with Multiple Popovers and Windows</title>
+<link rel="stylesheet" href="styles.css">
+  </head>
+  
+<body>
+  
+      <div id="notification" class="hide">
+        <strong id="notificationTitle">タイトル</strong><br>
+        <span id="notificationContent">内容</span>
+    </div>
+  
+  <!-- ロック画面 -->
+  <div id="lock-screen">
+    <form id="auth-form">
+      <input class="pass1" type="password" id="password" required>
+      <button class="pass2" type="submit">.</button>
+    </form>
+  </div>
+
+
+  <!-- 本来のコンテンツ -->
+  <div id="main-content" class="hidden">
+    <div class="dock">
+      <button id="lock-button"><img src="https://img.icons8.com/?size=100&id=15451&format=png&color=000000"></button>
+      <button id="open-popover"><img src="https://img.icons8.com/?size=100&id=12784&format=png&color=000000"></button>
+      <button id="open-window1"><img src="https://img.icons8.com/?size=100&id=12780&format=png&color=000000"></button>
+      <button id="open-window2"><img src="https://img.icons8.com/?size=100&id=82ixf4KHn6za&format=png&color=000000"></button>
+      <button id="open-window4"><img src="https://img.icons8.com/?size=100&id=15117&format=png&color=000000"></button>
+      
+      <!-- Window5ボタン -->
+<button id="open-window5">
+  <img src="https://img.icons8.com/?size=100&id=tPoDmhFbuk46&format=png&color=000000">
+</button>
+
+<!-- Window6ボタン -->
+<button id="open-window6">
+  <img src="https://img.icons8.com/?size=100&id=tPoDmhFbuk46&format=png&color=000000">
+</button>
+
+<!-- Window7ボタン -->
+<button id="open-window7">
+  <img src="https://img.icons8.com/?size=100&id=tPoDmhFbuk46&format=png&color=000000">
+</button>
+
+<!-- Window8ボタン -->
+<button id="open-window8">
+  <img src="https://img.icons8.com/?size=100&id=tPoDmhFbuk46&format=png&color=000000">
+</button>
+
+<!-- Window9ボタン -->
+<button id="open-window9">
+  <img src="https://img.icons8.com/?size=100&id=tPoDmhFbuk46&format=png&color=000000">
+</button>
+
+<!-- Window10ボタン -->
+<button id="open-window10">
+  <img src="https://img.icons8.com/?size=100&id=tPoDmhFbuk46&format=png&color=000000">
+</button>
+
+<!-- Window11ボタン -->
+<button id="open-window11">
+  <img src="https://img.icons8.com/?size=100&id=tPoDmhFbuk46&format=png&color=000000">
+</button>
+
+<!-- Window12ボタン -->
+<button id="open-window12">
+  <img src="https://img.icons8.com/?size=100&id=tPoDmhFbuk46&format=png&color=000000">
+</button>
+
+      
+    </div>
+
+    <!-- ポップオーバー -->
+    <div id="popover" class="popover hidden" style="width:300px;">
+      <div class="header"><p>設定</p><button class="close-popover">&times;</button>
+        </div>
+      <h2>外観</h2>
+          <label for="colorPicker">アプリの背景色</label>
+    <input type="color" id="bgColorPicker" name="bgColorPicker" value="#000000">
+    <br>
+                <label for="colorPicker">アプリの文字色</label>
+    <input type="color" id="textColorPicker" name="textColorPicker" value="#000000">
+    <br>
+    <label for="bgColorPicker">アクセントカラー:</label>
+    <input type="color" id="ColorPicker" name="ColorPicker" value="#ffffff">
+      <h2>セキュリティ</h2>
+      <button id="open-window3" class="button">パスワードを変更</button>
+      
+
+    </div>
+
+    <!-- ウィンドウ1 -->
+<div id="window1" class="window hidden">
+        <div class="header"><p>計算機</p><button class="close-window">&times;</button>
+        </div>
+ <iframe　style="margin:0px;" height="600px">
+    
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <script>
+        function addToDisplay(value) {
+        document.getElementById('display').value += value;
+    }
+
+    function clearDisplay() {
+        document.getElementById('display').value = '';
+    }
+
+    function calculate() {
+        try {
+            document.getElementById('display').value = eval(document.getElementById('display').value);
+        } catch(error) {
+            document.getElementById('display').value = 'Error';
+        }
+    }
+
+ 
+  </script>
+  <style>
+
+    
+body {
+       font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: <weight>;
+  font-style: normal;
+  font-variation-settings:
+    "slnt" 0;
+margIN:0px;
+    }
+    .calculator {
+        width: 290px;
+        border: none;
+        border-radius: 10px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-gap: 5px;
+    }
+    input[type="button"] {
+             font-family: "Inter", sans-serif;
+        width: 60px;
+        height: 60px;
+        font-size: 20px;
+        border: none;
+        border-radius: 55px;
+        cursor: pointer;
+        -webkit-transition: all 0.3s;
+        transition: all 0.3s;
+        margin:3px;
+    }
+    .calcdisplay {
+             font-family: "Inter", sans-serif;
+        width: 100v;
+        font-size: 35px;
+        grid-column: 1 / -1;
+      border: none;
+padding:30px 20px;
+      color:#000;
+      border-radius:10px 10px 20px 20px;
+      text-align: right;
+      background:none;
+    }
+
+
+
+.TC{
+  background-color:#ffffff50;color:#000000;
+}
+.SC{
+  background-color:#ffffff50;color:#000000;
+}
+.PC{
+  background-color:#ffffff50;color:#000000;
+}
+
+.SCH{
+  background-color:#ffffff20;color:#000000;
+}
+
+    </style>
+
+<div class="calculator">
+    <input type="text" id="display" class="calcdisplay" disabled>
+
+    <input type="button" value="AC" onclick="clearDisplay()" class="TC">
+    <input type="button" value="()" onclick="addToDisplay('(')" class="SC">
+    <input type="button" value="%" onclick="addToDisplay('%')" class="SC">
+    <input type="button" value="÷" onclick="addToDisplay('/')" class="SC">
+    <input type="button" value="7" onclick="addToDisplay('7')" class="SCH">
+    <input type="button" value="8" onclick="addToDisplay('8')" class="SCH">
+    <input type="button" value="9" onclick="addToDisplay('9')" class="SCH">
+    <input type="button" value="×" onclick="addToDisplay('*')" class="SC">
+    <input type="button" value="4" onclick="addToDisplay('4')" class="SCH">
+    <input type="button" value="5" onclick="addToDisplay('5')" class="SCH">
+    <input type="button" value="6" onclick="addToDisplay('6')" class="SCH">
+    <input type="button" value="-" onclick="addToDisplay('-')" class="SC">
+    <input type="button" value="1" onclick="addToDisplay('1')" class="SCH">
+    <input type="button" value="2" onclick="addToDisplay('2')" class="SCH">
+    <input type="button" value="3" onclick="addToDisplay('3')" class="SCH">
+    <input type="button" value="+" onclick="addToDisplay('+')" class="SC">
+    <input type="button" value="0" onclick="addToDisplay('0')" class="SCH">
+    <input type="button" value="・" onclick="addToDisplay('.')" class="SCH">
+    <input type="button" value="C" onclick="clearDisplay()" class="SCH">
+    <input type="button" value="=" onclick="calculate()"  class="PC">
+    </div>
+
+</body>
+ 
+    </iframe>
+</div>
+
+
+    <!-- ウィンドウ2 -->
+    <div id="window2" class="window hidden" style="height:400px;width:500px;">
+         <div class="header"><p>メモ帳</p><button class="close-window">&times;</button>
+        </div>
+        <iframe　style="margin:0px;" style="height:400px;width:500px;">
+    
+        <style>
+        body {
+            margin:0px;
+            font-family: Arial, sans-serif;
+        }
+        textarea {
+          margin:0px;
+            width: 100%;
+            height: 358px;
+            padding: 8px;
+            box-sizing: border-box;
+            resize: none;
+            border: none;
+            background:#ffffff30;
+  scrollbar-width: none;
+          outline:none;
+        }
+        /* スイッチのスタイル */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--text-light);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            border-radius: 50%;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked + .slider {
+            background-color: var(--element-dark);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* スイッチの丸い部分のスタイル */
+        .switch-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          
+        }
+    </style>
+</head>
+<body>
+    <div class="body">
+        <div>
+            <div class="inputs-container">
+                <div>
+                    <textarea id="textbox1"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // ページ読み込み時に保存されているデータを表示
+        window.onload = function() {
+            const checkboxState = localStorage.getItem('checkboxChecked');
+            if (checkboxState === 'true') {
+                document.getElementById('checkbox').checked = true;
+            } else {
+                document.getElementById('checkbox').checked = false;
+                document.getElementById('textbox1').value = localStorage.getItem('textbox1') || '';
+                document.getElementById('textbox2').value = localStorage.getItem('textbox2') || '';
+            }
+        };
+
+        // テキストボックスとチェックボックスの変更を検知して自動保存
+        document.getElementById('textbox1').addEventListener('input', saveData);
+        document.getElementById('textbox2').addEventListener('input', saveData);
+        document.getElementById('checkbox').addEventListener('change', saveData);
+
+        // データを保存する
+        function saveData() {
+            const checkboxChecked = document.getElementById('checkbox').checked;
+            localStorage.setItem('checkboxChecked', checkboxChecked);
+
+            if (!checkboxChecked) {
+                localStorage.setItem('textbox1', document.getElementById('textbox1').value);
+                localStorage.setItem('textbox2', document.getElementById('textbox2').value);
+            } else {
+                localStorage.removeItem('textbox1');
+                localStorage.removeItem('textbox2');
+            }
+        }
+
+        // データをクリアする
+        function clearData() {
+            localStorage.removeItem('textbox1');
+            localStorage.removeItem('textbox2');
+            localStorage.removeItem('checkboxChecked');
+            document.getElementById('textbox1').value = '';
+            document.getElementById('textbox2').value = '';
+            document.getElementById('checkbox').checked = false;
+        }
+    </script>
+</body>
+
+    </iframe>
+    </div>
+  
+  
+    <!-- ウィンドウ3 -->
+<div id="window3" class="window hidden">
+        <div class="header"><p>パスワードの変更</p><button class="close-window">&times;</button>
+        </div>
+  <div id="password-change-section">
+        <h2>新しいパスワードを入力</h2>
+        <input class="pass1" type="password" id="new-password" placeholder="パスワード" required>
+        <button id="change-password-button" class="button">変更を適応</button>
+      </div></div>
+  
+      <!-- ウィンドウ4 -->
+<div id="window4" class="window hidden">
+        <div class="header"><p>Webhook</p><button class="close-window">&times;</button></div>
+
+    <diuv class="appmargin">
+    <label for="webhookUrl12345">WebHook URL:</label>
+    <input class="pass1" type="text" id="webhookUrl12345" placeholder="https://example.com/webhook">
+    
+    <label for="textInput67890">内容</label>
+    <input type="text" class="pass1" id="textInput67890" placeholder="ここにテキストを入力">
+    
+    <button id="sendButton54321" class="button">送信</button>
+</div>
+  </div>
+  
+  <!-- ウィンドウ5 -->
+<div id="window5" class="window hidden">
+    <div class="header">
+        <p>blank</p>
+        <button class="close-window">&times;</button>
+    </div>
+    blank
+</div>
+
+<!-- ウィンドウ6 -->
+<div id="window6" class="window hidden">
+    <div class="header">
+        <p>blank</p>
+        <button class="close-window">&times;</button>
+    </div>
+    blank
+</div>
+
+<!-- ウィンドウ7 -->
+<div id="window7" class="window hidden">
+    <div class="header">
+        <p>blank</p>
+        <button class="close-window">&times;</button>
+    </div>
+    blank
+</div>
+
+<!-- ウィンドウ8 -->
+<div id="window8" class="window hidden">
+    <div class="header">
+        <p>blank</p>
+        <button class="close-window">&times;</button>
+    </div>
+    blank
+</div>
+
+<!-- ウィンドウ9 -->
+<div id="window9" class="window hidden">
+    <div class="header">
+        <p>blank</p>
+        <button class="close-window">&times;</button>
+    </div>
+    blank
+</div>
+
+<!-- ウィンドウ10 -->
+<div id="window10" class="window hidden">
+    <div class="header">
+        <p>blank</p>
+        <button class="close-window">&times;</button>
+    </div>
+    blank
+</div>
+
+<!-- ウィンドウ11 -->
+<div id="window11" class="window hidden">
+    <div class="header">
+        <p>blank</p>
+        <button class="close-window">&times;</button>
+    </div>
+    blank
+</div>
+
+<!-- ウィンドウ12 -->
+<div id="window12" class="window hidden">
+    <div class="header">
+        <p>blank</p>
+        <button class="close-window">&times;</button>
+    </div>
+    blank
+</div>
+  
+</div>
+  <script src="script.js"></script>
+</body>
+</html>
