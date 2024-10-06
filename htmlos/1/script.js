@@ -214,16 +214,18 @@ function makeDraggable(element) {
   let isDragging = false;
   let offsetX, offsetY;
 
-  element.addEventListener('mousedown', (event) => {
+  // headerクラスを持つ部分だけをドラッグできるようにする
+  const header = element.querySelector('.header');
+  if (!header) return; // headerが存在しない場合は何もしない
+
+  header.addEventListener('mousedown', (event) => {
     isDragging = true;
     offsetX = event.clientX - element.getBoundingClientRect().left;
     offsetY = event.clientY - element.getBoundingClientRect().top;
-    // カーソルを変更する行を削除
   });
 
   document.addEventListener('mouseup', () => {
     isDragging = false;
-    // カーソルを戻す行を削除
   });
 
   document.addEventListener('mousemove', (event) => {
@@ -233,6 +235,7 @@ function makeDraggable(element) {
     }
   });
 }
+
 
 // ポップオーバーを閉じる処理
 document.querySelector('.close-popover').addEventListener('click', () => {
