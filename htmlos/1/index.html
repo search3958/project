@@ -432,7 +432,7 @@ padding:30px 20px;
             border-right: none;
         }
 
-        textarea {
+        .cetextarea {
             flex: 1;
             width: 100%;
             resize: horizontal; 
@@ -460,13 +460,6 @@ padding:30px 20px;
             height: 100%;
         }
 
-        .button { 
-          background-color: #ccc;
-  padding: 5px;
-  margin: 8px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-        }
 
         .label {
             padding: 5px;
@@ -483,15 +476,15 @@ padding:30px 20px;
         <div class="editor-container">
             <div class="editor">
                 <div class="label">HTML</div>
-                <textarea id="htmlEditor" placeholder="Write HTML here"></textarea>
+                <textarea id="htmlEditor" class="cetextarea" placeholder="Write HTML here"></textarea>
             </div>
             <div class="editor">
                 <div class="label">CSS</div>
-                <textarea id="cssEditor" placeholder="Write CSS here"></textarea>
+                <textarea id="cssEditor" class="cetextarea" placeholder="Write CSS here"></textarea>
             </div>
             <div class="editor">
                 <div class="label">JavaScript</div>
-                <textarea id="jsEditor" placeholder="Write JavaScript here"></textarea>
+                <textarea id="jsEditor" class="cetextarea" placeholder="Write JavaScript here"></textarea>
             </div>
         </div>
         <div class="resizer" id="resizer"></div>
@@ -604,17 +597,6 @@ padding:30px 20px;
     </div>
     blank
 </div>
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   
 </div>
   <script src="script.js"></script>
