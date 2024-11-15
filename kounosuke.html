@@ -2,118 +2,128 @@
 <html lang="en">
 <head>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@100;200;300;400;500;600;700&display=swap" rel="stylesheet">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>幸之助の面</title>
-    <style>
-      *{
-        font-family: "IBM Plex Sans JP", serif;
-      }
-        img {
-            display: none;
-            transition: filter 0.1s;
-        }
-      body{
-        background:#f0f0f0;
-      }
-      button{
-        background:#185AF2;
-        color:#fff;
-        padding:8px;
-        border-radius:100px;
-        border:none;
-      }
-      .textbox{
-        background:#fff;
-        border-radius:16px;
-        padding:16px;
-        margin-bottom:-20px;
-        width:320px;
-      }
-      small{
-        color:#333;
-      }
-      h3{
-        margin:0px;
-      }
-      .box{
-       height: 100vh;
-    /* 真ん中寄せ */
-    display: grid;
-    place-items: center;
-      }
-              #fullscreenDiv {
-            display: none;
-            background-image: url('https://search3958.github.io/project/konosuke.png'); /* 画像パスを設定 */
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@100;200;300;400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>幸之助の面</title>
+  <style>
+    * {
+      font-family: "IBM Plex Sans JP", serif;
+    }
+
+    img {
+      display: none;
+      transition: filter 0.1s;
+    }
+
+    body {
+      background: #f0f0f0;
+    }
+
+    button {
+      background: #185AF2;
+      color: #fff;
+      padding: 8px;
+      border-radius: 100px;
+      border: none;
+    }
+
+    .textbox {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: -20px;
+      width: 320px;
+    }
+
+    small {
+      color: #333;
+    }
+
+    h3 {
+      margin: 0px;
+    }
+
+    .box {
+      height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+
+    #fullscreenDiv {
+      display: none;
+      background-image: url('https://search3958.github.io/project/konosuke.png'); /* 画像パスを設定 */
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
 </head>
-<body><div class="box">
-  <div class="textbox">
-    <h3>注意</h3>
-    周りの明るさ<br><small>暗いと目が死ぬけどお前にはそれがお似合いかもね笑</small><br>
-    顔面に注意<br><small>色が反転した顔面きもい</small><br>
-    画像の読み込み遅いかも<br><small>出てこんかったらちょっとだけ待って。</small><br>
-  </div>
+<body>
+  <div class="box">
+    <div class="textbox">
+      <h3>注意</h3>
+      周りの明るさ<br>
+      <small>暗いと目が死ぬけどお前にはそれがお似合いかもね笑</small><br>
+      顔面に注意<br>
+      <small>色が反転した顔面きもい</small><br>
+      画像の読み込み遅いかも<br>
+      <small>出てこんかったらちょっとだけ待って。</small><br>
+    </div>
     <button id="fullscreenButton">全画面幸之助を開始</button>
-   </div>
-    <div id="fullscreenDiv"></div>
+  </div>
 
-    <script>
-        const button = document.getElementById('fullscreenButton');
-        const fullscreenDiv = document.getElementById('fullscreenDiv');
-        let invertInterval;
+  <div id="fullscreenDiv"></div>
 
-        // フルスクリーンを開始
-        button.addEventListener('click', () => {
-            fullscreenDiv.style.display = 'block';
+  <script>
+    const button = document.getElementById('fullscreenButton');
+    const fullscreenDiv = document.getElementById('fullscreenDiv');
+    let invertInterval;
 
-            // フルスクリーンを開始（Safari互換性対応）
-            if (fullscreenDiv.requestFullscreen) {
-                fullscreenDiv.requestFullscreen();
-            } else if (fullscreenDiv.webkitRequestFullscreen) { // iPhone Safari対応
-                fullscreenDiv.webkitRequestFullscreen();
-            } else if (fullscreenDiv.msRequestFullscreen) { // IE対応
-                fullscreenDiv.msRequestFullscreen();
-            } else {
-                alert("Fullscreen not supported");
-                return;
-            }
+    // フルスクリーンを開始
+    button.addEventListener('click', () => {
+      fullscreenDiv.style.display = 'block';
 
-            // 色反転の開始
-            invertInterval = setInterval(() => {
-                if (fullscreenDiv.style.filter === 'invert(100%)') {
-                    fullscreenDiv.style.filter = 'invert(0%)';
-                } else {
-                    fullscreenDiv.style.filter = 'invert(100%)';
-                }
-            }, 100); // 0.1秒間隔で色反転
-        });
+      // フルスクリーンを開始（Safari互換性対応）
+      if (fullscreenDiv.requestFullscreen) {
+        fullscreenDiv.requestFullscreen();
+      } else if (fullscreenDiv.webkitRequestFullscreen) { // iPhone Safari対応
+        fullscreenDiv.webkitRequestFullscreen();
+      } else if (fullscreenDiv.msRequestFullscreen) { // IE対応
+        fullscreenDiv.msRequestFullscreen();
+      } else {
+        fullscreenDiv.webkitRequestFullscreen();
+        return;
+      }
 
-        // フルスクリーン終了時の処理
-        document.addEventListener('fullscreenchange', handleFullscreenExit);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
-        document.addEventListener('msfullscreenchange', handleFullscreenExit);
-
-        function handleFullscreenExit() {
-            if (!document.fullscreenElement && 
-                !document.webkitFullscreenElement && 
-                !document.msFullscreenElement) {
-                // 色反転の停止
-                clearInterval(invertInterval);
-                fullscreenDiv.style.filter = 'invert(0%)'; // フィルタをリセット
-                fullscreenDiv.style.display = 'none'; // 非表示に戻す
-            }
+      // 色反転の開始
+      invertInterval = setInterval(() => {
+        if (fullscreenDiv.style.filter === 'invert(100%)') {
+          fullscreenDiv.style.filter = 'invert(0%)';
+        } else {
+          fullscreenDiv.style.filter = 'invert(100%)';
         }
-    </script>
-</body>
-</html>
+      }, 100); // 0.1秒間隔で色反転
+    });
 
+    // フルスクリーン終了時の処理
+    document.addEventListener('fullscreenchange', handleFullscreenExit);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
+    document.addEventListener('msfullscreenchange', handleFullscreenExit);
+
+    function handleFullscreenExit() {
+      if (!document.fullscreenElement && 
+          !document.webkitFullscreenElement && 
+          !document.msFullscreenElement) {
+        // 色反転の停止
+        clearInterval(invertInterval);
+        fullscreenDiv.style.filter = 'invert(0%)'; // フィルタをリセット
+        fullscreenDiv.style.display = 'none'; // 非表示に戻す
+      }
+    }
+  </script>
+</body>
 </html>
