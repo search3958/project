@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@100;200;300;400;500;600;700&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>幸之助の面</title>
     <style>
+      *{
+        font-family: "IBM Plex Sans JP", serif;
+      }
         img {
             display: none;
             transition: filter 0.1s;
@@ -24,7 +30,7 @@
         border-radius:16px;
         padding:16px;
         margin-bottom:-20px;
-        width:350px;
+        width:320px;
       }
       small{
         color:#333;
@@ -38,6 +44,15 @@
     display: grid;
     place-items: center;
       }
+              #fullscreenDiv {
+            display: none;
+            background-image: url('https://search3958.github.io/project/konosuke.png'); /* 画像パスを設定 */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 100vw;
+            height: 100vh;
+        }
     </style>
 </head>
 <body><div class="box">
@@ -49,56 +64,46 @@
   </div>
     <button id="fullscreenButton">全画面幸之助を開始</button>
    </div>
-    <img id="fullscreenImage" src="https://search3958.github.io/project/konosuke.png" alt="Image" />
+    <div id="fullscreenDiv"></div>
 
     <script>
         const button = document.getElementById('fullscreenButton');
-        const image = document.getElementById('fullscreenImage');
+        const fullscreenDiv = document.getElementById('fullscreenDiv');
         let invertInterval;
 
-        // Start fullscreen with color inversion
+        // フルスクリーンを開始
         button.addEventListener('click', () => {
-            image.style.display = 'block';
-            if (image.requestFullscreen) {
-                image.requestFullscreen();
-            } else if (image.webkitRequestFullscreen) {
-                image.webkitRequestFullscreen();
-            } else if (image.msRequestFullscreen) {
-                image.msRequestFullscreen();
+            fullscreenDiv.style.display = 'block';
+            if (fullscreenDiv.requestFullscreen) {
+                fullscreenDiv.requestFullscreen();
+            } else if (fullscreenDiv.webkitRequestFullscreen) { // Safari対応
+                fullscreenDiv.webkitRequestFullscreen();
+            } else if (fullscreenDiv.msRequestFullscreen) { // IE対応
+                fullscreenDiv.msRequestFullscreen();
             }
 
-            // Start color inversion interval when fullscreen is active
+            // 0.1秒ごとの色反転処理
             invertInterval = setInterval(() => {
-                if (image.style.filter === 'invert(100%)') {
-                    image.style.filter = 'invert(0%)';
+                if (fullscreenDiv.style.filter === 'invert(100%)') {
+                    fullscreenDiv.style.filter = 'invert(0%)';
                 } else {
-                    image.style.filter = 'invert(100%)';
+                    fullscreenDiv.style.filter = 'invert(100%)';
                 }
-            }, 60); // 0.1 seconds
+            }, 100);
         });
 
-        // Listen for fullscreen exit to stop color inversion and hide image
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement) {
-                clearInterval(invertInterval); // Stop color inversion
-                image.style.filter = 'invert(0%)'; // Reset filter
-                image.style.display = 'none'; // Hide image
+        // フルスクリーン終了時の処理
+        document.addEventListener('fullscreenchange', exitHandler);
+        document.addEventListener('webkitfullscreenchange', exitHandler);
+        document.addEventListener('msfullscreenchange', exitHandler);
+
+        function exitHandler() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                clearInterval(invertInterval); // 色反転処理を停止
+                fullscreenDiv.style.filter = 'invert(0%)'; // フィルタをリセット
+                fullscreenDiv.style.display = 'none'; // フルスクリーン解除後に非表示
             }
-        });
-        document.addEventListener('webkitfullscreenchange', () => {
-            if (!document.webkitFullscreenElement) {
-                clearInterval(invertInterval);
-                image.style.filter = 'invert(0%)';
-                image.style.display = 'none';
-            }
-        });
-        document.addEventListener('msfullscreenchange', () => {
-            if (!document.msFullscreenElement) {
-                clearInterval(invertInterval);
-                image.style.filter = 'invert(0%)';
-                image.style.display = 'none';
-            }
-        });
+        }
     </script>
 </body>
 </html>
