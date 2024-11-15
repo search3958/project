@@ -50,8 +50,8 @@
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
@@ -74,36 +74,46 @@
         // フルスクリーンを開始
         button.addEventListener('click', () => {
             fullscreenDiv.style.display = 'block';
+
+            // フルスクリーンを開始（Safari互換性対応）
             if (fullscreenDiv.requestFullscreen) {
                 fullscreenDiv.requestFullscreen();
-            } else if (fullscreenDiv.webkitRequestFullscreen) { // Safari対応
+            } else if (fullscreenDiv.webkitRequestFullscreen) { // iPhone Safari対応
                 fullscreenDiv.webkitRequestFullscreen();
             } else if (fullscreenDiv.msRequestFullscreen) { // IE対応
                 fullscreenDiv.msRequestFullscreen();
+            } else {
+                alert("Fullscreen not supported");
+                return;
             }
 
-            // 0.1秒ごとの色反転処理
+            // 色反転の開始
             invertInterval = setInterval(() => {
                 if (fullscreenDiv.style.filter === 'invert(100%)') {
                     fullscreenDiv.style.filter = 'invert(0%)';
                 } else {
                     fullscreenDiv.style.filter = 'invert(100%)';
                 }
-            }, 100);
+            }, 100); // 0.1秒間隔で色反転
         });
 
         // フルスクリーン終了時の処理
-        document.addEventListener('fullscreenchange', exitHandler);
-        document.addEventListener('webkitfullscreenchange', exitHandler);
-        document.addEventListener('msfullscreenchange', exitHandler);
+        document.addEventListener('fullscreenchange', handleFullscreenExit);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
+        document.addEventListener('msfullscreenchange', handleFullscreenExit);
 
-        function exitHandler() {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-                clearInterval(invertInterval); // 色反転処理を停止
+        function handleFullscreenExit() {
+            if (!document.fullscreenElement && 
+                !document.webkitFullscreenElement && 
+                !document.msFullscreenElement) {
+                // 色反転の停止
+                clearInterval(invertInterval);
                 fullscreenDiv.style.filter = 'invert(0%)'; // フィルタをリセット
-                fullscreenDiv.style.display = 'none'; // フルスクリーン解除後に非表示
+                fullscreenDiv.style.display = 'none'; // 非表示に戻す
             }
         }
     </script>
 </body>
+</html>
+
 </html>
