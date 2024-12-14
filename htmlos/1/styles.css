@@ -13,7 +13,12 @@ body, #main-content {
   overflow: hidden;
   color: var(--app-text-color);
 }
-
+iframe{
+  border-radius:8px;
+  margin:2px;
+  border:none;
+  
+}
 /* 全画面のロック画面 */
 #lock-screen {
   backdrop-filter: blur(16px);
