@@ -1,1 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=lightbulb_2" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>グリッドレイアウト</title>
+</head>
+<body>
+
+  <div class="grid-container">
+    <div class="grid-item"><div class="bg"><div class="flex"><div class="na">1</div><div class="nb">設定の準備</div></div>Chromeの設定の"デザイン"で，ブックマークを表示するようにしてください。<br>その後このページをブックマークバーに追加し，届きやすいところに配置してください。<br><img src="https://search3958.github.io/project/miniiframe/1 (3).svg"></div></div>
+    
+    <div class="grid-item"><div class="bg">
+     <div class="flex"><div class="na">2</div><div class="nb">プログラムを設定</div></div>
+      追加したブックマークのURLを，下のコードに変更します。
+      <div class="hint"><div class="flex"><span class="material-symbols-outlined">
+lightbulb_2
+</span>上端からの位置を100%以上にすると，スクロールするまで表示されません。</div></div>
+        <div class="slider-container">
+            <div class="slider-label">
+                <span>上端からの位置:</span>
+                <span><span id="positionValue">?</span>%</span>
+            </div>
+            <input type="range" id="positionSlider" min="0" max="140" value="110">
+            <div class="slider-label">
+                <span>横幅:</span>
+                <span><span id="widthValue">?</span>%</span>
+            </div>
+            <input type="range" id="widthSlider" min="5" max="99" value="20" step="1">
+        </div>
+      <div class="flex">
+        <input id="resultBox" value="読み込み中" readonly>
+
+        <!-- コピー用ボタン -->
+        <button id="copyButton">コピー</button>
+          </div>
+<img src="https://search3958.github.io/project/miniiframe/2 (2).svg">
+        <div class="preview">
+            プレビュー:
+            <br>
+            top: <span id="previewPosition">?</span>
+            <br>
+            width: <span id="previewWidth">?</span>
+        </div>
+
+        <!-- 結果表示用のテキストボックス -->
+      
+        </div></div>
+    <div class="grid-item"><div class="bg"> <div class="flex"><div class="na">3</div><div class="nb">使用方法</div></div>
+      ブックマークをクリックすると，基本的にどのサイトでも使用できます。
+      <br>Google検索，Bing，Newtab 3，ChatGPTなど，monoxerなどで動作します。<br><br>Snake.ioなどが利用可能で，YoutubeやScratchは埋め込みURLを使用する必要があります。
+    </div></div>
+  </div>
+
+</body>
+  <style>*{font-family: "Inter", "Noto Sans";}
+ /* 全体の設定 */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background-color: #eeedf3;
+    }
+
+    /* グリッドの設定 */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr); /* 横3つのカラム */
+      grid-template-rows: 1fr; /* 縦に1行 */
+      height:calc(100vh - 20px); /* 高さは画面全体 */
+      padding:10px;
+    }
+
+    /* 各アイテムのスタイル */
+    .grid-item {
+      display: flex;
+      justify-content: center;
+      font-size: 20px;
+      padding:10px;
+      height: calc(100vh - 80px);
+    }
+    .bg{
+      background-color: #f9f9ff;
+      padding:20px;
+      height:100%;
+      width:100%;
+      border-radius:40px;
+    }
+img{
+  width:50%;
+  margin-top:10px;
+}
+.flex{
+  display:flex;
+  height:64px;
+}
+.na{
+  background:#515f79;
+  color:#ffffff;
+  padding:16px 20px;
+  border-radius:100px 24px 24px 100px;
+  margin-bottom:8px;
+}
+.nb{
+  margin-left:4px;
+  background:#d9e4ff;
+  color:#3c4962;
+  padding:16px 20px;
+  border-radius:24px 100px 100px 24px;
+  margin-bottom:8px;
+}
+.hint{
+  background:#fad8fd;
+  color:#28132e;
+  padding:20px;
+  border-radius:32px;
+  margin:10px 0px;
+}
+.slider-container{
+  background:#f3f3fa;
+  padding:20px;
+  border-radius:32px;
+  margin:10px 0px;
+}
+.material-symbols-outlined{
+  margin-right:10px;
+  margin-top:12px;
+}
+.preview{
+  display:none;
+}
+#positionSlider,#widthSlider{
+  width:100%;
+}
+#resultBox{
+  width:100%;
+  border-radius:100px 24px 24px 100px;
+  margin-bottom:20px;
+  padding-left:16px;
+  border:none;
+  outline:none;
+  background:#e2e2e9;
+}
+#copyButton{
+  width:80px;
+  margin-bottom:20px;
+  border-radius:24px 100px 100px 24px;
+  margin-left:4px;
+  border:none;
+  background:#365e9d;
+  color:#fff;
+}</style>
+  <script>const baseCode = `javascript:(function(){const iframeEngineHTML=\`<style>.iframeEngine { padding:0;margin:0;display:block;}.container.iframeEngine { width:MAX_WIDTHvw;margin:20px auto;padding:20px;font-family:sans-serif;position:absolute;top:TOP_VALUEvh;z-index:2147483647; }.controls.iframeEngine { margin-bottom:15px;display:flex;gap:10px;align-items:center; }.url-input.iframeEngine { flex-grow:1;padding:8px;border:1px solid #ccc;border-radius:8px; }.button.iframeEngine { padding:8px 16px;background-color:#007bff;color:#fff;border:none;border-radius:8px;cursor:pointer; }.button:hover.iframeEngine { background-color:#0056b3; }.iframe-container.iframeEngine { position:relative;border:1px solid #ccc;border-radius:8px;overflow:hidden; }.iframe-wrapper.iframeEngine { width:100%;overflow:auto;transform-origin:top left; }iframe.iframeEngine { width:100%;border:none;min-height:400px; }.resize-handle.iframeEngine { width:100%;height:10px;background-color:#f0f0f0;cursor:ns-resize;border-top:1px solid #ccc; }.zoom-controls.iframeEngine { margin-top:10px;display:flex;gap:4px;align-items:center; }.zoom-display.iframeEngine { min-width:80px;text-align:center; }</style><div class="container iframeEngine"><div class="controls iframeEngine"><input type="text" class="url-input iframeEngine" placeholder="https://付きURLを入力してください" value="https://search3958.github.io/newtab"><button class="button iframeEngine" id="iframeEngineGo">GO</button></div><div class="iframe-container iframeEngine"><div class="iframe-wrapper iframeEngine" id="iframeEngineWrapper"><iframe class="iframeEngine" id="iframeEngineFrame" src="about:blank"></iframe></div><div class="resize-handle iframeEngine" id="iframeEngineResizeHandle"></div></div><div class="zoom-controls iframeEngine"><button class="button iframeEngine" id="iframeEngineZoomIn">+</button><button class="button iframeEngine" id="iframeEngineZoomOut">-</button></div></div>\`;const iframeEngineScript=function(){const frame=document.getElementById('iframeEngineFrame');const wrapper=document.getElementById('iframeEngineWrapper');const resizeHandle=document.getElementById('iframeEngineResizeHandle');let isResizing=false;let initialHeight;let initialY;let currentZoom=1;const ZOOM_STEP=0.1;const MIN_ZOOM=0.5;const MAX_ZOOM=3.0;function loadURL(){const url=document.querySelector('.url-input.iframeEngine').value;frame.src=url;}function updateZoom(){wrapper.style.transform=\`scale(\${currentZoom})\`;wrapper.style.width=\`\${100/currentZoom}%\`;}function zoomIn(){if(currentZoom<MAX_ZOOM){currentZoom+=ZOOM_STEP;updateZoom();}}function zoomOut(){if(currentZoom>MIN_ZOOM){currentZoom-=ZOOM_STEP;updateZoom();}}function resetZoom(){currentZoom=1;updateZoom();}document.addEventListener('keydown',(e)=>{if(e.ctrlKey||e.metaKey){if(e.key==='='||e.key==='+'){e.preventDefault();zoomIn();}else if(e.key==='-'){e.preventDefault();zoomOut();}else if(e.key==='0'){e.preventDefault();resetZoom();}}});wrapper.addEventListener('wheel',(e)=>{if(e.ctrlKey||e.metaKey){e.preventDefault();if(e.deltaY<0){zoomIn();}else{zoomOut();}}});resizeHandle.addEventListener('mousedown',(e)=>{isResizing=true;initialHeight=frame.offsetHeight;initialY=e.clientY;});document.addEventListener('mousemove',(e)=>{if(!isResizing)return;const delta=e.clientY-initialY;frame.style.height=\`\${initialHeight+delta}px\`;});document.addEventListener('mouseup',()=>{isResizing=false;});document.getElementById('iframeEngineGo').addEventListener('click',loadURL);document.getElementById('iframeEngineZoomIn').addEventListener('click',zoomIn);document.getElementById('iframeEngineZoomOut').addEventListener('click',zoomOut);};const container=document.createElement('div');container.innerHTML=iframeEngineHTML;document.body.insertBefore(container,document.body.firstChild);iframeEngineScript();})()`;
+
+        const positionSlider = document.getElementById('positionSlider');
+        const widthSlider = document.getElementById('widthSlider');
+        const positionValue = document.getElementById('positionValue');
+        const widthValue = document.getElementById('widthValue');
+        const resultBox = document.getElementById('resultBox');
+        const copyButton = document.getElementById('copyButton');
+        const previewPosition = document.getElementById('previewPosition');
+        const previewWidth = document.getElementById('previewWidth');
+
+        function updateOutput() {
+            const position = positionSlider.value;
+            const width = widthSlider.value;
+            
+            // 値の表示を更新
+            positionValue.textContent = position;
+            widthValue.textContent = width;
+            
+            // プレビューを更新
+            previewPosition.textContent = `${position}vh`;
+            previewWidth.textContent = `${width}vw`;
+            
+            // コードを生成
+            let finalCode = baseCode.replace('TOP_VALUE', position);
+            finalCode = finalCode.replace('MAX_WIDTH', width);
+            
+            resultBox.value = finalCode;
+        }
+
+        // スライダーの値が変更されたときに実行
+        positionSlider.addEventListener('input', updateOutput);
+        widthSlider.addEventListener('input', updateOutput);
+
+        // 初期表示
+        updateOutput();
+
+        // テキストボックスをクリックしたときに全選択
+        resultBox.addEventListener('click', function() {
+            resultBox.select();
+        });
+
+        // コピー用ボタンの動作
+        copyButton.addEventListener('click', function() {
+            resultBox.select();
+            document.execCommand('copy');
+        });</script>
+</html>
 
