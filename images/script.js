@@ -20,7 +20,8 @@ class ImgBtns extends HTMLElement {
     updateImage(url) {
       const imgDiv = this.querySelector('.img');
       if (imgDiv) {
-        imgDiv.style.backgroundImage = `url('${url}')`;
+        const basePreviewUrl = 'https://search3958.github.io/newtab/bgimg/small/';
+        imgDiv.style.backgroundImage = `url('${basePreviewUrl}${url}')`;
       }
     }
 
@@ -40,20 +41,25 @@ class ImgBtns extends HTMLElement {
       this.updateImage(this.getAttribute('image-url') || '');
       // 各ボタンのイベント設定
       this.querySelector('#copy').addEventListener('click', () => {
-        navigator.clipboard.writeText(this.getAttribute('image-url'));
+        const baseUrl = 'https://search3958.github.io/newtab/bgimg/';
+        const fullUrl = `${baseUrl}${this.getAttribute('image-url')}`;
+        navigator.clipboard.writeText(fullUrl);
         alert('URLをコピーしました！');
       });
       
       this.querySelector('#download').addEventListener('click', () => {
+        const baseUrl = 'https://search3958.github.io/newtab/bgimg/';
+        const fullUrl = `${baseUrl}${this.getAttribute('image-url')}`;
         const link = document.createElement('a');
-        link.href = this.getAttribute('image-url');
+        link.href = fullUrl;
         link.download = 'image.jpg';
         link.click();
       });
 
       this.querySelector('#setNewtab').addEventListener('click', () => {
-        const imageUrl = this.getAttribute('image-url');
-        localStorage.setItem('backgroundImageUrl', imageUrl);
+        const baseUrl = 'https://search3958.github.io/newtab/bgimg/';
+        const fullUrl = `${baseUrl}${this.getAttribute('image-url')}`;
+        localStorage.setItem('backgroundImageUrl', fullUrl);
         alert('Newtab用の画像URLが保存されました！');
       });
     }
