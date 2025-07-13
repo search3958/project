@@ -6,7 +6,16 @@
   --text-color: #3E361F;
   --bg-gradient-start: #f9f4e1;
   --bg-gradient-end: #FFF1D6;
-}
+
+  
+          --md-ripple-hover-color:#0000;
+          --header-width: 279px;
+    --header-expanded-width: 279px;
+          --section-raius:64px;
+          --mac-color:#fff;
+        }
+
+
 body{
   opacity: 0;
   background: linear-gradient(180deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
@@ -97,3 +106,59 @@ body{
     fill:#fff;
   }
 }
+
+
+        #lensFx_canvas {
+            position: fixed;
+            top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+            width: var(--header-width);
+            height: 80px;
+            border-radius: 40px;
+            z-index: 10;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    --smooth-corners: 8,3;
+  mask-image: paint(smooth-corners);
+  -webkit-mask-image: paint(smooth-corners);
+  
+        }
+        .header {
+            position: fixed;
+            top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+            width: var(--header-width);
+            height: 80px;
+            border-radius: 40px;
+            z-index: 11;
+            transition: all 0.6s cubic-bezier(.2,0,0,1);
+            background: #aaa;
+            backdrop-filter: blur(4px);
+            gap: 16px;
+            padding: 0 16px;
+    mix-blend-mode: overlay;
+    --smooth-corners: 8,3;
+  mask-image: paint(smooth-corners);
+  -webkit-mask-image: paint(smooth-corners);
+        }
+
+        .header-ctn {
+            position: fixed;
+            top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+            width: var(--header-width);
+            height: 80px;
+            border-radius: 40px;
+            z-index: 12;
+            background: none;
+            display: flex;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            align-items: center;
+            gap: 16px;
+            padding: 0 16px;
+            background:#fff6;
+   box-shadow: 0px 8px 32px 0px rgba(0, 0, 0, 0.22);
+        }
