@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.6.0/dist/dom-to-image-more.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zumer/snapdom/dist/snapdom.min.js"></script>
 
     <title>Search3958</title><link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="icon" href="https://search3958.github.io/icons/search3958.svg">
@@ -222,43 +222,43 @@ footer{
 </div>
 
 <script>
-  const lensFx_canvas   = document.getElementById("lensFx_canvas");
-  const lensFx_ctx      = lensFx_canvas.getContext("2d");
-  const debugInfo       = document.getElementById("debugInfo");
+  const lensFx_canvas = document.getElementById("lensFx_canvas");
+  const lensFx_ctx = lensFx_canvas.getContext("2d");
+  const debugInfo = document.getElementById("debugInfo");
 
-  const LAYERS           = 13;
-  const MIN_ZOOM         = 1.8;
-  const MAX_ZOOM         = 1;
-  const SHRINK_STEP      = 5.5;
-  const CAPTURE_INTERVAL = 10;
+  const LAYERS = 13;
+  const MIN_ZOOM = 1.8;
+  const MAX_ZOOM = 1;
+  const SHRINK_STEP = 5.5;
+  const CAPTURE_INTERVAL = 100;
   const SCROLL_CAPTURE_INTERVAL = 5000;
 
-  let lensFx_img     = null;
-  let scrollOffsetY  = 0;
-  let captureTimer   = null;
-  let autoUpdate     = true;
-  let showDebug      = false;
-  let isScrolling    = false;
-  let scrollTimeout  = null;
+  let lensFx_img = null;
+  let scrollOffsetY = 0;
+  let captureTimer = null;
+  let autoUpdate = true;
+  let showDebug = false;
+  let isScrolling = false;
+  let scrollTimeout = null;
 
   function safeInverseEasing(t) {
     const ε = 0.05;
-    const v = 1/(t+ε) - 1/ε;
-    const maxV = 1/(1+ε) - 1/ε;
-    return v/maxV;
+    const v = 1 / (t + ε) - 1 / ε;
+    const maxV = 1 / (1 + ε) - 1 / ε;
+    return v / maxV;
   }
 
   function radiusEasing(t) {
-    return 0.3 + 0.7*(1 - t*t);
+    return 0.3 + 0.7 * (1 - t * t);
   }
 
   function updateCanvasSize(canvas, ctx) {
     const rect = canvas.getBoundingClientRect();
-    const dpr  = window.devicePixelRatio||1;
-    canvas.width  = rect.width * dpr;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(dpr,dpr);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
   }
 
   function getRadius(canvas) {
@@ -267,7 +267,7 @@ footer{
 
   function drawLens(img, ctx, canvasElem) {
     if (!img) return;
-    
+
     const imgW = img.width;
     const imgH = img.height;
     const rect = canvasElem.getBoundingClientRect();
@@ -280,23 +280,22 @@ footer{
 
     const viewportW = window.innerWidth;
     const viewportH = document.documentElement.scrollHeight;
-    
+
     const scaleX = imgW / viewportW;
     const scaleY = imgH / viewportH;
-    
+
     const imgCenterX = (viewportW / 2) * scaleX;
-    const imgCenterY = canvasScreenY * scaleY + (hLens/2) * scaleY;
+    const imgCenterY = canvasScreenY * scaleY + (hLens / 2) * scaleY;
 
     ctx.clearRect(0, 0, canvasElem.width, canvasElem.height);
 
     if (showDebug) {
-      debugInfo.innerHTML = `
-        Canvas位置: (${canvasScreenX.toFixed(0)}, ${canvasScreenY.toFixed(0)})<br>
+      debugInfo.innerHTML =
+        `Canvas位置: (${canvasScreenX.toFixed(0)}, ${canvasScreenY.toFixed(0)})<br>
         画像サイズ: ${imgW} x ${imgH}<br>
         ビューポート: ${viewportW} x ${viewportH}<br>
         スケール: ${scaleX.toFixed(3)} x ${scaleY.toFixed(3)}<br>
-        画像上中心: (${imgCenterX.toFixed(0)}, ${imgCenterY.toFixed(0)})
-      `;
+        画像上中心: (${imgCenterX.toFixed(0)}, ${imgCenterY.toFixed(0)})`;
     }
 
     for (let i = 0; i < LAYERS; i++) {
@@ -306,12 +305,12 @@ footer{
       const h = hLens - i * SHRINK_STEP;
       const dx = (wLens - w) / 2;
       const dy = (hLens - h) / 2;
-      
+
       const sw = (w / zoom) * scaleX;
       const sh = (h / zoom) * scaleY;
       const sx = imgCenterX - sw / 2;
       const sy = imgCenterY - sh / 2;
-      
+
       const rad = radius * radiusEasing(t);
 
       ctx.save();
@@ -337,26 +336,30 @@ footer{
     updateCanvasSize(lensFx_canvas, lensFx_ctx);
     drawLens(lensFx_img, lensFx_ctx, lensFx_canvas);
   }
-async function captureFullPage() {
-  try {
-    const dataUrl = await domtoimage.toPng(document.body, {
-      style: {
-        backgroundColor: "transparent"
-      },
-      cacheBust: true,
-      skipFonts: true
-    });
 
-    const img = new Image();
-    img.onload = () => {
-      lensFx_img = img;
-      renderAll();
-    };
-    img.src = dataUrl;
-  } catch (e) {
-    console.error(e);
+  async function captureFullPage() {
+    try {
+      const fullW = document.documentElement.scrollWidth;
+      const fullH = document.documentElement.scrollHeight;
+      const svg = await snapdom(document.body, {
+        width: fullW,
+        height: fullH,
+        scale: 1,
+        scrollX: 0,
+        scrollY: 0,
+        backgroundColor: null
+      });
+
+      const img = new Image();
+      img.onload = () => {
+        lensFx_img = img;
+        renderAll();
+      };
+      img.src = svg;
+    } catch (e) {
+      console.error(e);
+    }
   }
-}
 
   function updateLensEffect() {
     captureFullPage();
@@ -374,7 +377,9 @@ async function captureFullPage() {
   function toggleDebug() {
     showDebug = !showDebug;
     debugInfo.style.display = showDebug ? 'block' : 'none';
-    if (showDebug) renderAll();
+    if (showDebug) {
+      renderAll();
+    }
   }
 
   captureFullPage();
@@ -383,10 +388,12 @@ async function captureFullPage() {
   window.addEventListener("scroll", () => {
     scrollOffsetY = window.scrollY;
     renderAll();
+
     isScrolling = true;
     clearTimeout(scrollTimeout);
     clearInterval(captureTimer);
     updateCaptureTimer();
+
     scrollTimeout = setTimeout(() => {
       isScrolling = false;
       updateCaptureTimer();
@@ -407,11 +414,7 @@ async function captureFullPage() {
   window.addEventListener("resize", renderAll);
 
   const header = document.querySelector('.header');
-  const headerToggle = document.querySelector('.header-toggle');
-  headerToggle.addEventListener('click', () => {
-    header.classList.toggle('active');
-    syncWidth();
-  });
+  let isExpanded = false;
 
   function syncWidth() {
     lensFx_canvas.style.width = `${header.offsetWidth}px`;
@@ -422,6 +425,7 @@ async function captureFullPage() {
     const resizeObserver = new ResizeObserver(() => {
       syncWidth();
     });
+
     resizeObserver.observe(header);
     resizeObserver.observe(lensFx_canvas);
   }
@@ -436,9 +440,14 @@ async function captureFullPage() {
   });
 
   syncWidth();
+
+  const headerToggle = document.querySelector('.header-toggle');
+
+  headerToggle.addEventListener('click', () => {
+    header.classList.toggle('active');
+    syncWidth();
+  });
 </script>
-
-
 
 
 <script>
