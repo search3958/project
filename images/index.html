@@ -12,7 +12,7 @@
   <script type="text/javascript" src="//typesquare.com/3/tsst/script/ja/typesquare.js?67afe5719990420aa8d92d04ac1e02e5" charset="utf-8"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@100..900&family=Noto+Sans+JP:wght@100..900&family=Unbounded:wght@200..900&display=swap" rel="stylesheet">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6151036058675874"
@@ -33,15 +33,15 @@
 </head>
 <title>壁紙を選択</title>
 <body>
-  <div id="animateButton" style="display:flex;margin:24px 0px;">
+  <div id="animateButton" style="display:flex;margin:40px 10px;">
    <a href="https://search3958.github.io/newtab/" >
   <svg xmlns="http://www.w3.org/2000/svg" height="40px" viewBox="0 -960 960 960" width="40px" fill="#000000"><path d="M647.44-93.85 261.28-480l386.16-386.15 49.33 50L360.61-480l336.16 336.15-49.33 50Z"/></svg>
     
   </a>
-  <div class="h2">壁紙を選択</div>
+  <div class="h2">Wallpapers</div>
     </div>
   <div class="h3">プレート</div>
-<div class="container">
+<div class="container smooth">
   <img-btns image-url="bg1.webp"></img-btns>
   <img-btns image-url="bg2.webp"></img-btns>
   <img-btns image-url="bg3.webp"></img-btns>
@@ -53,14 +53,14 @@
 </div>
   
 <div class="h3">グラス</div>
-<div class="container">
+<div class="container smooth">
   <img-btns image-url="glass1.webp"></img-btns>
   <img-btns image-url="glass2.webp"></img-btns>
   <img-btns image-url="glass3.webp"></img-btns>
 </div>
 
 <div class="h3">スティック</div>
-<div class="container">
+<div class="container smooth">
   <img-btns image-url="reflect1.webp"></img-btns>
   <img-btns image-url="reflect2.webp"></img-btns>
   <img-btns image-url="reflect3.webp"></img-btns>
@@ -71,7 +71,7 @@
 
   <div class="h3">風景</div>
   <small>SNによる提供</small>
-<div class="container">
+<div class="container smooth">
   <img-btns image-url="photobg1.webp"></img-btns>
   <img-btns image-url="aibg1.webp"></img-btns>
   <img-btns image-url="aibg2.webp"></img-btns>
@@ -83,7 +83,7 @@
 </div>
 
 <div class="h3">サークル</div>
-<div class="container">
+<div class="container smooth">
   <img-btns image-url="circle1.webp"></img-btns>
   <img-btns image-url="circle2.webp"></img-btns>
   <img-btns image-url="circle3.webp"></img-btns>
@@ -98,7 +98,7 @@
 
 
 <div class="h3">3958</div>
-<div class="container">
+<div class="container smooth">
   <img-btns image-url="3958bg1.webp"></img-btns>
   <img-btns image-url="3958bg2.webp"></img-btns>
   <img-btns image-url="3958bg3.webp"></img-btns>
@@ -112,7 +112,7 @@
 </div>
 
 <div class="h3">ウェーブ</div>
-<div class="container">
+<div class="container smooth">
   <img-btns image-url="wabe1.webp"></img-btns>
   <img-btns image-url="wabe2.webp"></img-btns>
   <img-btns image-url="wabe3.webp"></img-btns>
@@ -127,7 +127,7 @@
 
 
   <div class="h3">スペシャル</div>
-<div class="container">
+<div class="container smooth">
   <img-btns image-url="take.webp"></img-btns>
   <img-btns image-url="newtab.webp"></img-btns>
   <img-btns image-url="727-light.png"></img-btns>
@@ -137,5 +137,43 @@
 <!-- partial -->
   <script  src="./script.js"></script>
 
+<script>
+function updateSmoothCorners() {
+  // 対象: .smooth クラスを持つ要素
+  const elements = document.querySelectorAll('.smooth');
+
+  elements.forEach(el => {
+    // 現在の computed style で --smooth-corners が使われているかチェック
+    const style = getComputedStyle(el);
+    const hasSmoothCorners = style.getPropertyValue('--smooth-corners');
+
+    if (hasSmoothCorners !== '') {
+      const height = el.offsetHeight;
+      const width = el.offsetWidth;
+      const smoothValue = `${(width / 50).toFixed(2)}, ${(height / 50).toFixed(2)}`;
+      el.style.setProperty('--smooth-corners', smoothValue);
+    }
+  });
+}
+
+// 初回実行
+updateSmoothCorners();
+
+// ウィンドウサイズ変更時にも再計算
+window.addEventListener('resize', updateSmoothCorners);
+
+// DOM追加時にも対応（必要なら）
+const observer = new MutationObserver(updateSmoothCorners);
+observer.observe(document.body, { childList: true, subtree: true });
+</script>
+<script>
+  if (CSS && 'paintWorklet' in CSS) CSS.paintWorklet.addModule('https://unpkg.com/smooth-corners')
+</script>
+
+<div class="footer">
+<footer class="smooth" style="--smooth-corners: 20.16, 2.88;">
+  © Search 3958<br>使用時はクレジット表記をお願いします。
+</footer>
+</div>
 </body>
 </html>
