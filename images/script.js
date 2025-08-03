@@ -59,14 +59,20 @@ class ImgBtns extends HTMLElement {
       this.querySelector('#setNewtab').addEventListener('click', () => {
         const baseUrl = 'https://search3958.github.io/newtab/bgimg/';
         const imageUrl = this.getAttribute('image-url');
+      
+        // URLのクエリパラメータからimage-urlを取得
+        const params = new URLSearchParams(window.location.search);
+        const urlParamImage = params.get('image-url');
+      
         const fullUrl = `${baseUrl}${imageUrl}`;
-        
-        // 条件に応じてキー名を変更
-        const key = (imageUrl === 'new') ? 'custom_wallpaper' : 'backgroundImageUrl';
+      
+        // URL変数が 'new' ならキーを 'custom_wallpaper' に、それ以外は 'backgroundImageUrl'
+        const key = (urlParamImage === 'new') ? 'custom_wallpaper' : 'backgroundImageUrl';
       
         localStorage.setItem(key, fullUrl);
-        alert(`NewTabに画像をセットしました！`);
+        alert(`NewTabに画像をセットしました！（キー：${key}）`);
       });
+      
       
     }
   }
