@@ -70,7 +70,7 @@ class ImgBtns extends HTMLElement {
         const key = (urlParamImage === 'new') ? 'custom_wallpaper' : 'backgroundImageUrl';
       
         localStorage.setItem(key, fullUrl);
-        alert(`NewTabに画像をセットしました！（キー：${key}）`);
+        alert(`NewTabに画像をセットしました！（詳細：${key}）`);
       });
       
       
