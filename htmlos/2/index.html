@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hanul 2</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0" />
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --window-bg: #ffffff;
+            --text-color: #333;
+            --bar-bg: #fffa;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --transition-ease: cubic-bezier(0.16, 1, 0.3, 1);
+            /* シンプルな計算機用カラー */
+            --calc-main: #555;
+            --calc-digit: #f0f0f0;
+            --calc-operator: #e0e0e0;
+            --calc-special: #ccc;
+            --main-shadow: 0 20px 50px var(--shadow-color),0 10px 25px var(--shadow-color),0 0px 1.5px #0007;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            user-select: none;
+            background-image: url(https://search3958.github.io/newtab/bgimg/circle1.webp);
+            background-size: cover;
+            background-position: center;
+            perspective: 1000px;
+        }
+        *{
+            corner-shape:superellipse(1.6);
+        }
+        .dock {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: #fff;
+            padding: 8px;
+            border-radius: 28px;
+            box-shadow:var(--main-shadow);
+            z-index: 1000;
+        }
+
+        .dock button {
+            background: #f5f5f7;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 18px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-color);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .dock button:hover {
+            background: #e5e5e7;
+            transform: translateY(-2px);
+        }
+
+        .window {
+            position: absolute;
+            top: 150px;
+            left: 50px;
+            width: 400px;
+            height: 250px;
+            min-width: 250px;
+            min-height: 150px;
+            background: var(--window-bg);
+            border-radius: 32px;
+            corner-shape:superellipse(1.6);
+            box-shadow:var(--main-shadow);
+            opacity: 0;
+            transform: scale(0.8) rotateX(-20deg);
+            transform-style: preserve-3d;
+            pointer-events: none;
+            transition: opacity 0.4s, transform 0.4s cubic-bezier(.51,0,.5,.61);
+            display: flex;
+            flex-direction: column;
+            will-change: transform, left, width, height;
+            overflow: visible; 
+            cursor: default; 
+        }
+
+        .window.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: all;
+            transition: opacity 0.4s, transform 0.5s cubic-bezier(.28,.14,0,1);
+        }
+
+        .window-content {
+            flex: 1;
+            padding: 24px;
+            overflow: hidden;
+            cursor: default;
+            color: var(--text-color);
+            position: relative;
+        }
+        
+        .control-bar {
+            position: absolute;
+            bottom: -36px; 
+            left: 50%;
+            transform: translateX(-50%);
+            height: 12px;
+            background: var(--bar-bg);
+            --bar-text: #0000;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 6px 0 8px;
+            gap: 10px;
+            width:100px;
+            cursor: grab; 
+            box-shadow:var(--main-shadow);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter:blur(8px);
+            z-index: 10;
+            max-width: 80%;
+            overflow: hidden;
+            color: var(--bar-text);
+            --close-btnbg:#0000;
+            corner-shape:superellipse(1);
+        }
+        
+        .control-bar:hover {
+            --bar-text: #000b;
+            --close-btnbg:#0004;
+            height: 28px;
+            bottom: -40px; 
+            width:140px;
+
+        }
+        .control-bar.dragging {
+            cursor: grabbing;
+        }
+
+        .bar-title {
+            font-size: 10px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 1;
+            max-width: 200px;
+            transition: max-width 0.3s, opacity 0.2s, margin 0.3s;
+        }
+
+        .close-btn-area {
+            width:16px;
+            height: 16px;
+            background: var(--close-btnbg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            corner-shape:superellipse(1);
+        }
+        
+        .close-btn-area:hover {
+            background:color(display-p3 1 0.17 0.174 / 1);
+        }
+
+        .close-icon {
+            position: relative;
+            width: 12px;
+            height: 12px;
+            transition: transform 0.3s;
+        }
+        .close-icon::before, .close-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #fff0;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+        .close-icon::after {
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        /* === ステート変化: リサイズモード === */
+        
+        .window.is-resizing .control-bar,
+        .window.is-resize-hover .control-bar {
+            left: 100%;
+            transform: translateX(-50%);
+            padding: 0;
+            width: 32px; 
+            height: 32px; 
+            bottom: -40px; 
+            justify-content: center;
+            background: #fff4;
+            cursor: nwse-resize;
+        }
+        
+        .window.is-resizing .bar-title,
+        .window.is-resize-hover .bar-title {
+            max-width: 0;
+            opacity: 0;
+            margin: 0;
+        }
+        
+        /* 閉じるボタンのアイコンを完全に非表示 */
+        .window.is-resizing .close-btn-area,
+        .window.is-resize-hover .close-btn-area {
+            background: transparent;
+            pointer-events: none;
+            visibility: hidden; 
+        }
+
+        .window.is-resizing .close-icon,
+        .window.is-resize-hover .close-icon {
+            transform: rotate(90deg) scale(0.9);
+        }
+
+        /* トランジション制御 */
+        .window.no-transition { transition: none !important; }
+        .window.no-transition .control-bar { transition: none !important; }
+        .window.no-transition .bar-title { transition: none !important; }
+        
+        body.global-resize-cursor {
+            cursor: nwse-resize !important;
+        }
+
+        /* --- アプリケーション固有のスタイル --- */
+        
+        /* 計算機 */
+        .app-calculator {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .calc-display {
+            color: #000;
+            padding: 10px;
+            text-align: right;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .calc-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            flex: 1;
+        }
+        .calc-buttons button {
+            background: var(--calc-digit);
+            color: var(--text-color);
+            border: none;
+            padding: 15px 10px;
+            border-radius: 19px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .calc-buttons button:hover {
+            background: #dedede;
+        }
+        .calc-buttons button.operator {
+            background: var(--calc-operator);
+        }
+        .calc-buttons button.special {
+            background: var(--calc-special);
+        }
+
+        /* 時計・タイマー・ストップウォッチ */
+        .time-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            height: 100%;
+            font-weight: 200;
+            color: var(--text-color);
+        }
+        .time-display .main-time {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            font-variant-numeric: tabular-nums; 
+        }
+        .time-controls {
+            display: flex;
+            gap: 15px;
+        }
+        .time-controls button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            background: #f0f0f0;
+            cursor: pointer;
+        }
+        
+        /* iFrame Browser */
+        .app-iframe-browser {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        .browser-url-bar {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .browser-url-bar input {
+            flex-grow: 1;
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            outline: none;
+        }
+        .browser-url-bar button {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-left: none;
+            background: #f0f0f0;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        .browser-iframe {
+            flex-grow: 1;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius:16px;
+        }
+        .browser-iframe iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* App Control */
+        .app-control-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .app-control-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .app-control-list li:last-child {
+            border-bottom: none;
+        }
+        .app-control-list li .app-name {
+            font-weight: 500;
+        }
+        .app-control-list li button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            background: #f0f0f0;
+            cursor: pointer;
+        }
+        .app-control-list li button.open {
+            background: #d4edda; 
+        }
+        .app-control-list li button.close {
+            background: #f8d7da; 
+        }
+        .app-control-list li.inactive .app-name {
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dock">
+        <button data-target="window-1">
+            <span class="material-symbols-rounded">verified</span>
+        </button>
+        <button data-target="window-2"><span class="material-symbols-rounded">
+photo
+</span></button>
+        <button data-target="window-4"><span class="material-symbols-rounded">
+calculate
+</span></button>
+        <button data-target="window-5"><span class="material-symbols-rounded">
+nest_clock_farsight_analog
+</span></button>
+        <button data-target="window-7"><span class="material-symbols-rounded">
+hourglass_bottom
+</span></button>
+        <button data-target="window-8"><span class="material-symbols-rounded">
+timer
+</span></button>
+        <button data-target="window-9"><span class="material-symbols-rounded">
+globe
+</span></button>
+        <button data-target="window-10"><span class="material-symbols-rounded">
+dashboard_2_gear
+</span></button>
+    </div>
+
+    <div id="window-1" class="window" data-app-name="はじめに" style="left: 50px; width: 350px;">
+        <div class="window-content">
+            <p style="margin-top:0; font-weight:bold; color:#888; font-size:0.8rem;">TEXT</p>
+            <p>全てのウィンドウは、右下隅の60pxの範囲でリサイズ可能です。</p>
+            <p>計算機、タイマー、ストップウォッチ、ブラウザ、App Controlが追加されました。</p>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">はじめに.txt</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+    <div id="window-2" class="window" data-app-name="写真" style="left: 100px;">
+        <div class="window-content">
+            <div style="width:100%; height:100%; background:#f0f0f0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc;">
+                Image Area
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">Photo.jpg</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+    <div id="window-3" class="window" data-app-name="設定" style="left: 200px; height: 180px;">
+        <div class="window-content">
+            <p>設定ウィンドウ</p>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">設定</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+    <div id="window-6" class="window" data-app-name="テキストエディタ" style="left: 550px; top: 50px; width: 500px; height: 350px; min-width: 250px; min-height: 150px;">
+        <div class="window-content" style="padding: 10px;">
+            <div class="app-text-editor">
+                <textarea placeholder="ここにテキストを入力..." spellcheck="false" style="width: 100%; height: 100%; border: none; padding: 0; margin: 0; resize: none; font-size: 14px; font-family: monospace; color: var(--text-color); background: transparent; outline: none; display: block;"></textarea>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">無題のファイル.txt</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+    <div id="window-4" class="window" data-app-name="計算機" style="left: 450px; top: 100px; width: 300px; height: 400px; min-width: 300px; min-height: 350px;">
+        <div class="window-content" style="padding: 10px;">
+            <div class="app-calculator">
+                <div class="calc-display">0</div>
+                <div class="calc-buttons">
+                    <button class="special clear">AC</button>
+                    <button class="special operator">±</button>
+                    <button class="special operator">%</button>
+                    <button class="operator">/</button>
+                    <button>7</button>
+                    <button>8</button>
+                    <button>9</button>
+                    <button class="operator">*</button>
+                    <button>4</button>
+                    <button>5</button>
+                    <button>6</button>
+                    <button class="operator">-</button>
+                    <button>1</button>
+                    <button>2</button>
+                    <button>3</button>
+                    <button class="operator">+</button>
+                    <button style="grid-column: span 2;">0</button>
+                    <button>.</button>
+                    <button class="operator equal">=</button>
+                </div>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">計算機</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+    <div id="window-5" class="window" data-app-name="時計" style="left: 800px; top: 200px; width: 280px; height: 180px; min-width: 200px; min-height: 100px;">
+        <div class="window-content">
+            <div class="time-display">
+                <span class="main-time clock-time">12:00:00</span>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">時計</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+    
+    <div id="window-7" class="window" data-app-name="タイマー" style="left: 100px; top: 500px; width: 300px; height: 200px; min-width: 250px; min-height: 150px;">
+        <div class="window-content">
+            <div class="time-display app-timer">
+                <input type="number" value="10" min="1" max="3600" style="width: 80px; padding: 5px; margin-bottom: 10px; text-align: center;">
+                <span class="main-time timer-display">10:00</span>
+                <div class="time-controls">
+                    <button class="timer-start">スタート</button>
+                    <button class="timer-reset" disabled>リセット</button>
+                </div>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">タイマー</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+    <div id="window-8" class="window" data-app-name="ストップウォッチ" style="left: 450px; top: 550px; width: 300px; height: 200px; min-width: 250px; min-height: 150px;">
+        <div class="window-content">
+            <div class="time-display app-stopwatch">
+                <span class="main-time stopwatch-display">00:00.00</span>
+                <div class="time-controls">
+                    <button class="stopwatch-start">スタート</button>
+                    <button class="stopwatch-reset" disabled>リセット</button>
+                </div>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">ストップウォッチ</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+    <div id="window-9" class="window" data-app-name="ブラウザ" style="left: 850px; top: 50px; width: 450px; height: 500px; min-width: 300px; min-height: 300px;">
+        <div class="window-content" style="padding: 10px;">
+            <div class="app-iframe-browser">
+                <div class="browser-url-bar">
+                    <input type="text" value="https://www.google.com" placeholder="URLを入力" class="url-input">
+                    <button class="go-button">Go</button>
+                </div>
+                <div class="browser-iframe">
+                    <iframe src="about:blank" class="iframe-view"></iframe>
+                </div>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">ブラウザ</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+    <div id="window-10" class="window" data-app-name="App Control" style="left: 1000px; top: 550px; width: 350px; height: 350px; min-width: 250px; min-height: 200px;">
+        <div class="window-content">
+            <h3>App Control</h3>
+            <ul class="app-control-list">
+                </ul>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">App Control</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+
+
+    <script src="script.js"></script>
+</body>
+</html>
