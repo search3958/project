@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Material 3 壁紙セレクタ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    <link href="light.css" rel="stylesheet">
+    <script type="importmap">
+    {
+      "imports": {
+        "@material/web/": "https://esm.run/@material/web/"
+      }
+    }
+  </script>
+  <script type="module">
+    import '@material/web/all.js';
+    import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
+
+    document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+  </script>
+    <style>
+        /* --- Material 3 の基本デザインを模倣 --- */
+        :root {
+            
+            --md-sys-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+
+            /* Typography */
+            font-family:  'Roboto', 'Noto Sans JP', sans-serif; 
+            font-weight: 400; 
+            
+            /* ヘッダーの高さをCSS変数として定義 (約56px) */
+            --header-height: 56px; 
+            --md-ripple-hover-color:#0000;
+            --md-ripple-pressed-color:var(--md-sys-color-surface-container-low);
+            --md-ripple-pressed-opacity:0.5;
+            
+            /* スライド幅をCSS変数として定義 */
+            --slide-offset: 30vw;
+            /* ★追加: ジャンルカードの画像高さ変数 ★ */
+            --genre-card-image-height: 200px; 
+        }
+
+        body {
+            /* bodyのスクロールは不要 */
+            background: var(--md-sys-color-surface-container-low);
+            color: var(--md-sys-color-on-surface);
+            padding: 0;
+            margin: 0;
+            overflow: hidden; /* body全体のスクロールを禁止 */
+        }
+
+        /* --- View Container: fixedで画面全体に配置 --- */
+        .view-wrapper {
+            /* position:fixedで画面全体に固定 */
+            position: fixed;
+            top: 0;
+            /* ★ 修正点1: left で位置を管理する ★ */
+            left: 0; 
+            width: 100vw;
+            height: 100vh;
+            
+            box-sizing: border-box; 
+            display: flex; 
+            flex-direction: column;
+            
+            /* ★ 修正点2: 新しいイージングとトランジション期間 (0.6秒) ★ */
+            transition: opacity 0.6s cubic-bezier(.72,0,0,1), left 0.6s cubic-bezier(.72,0,0,1); 
+            
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10; 
+        }
+        
+        /* ★ 修正点3: Offscreen Left (left: -30vw) ★ */
+        .view-wrapper.offscreen-left {
+            left: calc(-1 * var(--slide-offset)); 
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* ★ 修正点3: Offscreen Right (left: +30vw) ★ */
+        .view-wrapper.offscreen-right {
+            left: var(--slide-offset); 
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* ★ Active State (left: 0) - 表示中のビュー ★ */
+        .view-wrapper.active {
+            left: 0; 
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 30; 
+        }
+
+        /* ロード中コンテナ (変更なし) */
+        #loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--md-sys-color-surface-container-low);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #loading-content {
+            width: 90%;
+            max-width: 600px;
+            margin: auto;
+        }
+
+
+        /* --- Header / App Bar (変更なし) --- */
+        header {
+            background-color: var(--md-sys-color-surface-container-low); 
+            color: var(--md-sys-color-on-surface);
+            padding: 40px 32px;
+            box-shadow: none; 
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            box-sizing: border-box; 
+            position: static; 
+            width: 100%;
+            --md-ripple-pressed-color:var(--md-sys-color-on-surface);
+            --md-ripple-pressed-opacity:0.2;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 400; 
+            margin: 0;
+            line-height: 1;
+        }
+
+        /* --- Scrollable Content Area (変更なし) --- */
+        #genre-content, #gallery-content {
+            flex-grow: 1; 
+            overflow-y: auto; 
+            padding: 0 20px 20px 20px;
+            background: var(--md-sys-color-surface-container-low);
+        }
+        
+        /* --- Loading Bar (省略) --- */
+        #loading-bar-container {
+            width: 100%;
+            background-color: var(--md-sys-color-surface-container);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        #loading-bar {
+            height: 4px;
+            width: 0%;
+            background-color: var(--md-sys-color-primary);
+            color: transparent;
+            transition: width 0.3s;
+        }
+        
+        #loading-text {
+            font-size: 0.875rem;
+            color: var(--md-sys-color-on-surface);
+            margin: 0;
+        }
+
+        /* --- Genre View: Card Style (修正) --- */
+        #genre-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .genre-card {
+            background: none; 
+            border-radius: 0; 
+            box-shadow: none; 
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+            position:relative;
+            border-radius:32px;
+        }
+
+        .genre-card:hover {
+            box-shadow: none; 
+            transform: none; 
+        }
+
+        /* ★ 修正: img タグのスタイルを削除し、新しい div.genre-image-container のスタイルを追加 ★ */
+        .genre-image-container {
+            width: 100%;
+            /* 高さはCSS変数で管理 */
+            height: var(--genre-card-image-height); 
+            display: block;
+            /* 背景画像をカバーとして使用し、中央に配置 */
+            background-image:unset;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 1000px; /* 既存の円形スタイルを維持 */
+            /* プレースホルダーの背景色 */
+            transition: background-image 1s ease;
+            background-color: var(--md-sys-color-surface-container-high); 
+        }
+
+        .genre-card-content {
+            padding: 16px 0;
+            text-align: center; 
+        }
+        
+        .genre-card-content h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 400; 
+            color: var(--md-sys-color-on-surface); 
+        }
+
+        /* --- Gallery View: Image Grid (修正) --- */
+        #back-button {
+            background: var(--md-sys-color-surface-container-highest);
+            margin-right: 12px;
+            padding: 16px;
+            border: none;
+            cursor: pointer;
+            border-radius: 50%;
+            color: var(--md-sys-color-on-surface);
+            position:relative;
+        }
+        #image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            padding-top: 20px; 
+        }
+
+        #image-gallery > div {
+            border-radius: 32px;
+            background: var(--md-sys-color-surface-container);
+            overflow: hidden;
+            box-shadow: var(--md-sys-elevation-1);
+        }
+
+        /* ★ 修正: img タグのスタイルを削除し、新しい div.gallery-image-wrapper のスタイルを追加 ★ */
+        .gallery-image-wrapper {
+            width: 100%;
+            /* アスペクト比を維持 */
+            aspect-ratio: 16/9;
+            cursor: pointer;
+            /* 背景画像をカバーとして使用し、中央に配置 */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position:relative;
+            /* プレースホルダーの背景色 */
+            background-color: var(--md-sys-color-surface-container-high); 
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+    <div id="loading-container">
+        <div id="loading-content">
+            <div id="loading-bar-container">
+                <div id="loading-bar">0%</div>
+            </div>
+            <p id="loading-text">スクリプトとライブラリを読み込み中...</p>
+        </div>
+    </div>
+
+    <div id="genre-view" class="view-wrapper offscreen-right">
+        <header>
+            <h1 id="app-title">壁紙セレクタ</h1>
+        </header>
+        <div id="genre-content">
+            <div id="genre-list">
+            </div>
+        </div>
+    </div>
+
+    <div id="gallery-view" class="view-wrapper offscreen-right">
+        <header>
+            <span id="back-button" class="material-symbols-outlined" style="display:inline-flex;"><md-ripple></md-ripple>arrow_back</span>
+            <h1 id="gallery-title-header"></h1>
+        </header>
+        <div id="gallery-content">
+            <div id="image-gallery">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    const ZIP_URL = 'https://search3958.github.io/newtab/bgimg/zip/main.zip';
+    const LOCAL_STORAGE_KEY = 'wallpaperData';
+    
+    // DOM要素
+    const loadingContainer = document.getElementById('loading-container');
+    const genreView = document.getElementById('genre-view');
+    const galleryView = document.getElementById('gallery-view');
+    const genreList = document.getElementById('genre-list');
+    const imageGallery = document.getElementById('image-gallery');
+    const galleryTitleHeader = document.getElementById('gallery-title-header'); 
+    const backButton = document.getElementById('back-button');
+    const appTitle = document.getElementById('app-title'); 
+
+    let allWallpaperData = null;
+    let currentViewElement = null; 
+    let isAnimating = false; // アニメーション中フラグ
+    // ★ 修正点: CSSの transition duration (0.6s) と一致させる ★
+    const TRANSITION_DURATION_MS = 600; 
+
+    /**
+     * プログレスバーとテキストを更新する関数
+     */
+    function updateProgress(percent, text) {
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingText = document.getElementById('loading-text');
+        const safePercent = Math.min(100, percent); 
+        loadingBar.style.width = safePercent + '%';
+        loadingBar.textContent = `${Math.round(safePercent)}%`;
+        loadingText.textContent = text;
+    }
+
+    function processZipFile() {
+        return new Promise((resolve, reject) => {
+            updateProgress(5, 'ZIPファイルのダウンロード準備中...');
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', ZIP_URL, true);
+            xhr.responseType = 'arraybuffer';
+            xhr.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    let percent = (event.loaded / event.total) * 90; 
+                    updateProgress(percent, `ZIPファイルをダウンロード中... (${(event.loaded/1024/1024).toFixed(2)} MB)`);
+                }
+            };
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    updateProgress(90, 'ZIPファイルを処理中...');
+                    const zipFile = xhr.response; 
+                    const structuredData = {}; 
+
+                    JSZip.loadAsync(zipFile).then(function(zip) {
+                        const imagePromises = [];
+                        zip.forEach(function(relativePath, zipEntry) {
+                            const fileName = relativePath.toLowerCase();
+                            const parts = relativePath.split('/');
+                            const baseFileName = parts[parts.length - 1]; 
+                            
+                            if (
+                                !zipEntry.dir && 
+                                (fileName.endsWith('.png') || fileName.endsWith('.webp')) && 
+                                !baseFileName.startsWith('.')
+                            ) {
+                                const genre = parts.length > 1 ? parts[parts.length - 2] : 'その他';
+                                const name = baseFileName;
+                                if (!structuredData[genre]) { structuredData[genre] = []; }
+
+                                const filePromise = zipEntry.async('blob').then(function(blob) {
+                                    const imgUrl = URL.createObjectURL(blob);
+                                    structuredData[genre].push({ name: name, url: imgUrl, size: blob.size, });
+                                });
+                                imagePromises.push(filePromise);
+                            }
+                        });
+                        return Promise.all(imagePromises).then(() => {
+                            updateProgress(100, '完了！JSONデータを構造化しました。');
+                            return structuredData;
+                        });
+                    }).then(resolve).catch(error => {
+                        updateProgress(100, 'エラーが発生しました。');
+                        console.error('ZIPファイルの処理中にエラー:', error);
+                        reject('ZIP_PROCESSING_ERROR');
+                    });
+                } else {
+                    updateProgress(100, `エラーが発生しました: HTTPステータス ${xhr.status}`);
+                    console.error('ダウンロード中にHTTPエラー:', xhr.status, xhr.statusText);
+                    reject('HTTP_ERROR');
+                }
+            };
+            xhr.onerror = function() {
+                updateProgress(100, 'ネットワークエラーが発生しました。');
+                console.error('ネットワークエラー');
+                reject('NETWORK_ERROR');
+            };
+            xhr.send();
+        });
+    }
+
+    async function loadWallpaperData() {
+        const cachedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (cachedData) {
+            try {
+                updateProgress(100, 'キャッシュからデータをロード中...');
+                allWallpaperData = JSON.parse(cachedData);
+            } catch (e) {
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+            }
+        }
+        try {
+            // キャッシュデータがない場合は、常に新しいZIPファイルを処理してデータをロードする
+            // M3のウェブアプリはPWAとして動作することが想定されるため、今回は最新データ取得を優先
+            allWallpaperData = await processZipFile();
+            // 処理が成功した場合のみキャッシュに保存
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(allWallpaperData));
+            return true;
+        } catch (e) {
+            console.error('データのロードに失敗しました。', e);
+            return false;
+        }
+    }
+
+
+    /**
+     * ビューを切り替える汎用関数 (スライドアニメーション付き)
+     * left プロパティで位置を管理
+     * @param {HTMLElement} nextViewElement - 次に表示するビュー要素
+     * @param {boolean} isBackNavigation - 戻る操作かどうか 
+     */
+    function switchView(nextViewElement, isBackNavigation = false) {
+        if (isAnimating || nextViewElement === currentViewElement) return;
+        
+        isAnimating = true;
+        const prevViewElement = currentViewElement;
+        
+        // 1. 方向を決定
+        let exitClass, enterClass, postExitClass;
+        
+        if (isBackNavigation) {
+            // 戻る操作: 新しいビューは左から入り、古いビューは右へ出る
+            enterClass = 'offscreen-left'; 
+            exitClass = 'offscreen-right';
+            postExitClass = 'offscreen-right'; 
+        } else {
+            // 進む操作: 新しいビューは右から入り、古いビューは左へ出る
+            enterClass = 'offscreen-right'; 
+            exitClass = 'offscreen-left'; 
+            postExitClass = 'offscreen-left';
+        }
+        
+        // 2. 次のビューをエントリー位置に設定
+        nextViewElement.classList.remove('active', 'offscreen-left', 'offscreen-right');
+        nextViewElement.classList.add(enterClass);
+        
+        // Z-indexを調整 
+        nextViewElement.style.zIndex = 40; 
+        if (prevViewElement) {
+             prevViewElement.style.zIndex = 35; 
+        }
+
+        // 3. DOMを強制的に再描画 
+        nextViewElement.offsetWidth; 
+
+        // 4. 新しいビューのアニメーション (入場)
+        window.requestAnimationFrame(() => {
+            nextViewElement.classList.remove(enterClass);
+            nextViewElement.classList.add('active'); // トランジション開始 (left: 0)
+            
+            // 5. 古いビューのアニメーション (退場) - 同時に行う
+            if (prevViewElement) {
+                prevViewElement.classList.remove('active');
+                prevViewElement.classList.remove('offscreen-left', 'offscreen-right'); 
+                prevViewElement.classList.add(exitClass); // トランジション開始
+            }
+
+            // 6. アニメーション完了を transitionend イベントで待機
+            // left プロパティの transitionend を待つ
+            nextViewElement.addEventListener('transitionend', function handler(event) {
+                // transform ではなく left のトランジション完了を検出
+                if (event.propertyName !== 'left') return; 
+                
+                nextViewElement.removeEventListener('transitionend', handler);
+                
+                // アニメーション完了後の処理
+                isAnimating = false; 
+                nextViewElement.style.zIndex = 30; 
+
+                // 古いビューを、退場した位置（postExitClass）に維持する
+                if (prevViewElement) {
+                    prevViewElement.classList.remove(exitClass);
+                    prevViewElement.classList.add(postExitClass); 
+                    prevViewElement.style.zIndex = 10;
+                }
+            });
+        });
+
+        currentViewElement = nextViewElement;
+    }
+
+
+    /**
+     * ジャンル選択ビューをレンダリングし、表示する
+     */
+    function renderGenreView(isInitialLoad = false, isBack = false) {
+        genreList.innerHTML = '';
+        
+        if (!allWallpaperData) return;
+
+        const sortedGenres = Object.keys(allWallpaperData).sort();
+        
+        sortedGenres.forEach(genre => {
+            const images = allWallpaperData[genre];
+            if (images.length === 0) return;
+
+            // 最初の画像をカバーとして使用
+            const coverImage = images[0]; 
+
+            const card = document.createElement('div');
+            card.className = 'genre-card';
+            card.dataset.genre = genre;
+            // ★ 修正: imgタグを削除し、div.genre-image-container を追加し、背景画像を設定 ★
+            card.innerHTML = `
+                <div class="genre-image-container" style="background-image: url('${coverImage.url}')" 
+                    alt="${genre}のカバー画像"></div>
+                <div class="genre-card-content">
+                    <h3>${genre}</h3>
+                </div><md-ripple></md-ripple>
+            `;
+            
+            card.addEventListener('click', () => {
+                showGalleryView(genre);
+            });
+
+            genreList.appendChild(card);
+        });
+
+        appTitle.textContent = '壁紙セレクタ'; 
+        
+        if (isInitialLoad) {
+            // 初期ロード時はアニメーションなしで active にする
+            loadingContainer.style.display = 'none';
+            // 初期位置を明示的に offscreen-right に設定
+            genreView.classList.remove('offscreen-left');
+            genreView.classList.add('offscreen-right'); 
+
+            // 初期ロード時はアニメーションなしで active にする
+            setTimeout(() => {
+                genreView.classList.remove('offscreen-right');
+                genreView.classList.add('active');
+                currentViewElement = genreView;
+            }, 10); 
+            
+        } else {
+            // 戻るボタンなどからの遷移時
+            switchView(genreView, isBack);
+        }
+    }
+
+    /**
+     * 画像ギャラリービューをレンダリングし、表示する
+     */
+    function showGalleryView(genre) {
+        imageGallery.innerHTML = '';
+        
+        const images = allWallpaperData[genre];
+        galleryTitleHeader.textContent = `${genre}`; 
+
+        images.forEach(image => {
+            const div = document.createElement('div');
+            // ★ 修正: imgタグを削除し、div.gallery-image-wrapper を追加し、背景画像を設定 ★
+            div.innerHTML = `
+                <div class="gallery-image-wrapper" 
+                    style="background-image: url('${image.url}')" 
+                    title="${image.name}"><md-ripple></md-ripple></div>
+            `;
+            
+            imageGallery.appendChild(div);
+        });
+        
+        // ギャラリービューへ遷移 (進む操作: isBackNavigation=false)
+        switchView(galleryView, false); 
+    }
+
+    /**
+     * 初期処理
+     */
+    loadWallpaperData().then(success => {
+        if (success) {
+            renderGenreView(true); // 初期ロードとしてレンダリング
+        } else {
+            // ロード画面を維持し、エラーメッセージを表示
+            loadingContainer.style.display = 'flex';
+            const loadingText = document.getElementById('loading-text');
+            loadingText.style.color = 'red';
+            loadingText.textContent = 'データのロード中に致命的なエラーが発生しました。';
+        }
+    });
+
+    /**
+     * 戻るボタンのイベントリスナー
+     */
+    backButton.addEventListener('click', () => {
+        if (currentViewElement === galleryView) {
+            // 戻る操作としてレンダリング (isBack = true)
+            renderGenreView(false, true); 
+        }
+    });
+
+});
+    </script>
+</body>
+</html>
