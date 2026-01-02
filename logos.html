@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Identity Showcase - M3 Expressive Red</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        :root {
+            --m3-primary: #BA1A1A; /* M3 Standard Red */
+            --m3-primary-container: #FFDAD6;
+            --m3-on-primary-container: #410002;
+            --m3-surface: #FFF8F7;
+            --m3-surface-container-low: #FCEAE9;
+            --m3-surface-container-high: #F4DDDB;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--m3-surface);
+            color: #201A1A;
+            overflow-x: hidden;
+        }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-auto-rows: 300px;
+            gap: 1.5rem;
+        }
+
+        .m3-card {
+            position: relative;
+            background: var(--m3-surface-container-low);
+            border-radius: 32px; /* M3 Expressive Shape */
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem;
+            border: 1px solid transparent;
+        }
+
+        .m3-card:hover {
+            background: var(--m3-surface-container-high);
+            transform: scale(1.02);
+            border-color: var(--m3-primary-container);
+            box-shadow: 0 12px 24px rgba(186, 26, 26, 0.06);
+        }
+
+        .card-actions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.4s ease;
+        }
+
+        .m3-card:hover .card-actions {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .action-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--m3-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--m3-primary);
+            color: white;
+            transform: rotate(-8deg);
+        }
+
+        .span-2-2 { grid-column: span 2; grid-row: span 2; }
+        @media (max-width: 768px) { .span-2-2 { grid-column: span 1; grid-row: span 1; } }
+
+        .mesh-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(186, 26, 26, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 218, 214, 0.5) 0%, transparent 40%);
+        }
+
+        /* Snackbar */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #311111;
+            color: #fff;
+            text-align: center;
+            border-radius: 12px;
+            padding: 16px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body class="p-8 md:p-16">
+    <div class="mesh-bg"></div>
+
+    <header class="mb-20 max-w-4xl">
+        <div class="inline-block px-4 py-1 bg-red-100 text-red-700 rounded-full text-sm font-bold mb-6">
+            M3 EXPRESSIVE SYSTEM
+        </div>
+        <h1 class="text-7xl font-extrabold tracking-tighter mb-6 italic">
+            Visual Identity<span class="text-red-600">.</span>
+        </h1>
+        <p class="text-xl text-gray-500 leading-relaxed">
+            ブランドの魂をデジタルで管理する。
+            <span class="text-red-600 font-semibold">Red Accent</span> を基調とした
+            Material Design 3 の表現豊かなアセット管理ボード。
+        </p>
+    </header>
+
+    <main class="bento-grid max-w-[1400px] mx-auto">
+        <script>
+            const logos = [
+                { name: 'Primary Brand', src: 'logos/3958logo_main.svg', span: 'span-2-2' },
+                { name: '3D Space', src: 'logos/3dspace-main.svg' },
+                { name: 'TechPick', src: 'logos/techpick10-main.svg' },
+                { name: 'Toolboard', src: 'logos/toolboard-main.svg' },
+                { name: 'Dot Asset', src: 'logos/3958logo_dot.svg' },
+                { name: 'Docs System', src: 'logos/docs-main.svg' },
+                { name: 'Entertainment', src: 'logos/games-main.svg' },
+                { name: 'Hwawondae', src: 'logos/hwawondae-main.svg' },
+                { name: 'M3 Style Guide', src: 'logos/3958logo_m3.svg' },
+                { name: 'Minimalist Flat', src: 'logos/3958logo_flat.svg' }
+            ];
+
+            document.write(logos.map(logo => `
+                <div class="m3-card ${logo.span || ''} group">
+                    <img src="${logo.src}" alt="${logo.name}" class="w-3/4 h-3/4 object-contain transition-all duration-500 group-hover:scale-110 group-hover:drop-shadow-xl">
+                    
+                    <div class="card-actions">
+                        <button onclick="copyLink('${logo.src}')" class="action-btn" title="URLをコピー">
+                            <span class="material-symbols-outlined">link</span>
+                        </button>
+                        <a href="${logo.src}" download class="action-btn" title="ダウンロード">
+                            <span class="material-symbols-outlined">download</span>
+                        </a>
+                    </div>
+                    
+                    <div class="absolute top-8 left-8">
+                        <span class="text-[10px] font-black tracking-[0.2em] text-red-900/40 uppercase">
+                            ${logo.name}
+                        </span>
+                    </div>
+                </div>
+            `).join(''));
+
+            function copyLink(path) {
+                const fullUrl = window.location.origin + '/' + path;
+                navigator.clipboard.writeText(fullUrl).then(() => {
+                    showToast('クリップボードにコピーしました');
+                });
+            }
+
+            function showToast(message) {
+                const x = document.getElementById("toast");
+                x.innerText = message;
+                x.className = "show";
+                setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+            }
+        </script>
+    </main>
+
+    <footer class="mt-32 py-16 text-center">
+        <div class="w-12 h-1 bg-red-600 mx-auto mb-8"></div>
+        <p class="font-black text-2xl tracking-tighter mb-2">3958 LABS</p>
+        <p class="text-xs text-gray-400 uppercase tracking-widest">© 2026 Material 3 Design Edition</p>
+    </footer>
+
+    <div id="toast"></div>
+</body>
+</html>
