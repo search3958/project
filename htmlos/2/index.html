@@ -1,167 +1,1155 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>WASI Shell</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hanul 2</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0" />
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --window-bg: #ffffff;
+            --text-color: #333;
+            --bar-bg: #fffa;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --transition-ease: cubic-bezier(0.16, 1, 0.3, 1);
+            /* シンプルな計算機用カラー */
+            --calc-main: #555;
+            --calc-digit: #f0f0f0;
+            --calc-operator: #e0e0e0;
+            --calc-special: #ccc;
+            --main-shadow: 0 20px 50px var(--shadow-color),0 10px 25px var(--shadow-color),0 0px 1.5px #0007;
+        }
 
-  <style>
-    body {
-      margin: 0;
-      background: #0b0b0b;
-      color: #00ff88;
-      font-family: monospace;
-    }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            user-select: none;
+            background-image: url(https://search3958.github.io/newtab/bgimg/circle1.webp);
+            background-size: cover;
+            background-position: center;
+            perspective: 1000px;
+        }
+        *{
+            corner-shape:superellipse(1.6);
+        }
+        .dock {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: #fffb;
+            padding: 8px;
+            border-radius: 28px;
+            box-shadow:var(--main-shadow);
+            z-index: 1000;
+            backdrop-shadow:blur(8px);
+        }
 
-    .main-container {
-      padding: 12px;
-    }
+        .dock button {
+            background: #f5f5f7bb;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 18px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-color);
+            transition: transform 0.2s, background 0.2s;
+        }
 
-    #shell-output {
-      white-space: pre-wrap;
-      min-height: 300px;
-      margin-bottom: 8px;
-      overflow-y: auto;
-    }
+        .dock button:hover {
+            background: #e5e5e7bb;
+            transform: translateY(-2px);
+        }
 
-    #shell-input {
-      width: 100%;
-      background: #000;
-      color: #00ff88;
-      border: none;
-      outline: none;
-      font-family: monospace;
-      font-size: 14px;
-    }
-  </style>
+        .window {
+            position: absolute;
+            top: 150px;
+            left: 50px;
+            width: 400px;
+            height: 250px;
+            min-width: 250px;
+            min-height: 150px;
+            background: var(--window-bg);
+            border-radius: 32px;
+            corner-shape:superellipse(1.6);
+            box-shadow:var(--main-shadow);
+            opacity: 0;
+            transform: scale(0.8) rotateX(-20deg);
+            transform-style: preserve-3d;
+            pointer-events: none;
+            transition: opacity 0.4s, transform 0.4s cubic-bezier(.51,0,.5,.61);
+            display: flex;
+            flex-direction: column;
+            will-change: transform, left, width, height;
+            overflow: visible; 
+            cursor: default; 
+        }
+
+        .window.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: all;
+            transition: opacity 0.4s, transform 0.5s cubic-bezier(.28,.14,0,1);
+        }
+
+        .window-content {
+            flex: 1;
+            padding: 24px;
+            overflow: hidden;
+            cursor: default;
+            color: var(--text-color);
+            position: relative;
+        }
+        
+        .control-bar {
+            position: absolute;
+            bottom: -36px; 
+            left: 50%;
+            transform: translateX(-50%);
+            height: 12px;
+            background: var(--bar-bg);
+            --bar-text: #0000;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 6px 0 8px;
+            gap: 10px;
+            width:100px;
+            cursor: grab; 
+            box-shadow:var(--main-shadow);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter:blur(8px);
+            z-index: 10;
+            max-width: 80%;
+            overflow: hidden;
+            color: var(--bar-text);
+            --close-btnbg:#0000;
+            corner-shape:superellipse(1);
+        }
+        
+        .control-bar:hover {
+            --bar-text: #000b;
+            --close-btnbg:#0004;
+            height: 28px;
+            bottom: -40px; 
+            width:140px;
+
+        }
+        .control-bar.dragging {
+            cursor: grabbing;
+        }
+
+        .bar-title {
+            font-size: 10px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 1;
+            max-width: 200px;
+            transition: max-width 0.3s, opacity 0.2s, margin 0.3s;
+        }
+
+        .close-btn-area {
+            width:16px;
+            height: 16px;
+            background: var(--close-btnbg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            corner-shape:superellipse(1);
+        }
+        
+        .close-btn-area:hover {
+            background:color(display-p3 1 0.17 0.174 / 1);
+        }
+
+        .close-icon {
+            position: relative;
+            width: 12px;
+            height: 12px;
+            transition: transform 0.3s;
+        }
+        .close-icon::before, .close-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #fff0;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+        .close-icon::after {
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        /* === ステート変化: リサイズモード === */
+        
+        .window.is-resizing .control-bar,
+        .window.is-resize-hover .control-bar {
+            left: 100%;
+            transform: translateX(-50%);
+            padding: 0;
+            width: 32px; 
+            height: 32px; 
+            bottom: -40px; 
+            justify-content: center;
+            background: #fff4;
+            cursor: nwse-resize;
+        }
+        
+        .window.is-resizing .bar-title,
+        .window.is-resize-hover .bar-title {
+            max-width: 0;
+            opacity: 0;
+            margin: 0;
+        }
+        
+        /* 閉じるボタンのアイコンを完全に非表示 */
+        .window.is-resizing .close-btn-area,
+        .window.is-resize-hover .close-btn-area {
+            background: transparent;
+            pointer-events: none;
+            visibility: hidden; 
+        }
+
+        .window.is-resizing .close-icon,
+        .window.is-resize-hover .close-icon {
+            transform: rotate(90deg) scale(0.9);
+        }
+
+        /* トランジション制御 */
+        .window.no-transition { transition: none !important; }
+        .window.no-transition .control-bar { transition: none !important; }
+        .window.no-transition .bar-title { transition: none !important; }
+        
+        body.global-resize-cursor {
+            cursor: nwse-resize !important;
+        }
+
+        /* --- アプリケーション固有のスタイル --- */
+        
+        /* 計算機 */
+        .app-calculator {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .calc-display {
+            color: #000;
+            padding: 10px;
+            text-align: right;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .calc-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            flex: 1;
+        }
+        .calc-buttons button {
+            background: var(--calc-digit);
+            color: var(--text-color);
+            border: none;
+            padding: 15px 10px;
+            border-radius: 19px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .calc-buttons button:hover {
+            background: #dedede;
+        }
+        .calc-buttons button.operator {
+            background: var(--calc-operator);
+        }
+        .calc-buttons button.special {
+            background: var(--calc-special);
+        }
+
+        /* 時計・タイマー・ストップウォッチ */
+        .time-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            height: 100%;
+            font-weight: 200;
+            color: var(--text-color);
+        }
+        .time-display .main-time {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            font-variant-numeric: tabular-nums; 
+        }
+        .time-controls {
+            display: flex;
+            gap: 15px;
+        }
+        .time-controls button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            background: #f0f0f0;
+            cursor: pointer;
+        }
+        
+        /* iFrame Browser */
+        .app-iframe-browser {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        .browser-url-bar {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .browser-url-bar input {
+            flex-grow: 1;
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            outline: none;
+        }
+        .browser-url-bar button {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-left: none;
+            background: #f0f0f0;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        .browser-iframe {
+            flex-grow: 1;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius:16px;
+        }
+        .browser-iframe iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* App Control */
+        .app-control-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .app-control-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .app-control-list li:last-child {
+            border-bottom: none;
+        }
+        .app-control-list li .app-name {
+            font-weight: 500;
+        }
+        .app-control-list li button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            background: #f0f0f0;
+            cursor: pointer;
+        }
+        .app-control-list li button.open {
+            background: #d4edda; 
+        }
+        .app-control-list li button.close {
+            background: #f8d7da; 
+        }
+        .app-control-list li.inactive .app-name {
+            color: #aaa;
+        }
+    </style>
 </head>
 <body>
-  <div class="main-container">
-    <div id="shell-output"></div>
-    <input id="shell-input" placeholder="command..." autocomplete="off" />
-  </div>
 
-  <script type="module">
-    /* =========================================================
-       DOM取得（nullチェック徹底）
-    ========================================================= */
-    const outputEl = document.getElementById("shell-output");
-    if (!outputEl) {
-      console.error("[WASI] shell-output not found");
-      throw new Error("shell-output missing");
-    }
+    <div class="dock">
+        <button data-target="window-1">
+            <span class="material-symbols-rounded">verified</span>
+        </button>
+        <button data-target="window-2"><span class="material-symbols-rounded">
+photo
+</span></button>
+        <button data-target="window-4"><span class="material-symbols-rounded">
+calculate
+</span></button>
+        <button data-target="window-5"><span class="material-symbols-rounded">
+nest_clock_farsight_analog
+</span></button>
+        <button data-target="window-7"><span class="material-symbols-rounded">
+hourglass_bottom
+</span></button>
+        <button data-target="window-8"><span class="material-symbols-rounded">
+timer
+</span></button>
+        <button data-target="window-9"><span class="material-symbols-rounded">
+globe
+</span></button>
+        <button data-target="window-10"><span class="material-symbols-rounded">
+dashboard_2_gear
+</span></button>
+    </div>
 
-    const inputEl = document.getElementById("shell-input");
-    if (!inputEl) {
-      console.error("[WASI] shell-input not found");
-      throw new Error("shell-input missing");
-    }
+    <div id="window-1" class="window" data-app-name="はじめに" style="left: 50px; width: 350px;">
+        <div class="window-content">
+            <p style="margin-top:0; font-weight:bold; color:#888; font-size:0.8rem;">TEXT</p>
+            <p>全てのウィンドウは、右下隅の60pxの範囲でリサイズ可能です。</p>
+            <p>計算機、タイマー、ストップウォッチ、ブラウザ、App Controlが追加されました。</p>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">はじめに.txt</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-    console.log("[WASI] DOM initialized");
+    <div id="window-2" class="window" data-app-name="写真" style="left: 100px;">
+        <div class="window-content">
+            <div style="width:100%; height:100%; background:#f0f0f0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ccc;">
+                Image Area
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">Photo.jpg</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-    /* =========================================================
-       WASI / wasmfs（ローカル import）
-    ========================================================= */
-    import { WASI } from "./node_modules/@wasmer/wasi/dist/index.esm.js";
-    import {
-      init as wasmfsInit,
-      WASI as WASIBindings
-    } from "./node_modules/@wasmer/wasmfs/dist/index.esm.js";
+    <div id="window-3" class="window" data-app-name="設定" style="left: 200px; height: 180px;">
+        <div class="window-content">
+            <p>設定ウィンドウ</p>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">設定</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-    await wasmfsInit();
-    console.log("[WASI] wasmfs initialized");
+    <div id="window-6" class="window" data-app-name="テキストエディタ" style="left: 550px; top: 50px; width: 500px; height: 350px; min-width: 250px; min-height: 150px;">
+        <div class="window-content" style="padding: 10px;">
+            <div class="app-text-editor">
+                <textarea placeholder="ここにテキストを入力..." spellcheck="false" style="width: 100%; height: 100%; border: none; padding: 0; margin: 0; resize: none; font-size: 14px; font-family: monospace; color: var(--text-color); background: transparent; outline: none; display: block;"></textarea>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">無題のファイル.txt</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-    /* =========================================================
-       出力ユーティリティ
-    ========================================================= */
-    function writeOutput(text) {
-      outputEl.textContent += text;
-      outputEl.scrollTop = outputEl.scrollHeight;
-    }
+    <div id="window-4" class="window" data-app-name="計算機" style="left: 450px; top: 100px; width: 300px; height: 400px; min-width: 300px; min-height: 350px;">
+        <div class="window-content" style="padding: 10px;">
+            <div class="app-calculator">
+                <div class="calc-display">0</div>
+                <div class="calc-buttons">
+                    <button class="special clear">AC</button>
+                    <button class="special operator">±</button>
+                    <button class="special operator">%</button>
+                    <button class="operator">/</button>
+                    <button>7</button>
+                    <button>8</button>
+                    <button>9</button>
+                    <button class="operator">*</button>
+                    <button>4</button>
+                    <button>5</button>
+                    <button>6</button>
+                    <button class="operator">-</button>
+                    <button>1</button>
+                    <button>2</button>
+                    <button>3</button>
+                    <button class="operator">+</button>
+                    <button style="grid-column: span 2;">0</button>
+                    <button>.</button>
+                    <button class="operator equal">=</button>
+                </div>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">計算機</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-    /* =========================================================
-       busybox.wasm ロード
-    ========================================================= */
-    let wasmModule = null;
+    <div id="window-5" class="window" data-app-name="時計" style="left: 800px; top: 200px; width: 280px; height: 180px; min-width: 200px; min-height: 100px;">
+        <div class="window-content">
+            <div class="time-display">
+                <span class="main-time clock-time">12:00:00</span>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">時計</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
+    
+    <div id="window-7" class="window" data-app-name="タイマー" style="left: 100px; top: 500px; width: 300px; height: 200px; min-width: 250px; min-height: 150px;">
+        <div class="window-content">
+            <div class="time-display app-timer">
+                <input type="number" value="10" min="1" max="3600" style="width: 80px; padding: 5px; margin-bottom: 10px; text-align: center;">
+                <span class="main-time timer-display">10:00</span>
+                <div class="time-controls">
+                    <button class="timer-start">スタート</button>
+                    <button class="timer-reset" disabled>リセット</button>
+                </div>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">タイマー</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-    async function loadBusyBox() {
-      console.log("[WASI] loading busybox.wasm");
-      const res = await fetch("./busybox.wasm");
-      if (!res.ok) {
-        console.error("[WASI] busybox.wasm fetch failed:", res.status);
-        return;
-      }
+    <div id="window-8" class="window" data-app-name="ストップウォッチ" style="left: 450px; top: 550px; width: 300px; height: 200px; min-width: 250px; min-height: 150px;">
+        <div class="window-content">
+            <div class="time-display app-stopwatch">
+                <span class="main-time stopwatch-display">00:00.00</span>
+                <div class="time-controls">
+                    <button class="stopwatch-start">スタート</button>
+                    <button class="stopwatch-reset" disabled>リセット</button>
+                </div>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">ストップウォッチ</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-      const bytes = await res.arrayBuffer();
-      wasmModule = await WebAssembly.compile(bytes);
-      console.log("[WASI] busybox.wasm compiled");
-    }
+    <div id="window-9" class="window" data-app-name="ブラウザ" style="left: 850px; top: 50px; width: 450px; height: 500px; min-width: 300px; min-height: 300px;">
+        <div class="window-content" style="padding: 10px;">
+            <div class="app-iframe-browser">
+                <div class="browser-url-bar">
+                    <input type="text" value="https://www.google.com" placeholder="URLを入力" class="url-input">
+                    <button class="go-button">Go</button>
+                </div>
+                <div class="browser-iframe">
+                    <iframe src="about:blank" class="iframe-view"></iframe>
+                </div>
+            </div>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">ブラウザ</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-    await loadBusyBox();
+    <div id="window-10" class="window" data-app-name="App Control" style="left: 1000px; top: 550px; width: 350px; height: 350px; min-width: 250px; min-height: 200px;">
+        <div class="window-content">
+            <h3>App Control</h3>
+            <ul class="app-control-list">
+                </ul>
+        </div>
+        <div class="control-bar">
+            <span class="bar-title">App Control</span>
+            <div class="close-btn-area"><div class="close-icon"></div></div>
+        </div>
+    </div>
 
-    if (!wasmModule) {
-      throw new Error("busybox.wasm not loaded");
-    }
 
-    /* =========================================================
-       コマンド実行（1コマンド1インスタンス）
-    ========================================================= */
-    async function runCommand(commandLine) {
-      const args = commandLine.split(" ").filter(Boolean);
-      if (args.length === 0) return;
-
-      writeOutput(`$ ${commandLine}\n`);
-
-      const wasi = new WASI({
-        args: ["busybox", ...args],
-        env: {},
-        bindings: {
-          ...WASIBindings,
-          fs: WASIBindings.fs,
-          stdout: {
-            write(_fd, buffer) {
-              writeOutput(new TextDecoder().decode(buffer));
-              return buffer.length;
+    <script>
+        class WindowManager {
+            constructor() {
+                this.windows = document.querySelectorAll('.window');
+                this.buttons = document.querySelectorAll('[data-target]');
+                this.zIndex = 100;
+                this.RESIZE_THRESHOLD = 60; 
+                this.currentResizeHover = null; 
+                this.init();
             }
-          },
-          stderr: {
-            write(_fd, buffer) {
-              writeOutput(new TextDecoder().decode(buffer));
-              return buffer.length;
+
+            init() {
+                this.buttons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.openWindow(btn.getAttribute('data-target'));
+                    });
+                });
+
+                this.windows.forEach(win => {
+                    this.setupResizeAndMove(win);
+                    this.setupCloseButton(win);
+                });
+                
+                document.addEventListener('mousemove', this.handleGlobalMouseMove.bind(this));
+                
+                // アプリの初期化
+                this.initCalculator();
+                this.initClock();
+                this.initTextEditor();
+                this.initTimer();
+                this.initStopwatch();
+                this.initIframeBrowser();
+                this.initAppControl();
             }
-          }
+
+            // --- Window Management Methods (修正箇所) ---
+
+            openWindow(id) {
+                const win = document.getElementById(id);
+                if (win) {
+                    // 1. ウィンドウを画面中央に配置
+                    const winRect = win.getBoundingClientRect();
+                    const screenWidth = window.innerWidth;
+                    const screenHeight = window.innerHeight;
+
+                    // 中央位置を計算
+                    const centerX = (screenWidth - winRect.width) / 2;
+                    const centerY = (screenHeight - winRect.height) / 2;
+
+                    // CSSスタイルを更新
+                    win.style.left = `${centerX}px`;
+                    win.style.top = `${centerY}px`;
+
+                    // 2. ウィンドウをアクティブにして前面へ
+                    win.classList.add('active');
+                    this.bringToFront(win);
+                    
+                    if (id === 'window-10') {
+                        this.updateAppControlList(); 
+                    }
+                }
+            }
+
+            closeWindow(win) {
+                win.classList.remove('active');
+                win.classList.remove('is-resizing');
+                win.classList.remove('is-resize-hover');
+                this.updateAppControlList(); 
+            }
+
+            bringToFront(win) {
+                this.zIndex++;
+                win.style.zIndex = this.zIndex;
+            }
+
+            setupCloseButton(win) {
+                const closeBtn = win.querySelector('.close-btn-area');
+                closeBtn.addEventListener('mousedown', (e) => {
+                    if (!win.classList.contains('is-resizing')) {
+                        e.stopPropagation(); 
+                        this.closeWindow(win);
+                    }
+                });
+            }
+
+            // --- Resize/Move Logic (前回の修正を維持) ---
+
+            isNearResizeCorner(win, clientX, clientY) {
+                const rect = win.getBoundingClientRect();
+                const threshold = this.RESIZE_THRESHOLD; 
+
+                const distanceX = clientX - (rect.left + rect.width);
+                const isNearRight = distanceX >= -threshold && distanceX <= 5; 
+
+                const distanceY = clientY - (rect.top + rect.height);
+                const isNearBottom = distanceY >= -threshold && distanceY <= threshold; 
+                
+                return isNearRight && isNearBottom;
+            }
+            
+            handleGlobalMouseMove(e) {
+                if (document.querySelector('.window.is-resizing') || document.querySelector('.control-bar.dragging')) {
+                    return;
+                }
+
+                let foundHover = false;
+
+                const activeWindows = Array.from(this.windows).filter(win => win.classList.contains('active'));
+                activeWindows.sort((a, b) => (parseInt(b.style.zIndex) || 0) - (parseInt(a.style.zIndex) || 0));
+
+                for (const win of activeWindows) {
+                    if (this.isNearResizeCorner(win, e.clientX, e.clientY)) {
+                        if (this.currentResizeHover !== win) {
+                            if (this.currentResizeHover) {
+                                this.currentResizeHover.classList.remove('is-resize-hover');
+                            }
+                            win.classList.add('is-resize-hover');
+                            this.currentResizeHover = win;
+                        }
+                        document.body.classList.add('global-resize-cursor');
+                        foundHover = true;
+                        break; 
+                    }
+                }
+
+                if (!foundHover) {
+                    if (this.currentResizeHover) {
+                        this.currentResizeHover.classList.remove('is-resize-hover');
+                        this.currentResizeHover = null;
+                    }
+                    document.body.classList.remove('global-resize-cursor');
+                }
+            }
+
+
+            setupResizeAndMove(win) {
+                const controlBar = win.querySelector('.control-bar');
+                
+                win.addEventListener('mousemove', (e) => {
+                    if (!win.classList.contains('is-resizing') && !win.classList.contains('is-resize-hover') && e.target.closest('.control-bar')) {
+                        win.style.cursor = 'grab';
+                    } else if (!win.classList.contains('is-resizing') && !win.classList.contains('is-resize-hover')) {
+                        win.style.cursor = 'default'; 
+                    }
+                });
+
+                win.addEventListener('mousedown', (e) => {
+                    this.bringToFront(win);
+                    win.classList.add('no-transition');
+
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const rect = win.getBoundingClientRect();
+                    
+                    const isNearCorner = this.isNearResizeCorner(win, startX, startY);
+                    
+                    const isResizing = isNearCorner; 
+                    
+                    const isMoving = e.target.closest('.control-bar') && !isResizing;
+                    
+                    const isCloseButton = e.target.closest('.close-btn-area');
+
+                    if (!isResizing && !isMoving || isCloseButton) {
+                        win.classList.remove('no-transition');
+                        return;
+                    }
+
+                    if (isResizing) {
+                        win.classList.add('is-resizing');
+                        const startWidth = rect.width;
+                        const startHeight = rect.height;
+                        const minWidth = parseInt(win.style.minWidth) || 250;
+                        const minHeight = parseInt(win.style.minHeight) || 150;
+
+                        const onMouseMove = (moveEvent) => {
+                            const dx = moveEvent.clientX - startX;
+                            const dy = moveEvent.clientY - startY;
+
+                            win.style.width = `${Math.max(minWidth, startWidth + dx)}px`;
+                            win.style.height = `${Math.max(minHeight, startHeight + dy)}px`;
+                        };
+
+                        const onMouseUp = () => {
+                            win.classList.remove('is-resizing');
+                            win.classList.remove('is-resize-hover');
+                            win.classList.remove('no-transition');
+                            document.body.classList.remove('global-resize-cursor');
+                            document.removeEventListener('mousemove', onMouseMove);
+                            document.removeEventListener('mouseup', onMouseUp);
+                        };
+
+                        document.addEventListener('mousemove', onMouseMove);
+                        document.addEventListener('mouseup', onMouseUp);
+                    } 
+                    
+                    else if (isMoving) {
+                        controlBar.classList.add('dragging');
+                        const initialLeft = rect.left;
+                        const initialTop = rect.top;
+
+                        const onMouseMove = (moveEvent) => {
+                            const dx = moveEvent.clientX - startX;
+                            const dy = moveEvent.clientY - startY;
+                            
+                            win.style.left = `${initialLeft + dx}px`;
+                            win.style.top = `${initialTop + dy}px`; 
+                        };
+
+                        const onMouseUp = () => {
+                            controlBar.classList.remove('dragging');
+                            win.classList.remove('no-transition');
+                            document.removeEventListener('mousemove', onMouseMove);
+                            document.removeEventListener('mouseup', onMouseUp);
+                        };
+
+                        document.addEventListener('mousemove', onMouseMove);
+                        document.addEventListener('mouseup', onMouseUp);
+                    }
+                });
+            }
+            
+            // --- Application Implementations (変更なし) ---
+
+            initCalculator() {
+                const calculator = document.getElementById('window-4');
+                if (!calculator) return;
+
+                const display = calculator.querySelector('.calc-display');
+                const buttons = calculator.querySelector('.calc-buttons');
+                let currentInput = '0';
+                let previousInput = null;
+                let operator = null;
+                let resetDisplay = false;
+
+                const updateDisplay = () => {
+                    display.textContent = currentInput;
+                };
+
+                const calculate = () => {
+                    const prev = parseFloat(previousInput);
+                    const current = parseFloat(currentInput);
+                    if (isNaN(prev) || isNaN(current) || !operator) return;
+
+                    let result;
+                    switch (operator) {
+                        case '+': result = prev + current; break;
+                        case '-': result = prev - current; break;
+                        case '*': result = prev * current; break;
+                        case '/': result = prev / current; break;
+                        default: return;
+                    }
+                    currentInput = String(Math.round(result * 10000) / 10000); 
+                    previousInput = null;
+                    operator = null;
+                    resetDisplay = true;
+                    updateDisplay();
+                };
+
+                buttons.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target.tagName !== 'BUTTON') return;
+
+                    const value = target.textContent;
+
+                    if (target.classList.contains('clear')) {
+                        currentInput = '0';
+                        previousInput = null;
+                        operator = null;
+                        resetDisplay = false;
+                    } else if (target.classList.contains('equal')) {
+                        calculate();
+                    } else if (target.classList.contains('operator') && !target.classList.contains('equal')) {
+                        if (value === '±') {
+                            currentInput = String(parseFloat(currentInput) * -1);
+                        } else if (value === '%') {
+                            currentInput = String(parseFloat(currentInput) / 100);
+                            resetDisplay = true;
+                        } else {
+                            if (previousInput && operator) {
+                                calculate(); 
+                            }
+                            previousInput = currentInput;
+                            operator = value;
+                            resetDisplay = true;
+                        }
+                    } else if (value === '.') {
+                        if (!currentInput.includes('.')) {
+                            currentInput += '.';
+                        }
+                    } else { 
+                        if (currentInput === '0' || resetDisplay) {
+                            currentInput = value;
+                            resetDisplay = false;
+                        } else {
+                            currentInput += value;
+                        }
+                    }
+
+                    updateDisplay();
+                });
+
+                updateDisplay(); 
+            }
+
+            initClock() {
+                const clockWin = document.getElementById('window-5');
+                if (!clockWin) return;
+                const clockTime = clockWin.querySelector('.clock-time');
+
+                const updateClock = () => {
+                    const now = new Date();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    const seconds = now.getSeconds().toString().padStart(2, '0');
+                    
+                    clockTime.textContent = `${hours}:${minutes}:${seconds}`;
+                };
+
+                updateClock();
+                setInterval(updateClock, 1000); 
+            }
+            
+            initTextEditor() {
+                const editorWin = document.getElementById('window-6');
+                if (!editorWin) return;
+                const textarea = editorWin.querySelector('textarea');
+                
+                const contentDiv = editorWin.querySelector('.window-content');
+                if(contentDiv) {
+                    const adjustHeight = () => {
+                        textarea.style.height = `${contentDiv.offsetHeight - 20}px`; 
+                    };
+                    adjustHeight();
+                    new ResizeObserver(adjustHeight).observe(editorWin);
+                }
+            }
+
+            initTimer() {
+                const timerWin = document.getElementById('window-7');
+                if (!timerWin) return;
+                
+                const input = timerWin.querySelector('input');
+                const display = timerWin.querySelector('.timer-display');
+                const startBtn = timerWin.querySelector('.timer-start');
+                const resetBtn = timerWin.querySelector('.timer-reset');
+
+                let totalSeconds = 10;
+                let remainingSeconds = 10;
+                let intervalId = null;
+                let isRunning = false;
+
+                const formatTime = (seconds) => {
+                    const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+                    const sec = (seconds % 60).toString().padStart(2, '0');
+                    return `${min}:${sec}`;
+                };
+
+                const updateDisplay = () => {
+                    display.textContent = formatTime(remainingSeconds);
+                    if (remainingSeconds === 0) {
+                        clearInterval(intervalId);
+                        display.textContent = "DONE!";
+                        isRunning = false;
+                        startBtn.textContent = 'スタート';
+                        resetBtn.disabled = false;
+                    }
+                };
+
+                const startTimer = () => {
+                    if (isRunning) return;
+                    isRunning = true;
+                    startBtn.textContent = '一時停止';
+                    resetBtn.disabled = true;
+
+                    intervalId = setInterval(() => {
+                        if (remainingSeconds > 0) {
+                            remainingSeconds--;
+                            updateDisplay();
+                        }
+                    }, 1000);
+                };
+
+                const pauseTimer = () => {
+                    if (!isRunning) return;
+                    clearInterval(intervalId);
+                    isRunning = false;
+                    startBtn.textContent = '再開';
+                    resetBtn.disabled = false;
+                };
+
+                const resetTimer = () => {
+                    clearInterval(intervalId);
+                    isRunning = false;
+                    totalSeconds = parseInt(input.value) * 60 || 10; 
+                    remainingSeconds = totalSeconds;
+                    startBtn.textContent = 'スタート';
+                    resetBtn.disabled = true;
+                    updateDisplay();
+                };
+
+                input.addEventListener('change', () => {
+                    if (!isRunning) {
+                        resetTimer();
+                    }
+                });
+
+                startBtn.addEventListener('click', () => {
+                    if (isRunning) {
+                        pauseTimer();
+                    } else {
+                        startTimer();
+                    }
+                });
+
+                resetBtn.addEventListener('click', resetTimer);
+
+                resetTimer(); 
+            }
+            
+            initStopwatch() {
+                const stopwatchWin = document.getElementById('window-8');
+                if (!stopwatchWin) return;
+                
+                const display = stopwatchWin.querySelector('.stopwatch-display');
+                const startBtn = stopwatchWin.querySelector('.stopwatch-start');
+                const resetBtn = stopwatchWin.querySelector('.stopwatch-reset');
+
+                let startTime = 0;
+                let elapsedTime = 0;
+                let intervalId = null;
+                let isRunning = false;
+
+                const formatTime = (time) => {
+                    const centiseconds = Math.floor((time % 1000) / 10).toString().padStart(2, '0');
+                    const seconds = Math.floor((time / 1000) % 60).toString().padStart(2, '0');
+                    const minutes = Math.floor(time / 60000).toString().padStart(2, '0');
+                    return `${minutes}:${seconds}.${centiseconds}`;
+                };
+
+                const updateDisplay = () => {
+                    const currentTime = Date.now();
+                    elapsedTime = currentTime - startTime;
+                    display.textContent = formatTime(elapsedTime);
+                };
+
+                const startStopwatch = () => {
+                    if (isRunning) return;
+                    isRunning = true;
+                    startBtn.textContent = '一時停止';
+                    resetBtn.disabled = true;
+                    
+                    startTime = Date.now() - elapsedTime; 
+
+                    intervalId = setInterval(updateDisplay, 10); 
+                };
+
+                const pauseStopwatch = () => {
+                    if (!isRunning) return;
+                    clearInterval(intervalId);
+                    isRunning = false;
+                    startBtn.textContent = '再開';
+                    resetBtn.disabled = false;
+                };
+
+                const resetStopwatch = () => {
+                    clearInterval(intervalId);
+                    isRunning = false;
+                    startTime = 0;
+                    elapsedTime = 0;
+                    startBtn.textContent = 'スタート';
+                    resetBtn.disabled = true;
+                    display.textContent = '00:00.00';
+                };
+
+                startBtn.addEventListener('click', () => {
+                    if (isRunning) {
+                        pauseStopwatch();
+                    } else {
+                        startStopwatch();
+                    }
+                });
+
+                resetBtn.addEventListener('click', resetStopwatch);
+
+                resetStopwatch(); 
+            }
+            
+            initIframeBrowser() {
+                const browserWin = document.getElementById('window-9');
+                if (!browserWin) return;
+                
+                const urlInput = browserWin.querySelector('.url-input');
+                const goButton = browserWin.querySelector('.go-button');
+                const iframeView = browserWin.querySelector('.iframe-view');
+                const barTitle = browserWin.querySelector('.bar-title');
+                
+                const loadUrl = () => {
+                    let url = urlInput.value.trim();
+                    if (!url) return;
+                    
+                    if (!/^https?:\/\//i.test(url)) {
+                        url = `https://${url}`;
+                    }
+                    
+                    iframeView.src = url;
+                    barTitle.textContent = url;
+                };
+                
+                goButton.addEventListener('click', loadUrl);
+                urlInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        loadUrl();
+                    }
+                });
+                
+                loadUrl(); 
+            }
+
+            initAppControl() {
+                const appControlWin = document.getElementById('window-10');
+                if (!appControlWin) return;
+                
+                appControlWin.listElement = appControlWin.querySelector('.app-control-list');
+                this.updateAppControlList = this.updateAppControlList.bind(this);
+            }
+            
+            updateAppControlList() {
+                const appControlWin = document.getElementById('window-10');
+                if (!appControlWin || !appControlWin.listElement) return;
+
+                const controllableWindows = Array.from(this.windows).filter(win => win.id !== 'window-10');
+                const list = appControlWin.listElement;
+                list.innerHTML = ''; 
+
+                controllableWindows.forEach(win => {
+                    const isActive = win.classList.contains('active');
+                    const appName = win.getAttribute('data-app-name') || win.id;
+                    const listItem = document.createElement('li');
+                    
+                    listItem.classList.toggle('inactive', !isActive);
+                    listItem.dataset.targetId = win.id;
+
+                    listItem.innerHTML = `
+                        <span class="app-name">${appName}</span>
+                        <button class="${isActive ? 'close' : 'open'}" data-action="${isActive ? 'close' : 'open'}">
+                            ${isActive ? '閉じる' : '開く'}
+                        </button>
+                    `;
+                    
+                    list.appendChild(listItem);
+                });
+
+                list.addEventListener('click', (e) => {
+                    const button = e.target.closest('button');
+                    if (!button) return;
+                    
+                    const targetId = button.closest('li').dataset.targetId;
+                    const targetWin = document.getElementById(targetId);
+                    const action = button.dataset.action;
+
+                    if (targetWin) {
+                        if (action === 'open') {
+                            this.openWindow(targetId);
+                        } else if (action === 'close') {
+                            this.closeWindow(targetWin);
+                        }
+                        this.updateAppControlList();
+                    }
+                });
+            }
         }
-      });
 
-      try {
-        const instance = await WebAssembly.instantiate(
-          wasmModule,
-          { wasi_snapshot_preview1: wasi.wasiImport }
-        );
-
-        wasi.start(instance);
-        console.log("[WASI] executed:", commandLine);
-      } catch (err) {
-        console.error("[WASI] execution error", err);
-        writeOutput("error\n");
-      }
-    }
-
-    /* =========================================================
-       入力処理
-    ========================================================= */
-    inputEl.addEventListener("keydown", async (e) => {
-      if (e.key !== "Enter") return;
-
-      const cmd = inputEl.value.trim();
-      inputEl.value = "";
-
-      if (!cmd) return;
-
-      await runCommand(cmd);
-    });
-
-    writeOutput("WASI shell ready.\n");
-    console.log("[WASI] shell ready");
-  </script>
+        document.addEventListener('DOMContentLoaded', () => {
+            new WindowManager();
+        });
+    </script>
 </body>
 </html>
