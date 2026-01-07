@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>WebTerminal Pro</title>
+    <script src="coi-serviceworker.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.1.0/css/xterm.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.1.0/lib/xterm.js"></script>
+    <style>
+        
+        body{
+          margin:0;
+          padding:0;
+            width: 100vw;
+            height: 100vh;
+            position:fixed;
+            top:0;
+            left:0;
+            background-color: #4e0101; /* 確認用背景色 */
+        }
+        #terminal-container { width: 100vw; height: 100vh; padding: 5px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <div id="terminal-container"></div>
+
+    <script type="module">
+        import { WebContainer } from 'https://esm.sh/@webcontainer/api';
+
+        window.addEventListener('load', async () => {
+            if (!window.crossOriginIsolated) return;
+
+            const term = new Terminal({
+                cursorBlink: true,
+                fontFamily: '"Fira Code", monospace',
+                theme: { background: '#0c0c0c', foreground: '#d1d1d1' }
+            });
+            term.open(document.getElementById('terminal-container'));
+
+            term.write('\x1b[36m>>> System Booting...\x1b[0m\r\n');
+            const webcontainerInstance = await WebContainer.boot();
+            
+            // --- 独自コマンドの設定 ---
+            const CUSTOM_COMMANDS = {
+                'help': () => {
+                    term.write('\r\n\x1b[1mAVAILABLE COMMANDS:\x1b[0m\r\n');
+                    term.write('  \x1b[33mhelp\x1b[0m     - このヘルプを表示\r\n');
+                    term.write('  \x1b[33minfo\x1b[0m     - システム情報を表示\r\n');
+                    term.write('  \x1b[33mapp\x1b[0m      - 挨拶アプリをインストールして実行\r\n');
+                    term.write('  \x1b[33mclear\x1b[0m    - 画面を消去\r\n');
+                    term.write('  \x1b[32mls, node\x1b[0m - 標準のLinuxコマンド\r\n\r\n');
+                },
+                'info': () => {
+                    term.write('\r\n\x1b[35m OS:\x1b[0m WebContainer OS v1.0\r\n');
+                    term.write('\x1b[35m RUNTIME:\x1b[0m Node.js / WebAssembly\r\n');
+                    term.write('\x1b[35m MEMORY:\x1b[0m SharedArrayBuffer Enabled\r\n\r\n');
+                },
+                'app': async () => {
+                    term.write('\r\nInstalling Greeting App...\r\n');
+                    await webcontainerInstance.fs.writeFile('/main.js', `
+                        console.log("App Started!");
+                        process.stdout.write("名前を入力: ");
+                        process.stdin.on("data", (d) => {
+                            console.log("Hello, " + d.toString().trim() + "!");
+                            process.exit();
+                        });
+                    `);
+                    term.write('Done. Run \x1b[32mnode main.js\x1b[0m to start.\r\n\r\n');
+                }
+            };
+
+            // シェルの起動
+            const shellProcess = await webcontainerInstance.spawn('jsh');
+            const input = shellProcess.input.getWriter();
+
+            // 入力データの監視（自作コマンドのフック）
+            let currentLine = '';
+            term.onData(data => {
+                if (data === '\r') { // Enterが押された時
+                    const cmd = currentLine.trim();
+                    if (CUSTOM_COMMANDS[cmd]) {
+                        CUSTOM_COMMANDS[cmd]();
+                        // jsh側のプロンプトを再表示させるために空のEnterを送る
+                        input.write('\r');
+                    } else if (cmd === 'clear') {
+                        term.clear();
+                        input.write('\r');
+                    } else {
+                        input.write(data);
+                    }
+                    currentLine = '';
+                } else if (data === '\u007f') { // Backspace
+                    currentLine = currentLine.slice(0, -1);
+                    input.write(data);
+                } else {
+                    currentLine += data;
+                    input.write(data);
+                }
+            });
+
+            shellProcess.output.pipeTo(new WritableStream({
+                write(data) { term.write(data); }
+            }));
+
+            term.write('\x1b[32m✔ Terminal Ready!\x1b[0m\r\n');
+            term.write('Type \x1b[33mhelp\x1b[0m to see custom commands.\r\n\r\n');
+        });
+    </script>
+</body>
+</html>

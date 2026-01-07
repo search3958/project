@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>WebTerminal Pro x Lottie</title>
+    <script src="coi-serviceworker.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.1.0/css/xterm.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.1.0/lib/xterm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #0c0c0c;
+            overflow: hidden;
+        }
+
+        #terminal-container {
+            width: 100vw;
+            height: 100vh;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        #lottie-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            /* フェード時間を0.3sに最適化 */
+            transition: opacity 0.3s ease, visibility 0.3s;
+        }
+
+        .fade-out {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="lottie-overlay">
+        <div id="lottie-container" style="width: 100vw; height: 100vh;"></div>
+    </div>
+
+    <div id="terminal-container"></div>
+
+    <script type="module">
+        import { WebContainer } from 'https://esm.sh/@webcontainer/api';
+
+        window.addEventListener('load', async () => {
+            if (!window.crossOriginIsolated) {
+                console.error("COOP/COEP headers are missing.");
+                return;
+            }
+
+            // 1. Lottieアニメーションのセットアップ
+            const lottieContainer = document.getElementById('lottie-container');
+            const overlay = document.getElementById('lottie-overlay');
+            
+            const animation = lottie.loadAnimation({
+                container: lottieContainer,
+                renderer: 'svg',
+                loop: false, 
+                autoplay: true,
+                path: 'data.json'
+            });
+
+            // アニメーション完了を待つためのPromise
+            const animationFinished = new Promise(resolve => {
+                animation.onComplete = () => resolve();
+            });
+
+            // 2. ターミナルの初期化
+            const term = new Terminal({
+                cursorBlink: true,
+                fontFamily: '"Fira Code", monospace',
+                theme: { background: '#0c0c0c', foreground: '#d1d1d1' }
+            });
+            term.open(document.getElementById('terminal-container'));
+
+            // 3. WebContainerの起動とアニメーション終了を同時に待つ
+            term.write('\x1b[36m>>> System Booting...\x1b[0m\r\n');
+            
+            // bootとアニメーション完了、両方が終わるまで待機
+            const [webcontainerInstance] = await Promise.all([
+                WebContainer.boot(),
+                animationFinished
+            ]);
+            
+            // 両方完了したらフェードアウト
+            overlay.classList.add('fade-out');
+
+            // --- 独自コマンドの設定 (変更なし) ---
+            const CUSTOM_COMMANDS = {
+                'help': () => {
+                    term.write('\r\n\x1b[1mAVAILABLE COMMANDS:\x1b[0m\r\n');
+                    term.write('  \x1b[33mhelp\x1b[0m     - このヘルプを表示\r\n');
+                    term.write('  \x1b[33minfo\x1b[0m     - システム情報を表示\r\n');
+                    term.write('  \x1b[33mapp\x1b[0m      - 挨拶アプリをインストールして実行\r\n');
+                    term.write('  \x1b[33mclear\x1b[0m    - 画面を消去\r\n');
+                    term.write('  \x1b[32mls, node\x1b[0m - 標準のLinuxコマンド\r\n\r\n');
+                },
+                'info': () => {
+                    term.write('\r\n\x1b[35m OS:\x1b[0m ZhiliuOS v1.0\r\n');
+                    term.write('\x1b[35m RUNTIME:\x1b[0m Node.js / WebAssembly\r\n');
+                    term.write('\x1b[35m MEMORY:\x1b[0m SharedArrayBuffer Enabled\r\n\r\n');
+                }
+            };
+
+            // シェルの起動
+            const shellProcess = await webcontainerInstance.spawn('jsh');
+            const input = shellProcess.input.getWriter();
+
+            let currentLine = '';
+            term.onData(data => {
+                if (data === '\r') {
+                    const cmd = currentLine.trim();
+                    if (CUSTOM_COMMANDS[cmd]) {
+                        CUSTOM_COMMANDS[cmd]();
+                        input.write('\r');
+                    } else if (cmd === 'clear') {
+                        term.clear();
+                        input.write('\r');
+                    } else {
+                        input.write(data);
+                    }
+                    currentLine = '';
+                } else if (data === '\u007f') {
+                    currentLine = currentLine.slice(0, -1);
+                    input.write(data);
+                } else {
+                    currentLine += data;
+                    input.write(data);
+                }
+            });
+
+            shellProcess.output.pipeTo(new WritableStream({
+                write(data) { term.write(data); }
+            }));
+
+            term.write('\x1b[32m✔ Terminal Ready!\x1b[0m\r\n');
+            term.write('Type \x1b[33mhelp\x1b[0m to see custom commands.\r\n\r\n');
+        });
+    </script>
+</body>
+</html>

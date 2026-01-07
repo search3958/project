@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottie アニメーション再生</title>
+    <style>
+        body{
+
+            width: 100vw;
+            height: 100vh;
+            position:fixed;
+            top:0;
+            left:0;
+            background-color: #4e0101; /* 確認用背景色 */
+        }
+        /* アニメーションを表示するコンテナのサイズを指定 */
+        #lottie-container {
+            width: 100vw;
+            height: 100vh;
+            position:fixed;
+            top:0;
+            left:0;
+            background-color: #000; /* 確認用背景色 */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="lottie-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+
+    <script>
+        // 2. アニメーションの設定
+        const animation = lottie.loadAnimation({
+            container: document.getElementById('lottie-container'), // 表示させる要素
+            renderer: 'svg',        // 描写形式（svg / canvas / html）
+            loop: true,             // ループ再生の有無
+            autoplay: true,         // 自動再生の有無
+            path: 'data.json'       // 同じフォルダにあるjsonファイルのパス
+        });
+    </script>
+</body>
+</html>
