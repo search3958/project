@@ -1,0 +1,12 @@
+<windodw width="400px">
+    <title id="hello-window-main">こんにちは</title>
+    <vstack gap="8px">
+        <text-view id="output">こんにちは！さん。</text-view>
+        <text id="output">名前を変更したいならば，以下のテキストボックスを使用してください。</text>
+        <text-input id="name" action="{input#name}">ここに入力</text-input>
+    </vstack>
+    <hstack>
+        <button action="han-gui close hello-window-main">完了</button>
+        <button disabled>無効化</button>
+    </hstack>
+</window>
