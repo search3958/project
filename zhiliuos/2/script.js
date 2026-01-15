@@ -93,6 +93,7 @@ echo " \x1b[36m╚══════╝╚═╝  ╚═╝╚═╝╚═══
 echo ""
 echo "✔ 智流OS-準備は完了しました(v0 Beta)"
 echo "'help'とタイプして，コマンドのヒントを探りましょう！"
+terminal run "node dock.js"
 `.trim()
         }
     },
@@ -138,6 +139,10 @@ if (action === 'open') {
 const args = process.argv.slice(2);
 if (args.includes('--term')) {
     console.log('[[GUI:{"action":"create","type":"terminal","title":"Terminal"}]]');
+} else if (args[0] === 'run' && args[1]) {
+    // terminal run "node ???.js" の場合
+    const cmd = args.slice(1).join(' ');
+    console.log(\`[[GUI:{"action":"create","type":"terminal","title":"Terminal","autorun":\${JSON.stringify(cmd)}}]]\`);
 } else {
     console.log('[[GUI:{"action":"create","title":"Zhiliu Message","content":"<p>Multitasking GUI Window.</p>"}]]');
 }
@@ -201,7 +206,61 @@ main().catch(err => console.error('Error:', err.message));
 
     'package.json': {
         file: { contents: '{"name":"zhiliu-os","type":"commonjs"}' }
+    },
+
+
+
+    'dock.js': {
+        file: {
+            contents: `
+const readline = require('readline');
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const appId = 'hellogui-' + Date.now();
+
+const xmlContent = \`<window width="417px" height="79px" size-change="false">
+    <title id="hello-window-main">Dock</title>
+    <hstack gap="10px">
+        <button action="hellogui">
+            <image action="terminal" id="icon" width="32px" height="32px">./appicons/hello.svg</image>
+        Hello</button>
+
+        <button action="xml-gui example_gui.xml">
+            <image action="terminal" id="icon" width="32px" height="32px">./appicons/xmlgui.svg</image>
+        XML GUI</button>
+
+        <button radius="16px" action="gui-demo">
+            <image action="terminal" id="icon" width="32px" height="32px">./appicons/terminal.svg</image>
+        Win Demo</button>
+    </hstack>
+</window>\`;
+
+console.log(\`[[GUI:{"action":"create-xml","file":"hellogui-\${appId}.xml","xml":\${JSON.stringify(xmlContent)},"appId":"\${appId}"}]]\`);
+
+async function run() {
+    while (true) {
+        const input = await new Promise(resolve => {
+            rl.question('', resolve);
+        });
+
+        const trimmed = input.trim();
+        
+        if (trimmed === '!close-hellogui') {
+            console.log(\`[[GUI:{"action":"close","id":"xml-hellogui-\${appId}"}]]\`);
+            console.log('HelloGUIを終了しました。');
+            process.exit(0);
+        } else if (trimmed) {
+            console.log(\`[[GUI:{"action":"update-xml-element","file":"hellogui-\${appId}.xml","id":"output","value":"名前: \${trimmed}"}]]\`);
+        }
     }
+}
+
+run();
+`.trim()
+        }
+    },
+
+
+
 };
 
 
@@ -243,112 +302,114 @@ class WindowManager {
         return win;
     }
 
-    async createTerminalWindow(title) {
-        if (!this.webcontainerInstance) return;
+async createTerminalWindow(title, autorun) {
+    if (!this.webcontainerInstance) return;
 
-        this.dialogCounter++;
-        const id = `term-win-${this.dialogCounter}`;
-        const termId = `term-${this.dialogCounter}`;
-        const win = this.createWindowElement(id, title);
-        win.style.width = '640px';
-        win.style.height = '450px';
-        
-        const content = win.querySelector('.window-content');
-        content.style.display = 'flex';
-        content.style.flexDirection = 'column';
-        content.style.backgroundColor = '#1e1e1e';
-        content.style.padding = '0';
+    this.dialogCounter++;
+    const id = `term-win-${this.dialogCounter}`;
+    const termId = `term-${this.dialogCounter}`;
+    const win = this.createWindowElement(id, title);
+    
+    // --- (UI構築部分は変更なし) ---
+    win.style.width = '640px';
+    win.style.height = '450px';
+    const content = win.querySelector('.window-content');
+    content.style.display = 'flex';
+    content.style.flexDirection = 'column';
+    content.style.backgroundColor = '#1e1e1e';
+    content.style.padding = '0';
+    const termContainer = document.createElement('div');
+    termContainer.style.flex = '1';
+    termContainer.style.width = '100%';
+    termContainer.setAttribute('data-term-id', termId);
+    content.appendChild(termContainer);
+    const inputArea = document.createElement('div');
+    inputArea.style.display = 'flex';
+    inputArea.style.padding = '10px';
+    inputArea.style.backgroundColor = '#2d2d2d';
+    inputArea.style.borderTop = '1px solid #444';
+    const inputField = document.createElement('input');
+    inputField.type = 'text';
+    inputField.placeholder = 'コマンドを入力...';
+    inputField.style.flex = '1';
+    inputField.style.backgroundColor = '#3c3c3c';
+    inputField.style.color = '#fff';
+    inputField.style.border = 'none';
+    inputField.style.padding = '8px';
+    inputField.style.outline = 'none';
+    const sendBtn = document.createElement('button');
+    sendBtn.innerText = '送信';
+    sendBtn.style.padding = '8px 15px';
+    sendBtn.style.marginLeft = '10px';
+    sendBtn.style.cursor = 'pointer';
+    inputArea.appendChild(inputField);
+    inputArea.appendChild(sendBtn);
+    content.appendChild(inputArea);
 
-        const termContainer = document.createElement('div');
-        termContainer.style.flex = '1';
-        termContainer.style.width = '100%';
-        termContainer.setAttribute('data-term-id', termId);
-        content.appendChild(termContainer);
+    const term = new Terminal({
+        cursorBlink: true,
+        theme: { background: '#1e1e1e' },
+        convertEol: true,
+        fontSize: 14,
+        fontFamily: '"Fira Code", monospace'
+    });
+    term.open(termContainer);
+    this.openWindow(id);
+    inputField.focus();
 
-        const inputArea = document.createElement('div');
-        inputArea.style.display = 'flex';
-        inputArea.style.padding = '10px';
-        inputArea.style.backgroundColor = '#2d2d2d';
-        inputArea.style.borderTop = '1px solid #444';
-        
-        const inputField = document.createElement('input');
-        inputField.type = 'text';
-        inputField.placeholder = 'コマンドを入力...';
-        inputField.style.flex = '1';
-        inputField.style.backgroundColor = '#3c3c3c';
-        inputField.style.color = '#fff';
-        inputField.style.border = 'none';
-        inputField.style.padding = '8px';
-        inputField.style.outline = 'none';
-        
-        const sendBtn = document.createElement('button');
-        sendBtn.innerText = '送信';
-        sendBtn.style.padding = '8px 15px';
-        sendBtn.style.marginLeft = '10px';
-        sendBtn.style.cursor = 'pointer';
+    const shellProcess = await this.webcontainerInstance.spawn('jsh', {
+        terminal: { cols: term.cols, rows: term.rows }
+    });
+    
+    const inputWriter = shellProcess.input.getWriter();
+    this.terminalWriters.set(termId, inputWriter);
 
-        inputArea.appendChild(inputField);
-        inputArea.appendChild(sendBtn);
-        content.appendChild(inputArea);
-
-        const term = new Terminal({
-            cursorBlink: true,
-            theme: { background: '#1e1e1e' },
-            convertEol: true,
-            fontSize: 14,
-            fontFamily: '"Fira Code", monospace'
-        });
-        term.open(termContainer);
-
-        this.openWindow(id);
-        inputField.focus();
-
-        const shellProcess = await this.webcontainerInstance.spawn('jsh', {
-            terminal: { cols: term.cols, rows: term.rows }
-        });
-        
-        const inputWriter = shellProcess.input.getWriter();
-        this.terminalWriters.set(termId, inputWriter);
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-               shellProcess.output.pipeTo(new WritableStream({
-            write(data) {
-                if (data.includes('[[GUI:')) {
-                    const match = data.match(/\[\[GUI:(.*?)\]\]/);
-                    if (match) {
-                        try {
-                            const guiData = JSON.parse(match[1]);
-                            guiData.termId = termId; // どのターミナルから来たかを記録
-                            windowManager.handleGuiCommand(guiData);
-                            term.write(data.replace(/\[\[GUI:.*\]\]/, ''));
-                            return;
-                        } catch (e) { }
-                    }
+    shellProcess.output.pipeTo(new WritableStream({
+        write(data) {
+            if (data.includes('[[GUI:')) {
+                const match = data.match(/\[\[GUI:(.*?)\]\]/);
+                if (match) {
+                    try {
+                        const guiData = JSON.parse(match[1]);
+                        guiData.termId = termId;
+                        windowManager.handleGuiCommand(guiData);
+                        term.write(data.replace(/\[\[GUI:.*\]\]/, ''));
+                        return;
+                    } catch (e) { }
                 }
-                term.write(data);
-            },
-            close() {
-                // CUIプロセスが終了したらウィンドウも閉じる
-                const win = document.getElementById(`term-win-${termId.split('-')[1]}`);
-                if (win) windowManager.closeWindow(win);
             }
-        }));
-        await inputWriter.write("source boot.sh\n");
+            term.write(data);
+        },
+        close() {
+            const win = document.getElementById(id);
+            if (win) windowManager.closeWindow(win);
+        }
+    }));
 
-        const sendInput = async () => {
-            const val = inputField.value;
-            await inputWriter.write(val + "\n");
-            inputField.value = '';
-        };
+    // 【修正ポイント】ここから
+    // 1. シェル(jsh)自体の起動をしっかり待つ
+    await new Promise(resolve => setTimeout(resolve, 500)); 
+    
+    // 2. boot.sh を読み込む
+    await inputWriter.write("source boot.sh\n");
 
-        sendBtn.onclick = sendInput;
-        inputField.onkeydown = (e) => {
-            if (e.key === 'Enter') {
-                sendInput();
-                e.preventDefault();
-            }
-        };
+    // 3. boot.sh 内の echo や処理が終わるのを少し待つ
+    await new Promise(resolve => setTimeout(resolve, 2000)); 
+
+    // 4. autorunがあれば実行
+    if (autorun) {
+        await inputWriter.write(autorun + "\n");
     }
+    // 【修正ポイント】ここまで
+
+    const sendInput = async () => {
+        const val = inputField.value;
+        await inputWriter.write(val + "\n");
+        inputField.value = '';
+    };
+    sendBtn.onclick = sendInput;
+    inputField.onkeydown = (e) => { if (e.key === 'Enter') { sendInput(); e.preventDefault(); } };
+}
 
     createDialog(id, title, html) {
         const win = this.createWindowElement(id, title);
@@ -359,15 +420,16 @@ class WindowManager {
         return win;
     }
 
-    handleGuiCommand(config) {
-        if (config.action === 'create') {
-            const winId = config.id || `win-${++this.dialogCounter}`;
-            if (config.type === 'terminal') {
-                this.createTerminalWindow(config.title);
-            } else {
-                this.createDialog(winId, config.title, config.content || 'Application running...');
-            }
-        } else if (config.action === 'close') {
+handleGuiCommand(config) {
+    if (config.action === 'create') {
+        const winId = config.id || `win-${++this.dialogCounter}`;
+        if (config.type === 'terminal') {
+            // 第2引数に autorun (node dock.js 等) を渡すように修正
+            this.createTerminalWindow(config.title || 'Terminal', config.autorun);
+        } else {
+            this.createDialog(winId, config.title, config.content || 'Application running...');
+        }
+    } else if (config.action === 'close') {
             const win = document.getElementById(config.id);
             if (win) this.closeWindow(win);
         } else if (config.action === 'create-xml') {
@@ -631,13 +693,30 @@ class WindowManager {
 
             case 'button':
                 el = document.createElement('button');
-                el.textContent = xmlNode.textContent;
                 el.style.padding = '8px 16px';
                 el.style.cursor = 'pointer';
                 el.style.border = '1px solid #555';
                 el.style.backgroundColor = '#2a2a2a';
                 el.style.color = '#fff';
                 el.style.borderRadius = '4px';
+                el.style.display = 'inline-flex'; // 画像とテキストを並べやすくする
+                el.style.alignItems = 'center';
+                el.style.justifyContent = 'center';
+                el.style.gap = '8px';
+
+                // 子要素（テキストや画像）をループして追加
+                for (const child of xmlNode.childNodes) {
+                    if (child.nodeType === 3) { // テキストノードの場合
+                        const text = child.textContent.trim();
+                        if (text) {
+                            el.appendChild(document.createTextNode(text));
+                        }
+                    } else if (child.nodeType === 1) { // 要素ノード（imageなど）の場合
+                        const childEl = this.createXmlElement(child, xmlFile);
+                        if (childEl) el.appendChild(childEl);
+                    }
+                }
+
                 const action = xmlNode.getAttribute('action');
                 if (action) {
                     el.onclick = () => this.executeAction(action, xmlFile);
