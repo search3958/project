@@ -15,6 +15,7 @@
     font-optical-sizing: auto;
     font-style: normal;
     line-height: 1.5 !important;
+    corner-shape: superellipse(1.6);
 }
 div#lottie-container {
     scale: 0.5;
@@ -32,6 +33,31 @@ body {
     user-select: none;
 }
 
+
+button {
+  padding: 8px 16px;
+  cursor: pointer;
+  border: 1px solid #555;
+  background-color: #2a2a2a;
+  color: #fff;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* スムーズな色の変化（オプション） */
+  transition: background-color 0.2s;
+}
+
+/* ホバー時のスタイル（おすすめの追加設定） */
+button:hover {
+  background-color: #3f3f3f;
+}
+
+/* クリック時のスタイル */
+button:active {
+  background-color: #1a1a1a;
+}
 /* 背景ターミナル（透過表示） */
 #bg-terminal {
     position: fixed;
@@ -71,8 +97,6 @@ body {
     min-height: 30px;
     max-width: 100vw;
     max-height: 100vh;
-    background: var(--window-bg);
-    border-radius: 16px;
     box-shadow: var(--main-shadow);
     opacity: 0;
     transform: scale(0.8);
@@ -80,8 +104,10 @@ body {
     transition: opacity 0.4s, transform 0.4s cubic-bezier(.51, 0, .5, .61);
     display: flex;
     flex-direction: column;
-    overflow: visible;
     cursor: default;
+    overflow:visible;
+    border-radius: 24px;
+    background: var(--window-bg);
 }
 
 .window.active {
@@ -89,6 +115,11 @@ body {
     transform: scale(1);
     pointer-events: all;
     transition: opacity 0.4s, transform 0.5s cubic-bezier(.28, .14, 0, 1);
+}
+
+.window-content{
+    overflow:scroll;
+    border-radius: inherit;
 }
 
 .window-content {
@@ -442,4 +473,9 @@ body.global-resize-cursor {
 
 .file-item-actions button.delete:hover {
     background: #ff4444;
+}
+
+.control-bar,.close-btn-area{
+
+    corner-shape: superellipse(1)!important;
 }
