@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextGen Editor - Prototype</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">EXPLORER</div>
+            <ul class="file-list">
+                <li class="active">main.js</li>
+                <li>style.css</li>
+                <li>index.html</li>
+            </ul>
+
+            <div class="repl-container">
+                <div class="sidebar-header">META REPL (JS)</div>
+                <div class="repl-desc">editor.current APIが使用可能</div>
+                <textarea id="replInput" placeholder="例: editor.current.insert('Hello');">// 選択範囲を大文字にする
+editor.current.selection.replace(t => t.toUpperCase());</textarea>
+                <button id="runReplBtn">Run Script (Ctrl+Enter)</button>
+                <div id="replOutput" class="repl-output">Ready.</div>
+            </div>
+        </aside>
+
+        <main class="editor-area">
+            <div class="tabs">
+                <div class="tab active">main.js <span class="close">×</span></div>
+            </div>
+            
+            <div class="editor-viewport" id="editorViewport">
+                <textarea id="inputTrap" spellcheck="false" autocomplete="off"></textarea>
+                
+                <canvas id="editorCanvas"></canvas>
+                
+                <canvas id="minimapCanvas"></canvas>
+            </div>
+
+            <div class="terminal-panel">
+                <div class="terminal-header">TERMINAL (GPU Accelerated)</div>
+                <div class="terminal-content">
+                    <span class="prompt">user@nextgen:~$</span> <span class="cursor-block"> </span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="status-bar">
+        <div class="left">
+            <span>main.js</span>
+            <span id="cursorPos">Ln 1, Col 1</span>
+        </div>
+        <div class="right">
+            <span>UTF-8</span>
+            <span>JavaScript</span>
+            <span>Git: <span class="branch">main</span></span>
+            <span class="ai-status">AI: Ready</span>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

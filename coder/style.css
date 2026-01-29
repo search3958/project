@@ -1,0 +1,188 @@
+:root {
+    --bg-dark: #1e1e1e;
+    --bg-sidebar: #252526;
+    --bg-active: #37373d;
+    --text-main: #d4d4d4;
+    --accent: #007acc;
+    --border: #3e3e42;
+    --font-code: 'Fira Code', 'Menlo', 'Consolas', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body, html {
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+}
+
+.app-container {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    grid-template-rows: 1fr 22px;
+    height: 100vh;
+}
+
+/* Sidebar & REPL */
+.sidebar {
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #bbb;
+}
+
+.file-list li {
+    padding: 5px 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.file-list li.active { background-color: var(--bg-active); border-left: 2px solid var(--accent); }
+
+.repl-container {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 10px;
+    height: 40%;
+    display: flex;
+    flex-direction: column;
+}
+
+.repl-desc { font-size: 0.7rem; color: #888; margin-bottom: 5px; }
+
+#replInput {
+    background: #111;
+    border: 1px solid #444;
+    color: #a6e22e;
+    font-family: var(--font-code);
+    width: 100%;
+    flex-grow: 1;
+    resize: none;
+    padding: 5px;
+    font-size: 0.8rem;
+}
+
+#runReplBtn {
+    margin-top: 5px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.repl-output {
+    font-family: var(--font-code);
+    font-size: 0.75rem;
+    color: #ddd;
+    margin-top: 5px;
+    height: 60px;
+    overflow-y: auto;
+    border-top: 1px dotted #444;
+}
+
+/* Main Editor Area */
+.editor-area {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.tabs {
+    background: var(--bg-sidebar);
+    display: flex;
+    height: 35px;
+}
+.tab {
+    padding: 0 15px;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--accent);
+}
+
+.editor-viewport {
+    flex-grow: 1;
+    position: relative;
+    cursor: text;
+    background-color: var(--bg-dark);
+}
+
+/* The Core Engine Layers */
+#editorCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+}
+
+#inputTrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0; /* 完全に透明にして入力を吸い取る */
+    z-index: 2;
+    cursor: text;
+    color: transparent;
+    background: transparent;
+    caret-color: transparent;
+    resize: none;
+    font-family: var(--font-code);
+    font-size: 14px;
+    line-height: 20px;
+    padding: 0; /* Canvasと位置を合わせるため */
+    white-space: pre;
+}
+
+#minimapCanvas {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 60px;
+    height: 100%;
+    z-index: 3;
+    opacity: 0.8;
+}
+
+/* Terminal */
+.terminal-panel {
+    height: 150px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-sidebar);
+    padding: 5px;
+}
+.terminal-header { font-size: 0.75rem; margin-bottom: 5px; margin-left: 10px;}
+.terminal-content { font-family: var(--font-code); font-size: 0.85rem; padding-left: 10px; }
+.prompt { color: #a6e22e; }
+.cursor-block { display: inline-block; width: 8px; height: 14px; background: #ddd; animation: blink 1s step-end infinite; }
+
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Status Bar */
+.status-bar {
+    grid-column: 1 / -1;
+    background: #007acc;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.75rem;
+}
+.right span { margin-left: 15px; }

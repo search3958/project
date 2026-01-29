@@ -99,18 +99,6 @@ node sleep.js 0.2
 
 node gui_demo.js --term run "node dock.js"
 
-node sleep.js 1
-
-echo "test" >&2
-node sleep.js 1
-
-echo "test" >&2
-node sleep.js 1
-
-echo "test" >&2
-node sleep.js 1
-
-echo "test" >&2
 
 `.trim()
         }
@@ -267,7 +255,7 @@ console.log(\`[[GUI:{"action":"create-xml","file":"dock-\${appId}.xml","xml":\${
       contents: `
 const appId = 'wallpaper-' + Date.now();
 const xmlContent = \`
-<window position="(0px,0px)" width="100vw" height="100vh" radius="0px" bar="true" padding="0px" size-change="false" style="z-index:-1!important;pointer-events:none!important;background:#0000;
+<window z-index="-1" position="(0px,0px)" width="100vw" height="100vh" radius="0px" bar="true" padding="0px" size-change="false" style="z-index:-1!important;pointer-events:none!important;background:#0000;
     background-image: url(https://search3958.github.io/newtab/bgimg/zip/chips/chips4_dark.webp);
     background-repeat: no-repeat;
     background-position: center center;
@@ -293,6 +281,36 @@ setInterval(() => {
       setTimeout(() => {
         process.exit(0);
       }, seconds * 1000);
+    `.trim()
+  }
+},
+
+'zhiiliu-service-loader.mjs': {
+  file: {
+    contents: `
+// zhiiliu-service-loader.mjs
+
+async function loadService() {
+    // 外側のJSが /zhiiliu-service.mjs を作ってくれているので、普通に読み込めます
+    const targetFile = './zhiiliu-service.mjs';
+
+    try {
+        console.log(\`[Loader] 読み込み中: \${targetFile}\`);
+        
+        // 仮想環境内にファイルが存在するため、通常のインポートが可能
+        const service = await import(targetFile);
+
+        if (service.init) {
+            service.init();
+        }
+        console.log('[Loader] 正常に読み込まれました。');
+    } catch (error) {
+        console.error('[Loader] 読み込み失敗。ファイルが同期されているか確認してください。');
+        console.error(error);
+    }
+}
+
+loadService();
     `.trim()
   }
 }
@@ -598,14 +616,20 @@ class WindowManager {
         }, 400);
     }
 
-    bringToFront(win) {
-    // 画面上の全ウィンドウから最大のz-indexを探して、それより1高くする
+// WindowManagerクラス内の bringToFront メソッドを修正
+bringToFront(win) {
+    // 固定z-indexが設定されている場合は、最前面へ移動させない
+    if (win.hasAttribute('data-fixed-z')) {
+        return; 
+    }
+
     const allWindows = Array.from(document.querySelectorAll('.window'));
     const maxZ = allWindows.reduce((max, el) => {
+        // 固定されているウィンドウのz-indexは計算から除外するか、比較対象に含める
         const z = parseInt(el.style.zIndex) || 0;
         return Math.max(max, z);
     }, this.zIndex);
-
+    
     this.zIndex = maxZ + 1;
     win.style.zIndex = this.zIndex;
 }
@@ -740,6 +764,7 @@ createXmlWindow(xmlFile, xmlString, appId, termId) {
         return;
     }
 
+    // 基本属性の取得
     const width = xmlRoot.getAttribute('width') || '500px';
     const height = xmlRoot.getAttribute('height') || '400px';
     const radius = xmlRoot.getAttribute('radius') || '24px';
@@ -748,31 +773,43 @@ createXmlWindow(xmlFile, xmlString, appId, termId) {
     const position = xmlRoot.getAttribute('position');
     const terminalVisibility = xmlRoot.getAttribute('terminal');
     const windowPadding = xmlRoot.getAttribute('padding') || '12px';
+    const customWinStyle = xmlRoot.getAttribute('style');
+    
+    // 【新規】z-index 属性の取得
+    const zIndexValue = xmlRoot.getAttribute('z-index');
+
     const titleEl = xmlRoot.querySelector('title');
     const title = titleEl ? titleEl.textContent : 'XML Window';
-
     const winId = appId ? `xml-${appId}` : `xml-win-${++this.dialogCounter}`;
+
     const win = document.createElement('div');
     win.className = 'window';
     win.id = winId;
 
-    // --- 【修正ポイント】Window本体へのstyle属性適用 ---
-    const customWinStyle = xmlRoot.getAttribute('style');
+    // カスタムスタイルの適用
     if (customWinStyle) {
         win.style.cssText += customWinStyle;
     }
-    // ----------------------------------------------
 
+    // サイズと角丸の適用
     win.style.width = width;
     win.style.height = height;
     win.style.borderRadius = radius;
 
+    // 【新規】z-index が指定されている場合、固定値として設定
+    if (zIndexValue !== null) {
+        win.style.zIndex = zIndexValue;
+        win.setAttribute('data-fixed-z', zIndexValue); // bringToFrontで無視するためのフラグ
+    }
+
+    // 位置指定の処理
     if (position) {
         const match = position.match(/\(([^,]+),([^)]+)\)/);
         if (match) {
             win.style.left = match[1].trim();
             win.style.top = match[2].trim();
             win.setAttribute('data-positioned', 'true');
+            // 固定位置の場合はリサイズを無効化するケースが多い
             win.classList.add('no-resize');
         }
     }
@@ -781,8 +818,15 @@ createXmlWindow(xmlFile, xmlString, appId, termId) {
         win.classList.add('no-resize');
     }
 
+    // 内部構造の構築
     win.innerHTML = `
-        ${showBar ? `<div class="control-bar"><span class="bar-title">${title}</span><div class="close-btn-area"><div class="close-icon"></div></div></div>` : ''}
+        ${showBar ? `
+            <div class="control-bar">
+                <span class="bar-title">${title}</span>
+                <div class="close-btn-area">
+                    <div class="close-icon"></div>
+                </div>
+            </div>` : ''}
         <div class="window-content"></div>
     `;
 
@@ -790,7 +834,7 @@ createXmlWindow(xmlFile, xmlString, appId, termId) {
     this.setupWindow(win);
     this.xmlWindows.set(xmlFile, { winId, xmlString, xmlRoot, termId });
 
-    // ターミナルの表示/非表示制御
+    // ターミナルの表示制御
     if (terminalVisibility === 'hide' && termId) {
         const termContainer = document.querySelector(`[data-term-id="${termId}"]`);
         if (termContainer) {
@@ -802,6 +846,7 @@ createXmlWindow(xmlFile, xmlString, appId, termId) {
         }
     }
 
+    // コンテンツのレンダリング
     const content = win.querySelector('.window-content');
     content.style.padding = windowPadding;
     content.style.overflow = 'auto';
@@ -1031,20 +1076,13 @@ window.addEventListener('load', async () => {
         path: 'data.json'
     });
 
-    const bgTerm = new Terminal({
-        theme: {
-            background: '#0c0c0c'
-        },
-        disableStdin: true
-    });
+    const bgTerm = new Terminal({ theme: { background: '#0c0c0c' }, disableStdin: true });
     bgTerm.open(document.getElementById('bg-terminal'));
 
     const mainTerm = new Terminal({
         cursorBlink: true,
         fontFamily: '"Fira Code",monospace',
-        theme: {
-            background: '#1e1e1e'
-        },
+        theme: { background: '#1e1e1e' },
         convertEol: true
     });
     mainTerm.open(document.getElementById('terminal-container'));
@@ -1060,14 +1098,29 @@ window.addEventListener('load', async () => {
 
     windowManager.setWebContainer(webcontainerInstance);
     document.getElementById('lottie-overlay').classList.add('fade-out');
+
+    // 1. 仮想ファイルをマウント
     await webcontainerInstance.mount(files);
 
-    const shellProcess = await webcontainerInstance.spawn('jsh', {
-        terminal: {
-            cols: mainTerm.cols,
-            rows: mainTerm.rows
+    // 2. 【追加】物理ファイルを fetch して仮想環境へ書き込む
+    try {
+        const response = await fetch('./zhiiliu-service.mjs');
+        if (response.ok) {
+            const physicalCode = await response.text();
+            // 仮想環境のルート直下に保存
+            await webcontainerInstance.fs.writeFile('/zhiiliu-service.mjs', physicalCode);
+            console.log('[System] 物理ファイル zhiiliu-service.mjs を同期しました。');
+        } else {
+            console.warn('[System] 物理ファイルが見つかりません。スキップします。');
         }
+    } catch (err) {
+        console.error('[System] 同期失敗:', err);
+    }
+
+    const shellProcess = await webcontainerInstance.spawn('jsh', {
+        terminal: { cols: mainTerm.cols, rows: mainTerm.rows }
     });
+
     const inputWriter = shellProcess.input.getWriter();
     windowManager.terminalWriters.set('main', inputWriter);
 
@@ -1080,31 +1133,26 @@ window.addEventListener('load', async () => {
                 if (match) {
                     try {
                         const guiData = JSON.parse(match[1]);
-                        guiData.termId = 'main'; // メインターミナルのID
+                        guiData.termId = 'main';
                         windowManager.handleGuiCommand(guiData);
                         mainTerm.write(data.replace(/\[\[GUI:.*\]\]/, ''));
                         return;
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error("GUI JSON Parse Error:", e);
+                    }
                 }
             }
             mainTerm.write(data);
             bgTerm.write(data);
         },
         close() {
-        // このターミナルのプロセスが終了したとき
-        const winEl = document.getElementById(id);
-        
-        // このターミナル(termId)を親として持つXMLウィンドウだけを探して閉じる
-        windowManager.xmlWindows.forEach((winData, xmlFile) => {
-            if (winData.termId === termId) {
-                // closeXmlWindowは内部でtermIdの再表示(display:block)を試みるが、
-                // ターミナル自体が消滅する場合は単にGUIが閉じるだけになる
-                windowManager.closeXmlWindow(xmlFile);
-            }
-        });
-
-        if (winEl) windowManager.closeWindow(winEl);
-    }
+            // (既存の close 処理)
+            windowManager.xmlWindows.forEach((winData, xmlFile) => {
+                if (winData.termId === 'main') {
+                    windowManager.closeXmlWindow(xmlFile);
+                }
+            });
+        }
     }));
 
     await inputWriter.write("source boot.sh\n");
