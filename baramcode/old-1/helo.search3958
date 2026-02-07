@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>z.ai Direct API Demo</title>
+    <style>
+        body { font-family: sans-serif; max-width: 650px; margin: 30px auto; padding: 0 20px; color: #333; }
+        .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 120px; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px; font-size: 16px; }
+        button { background-color: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #output { margin-top: 25px; padding: 15px; background: #f8f9fa; border-left: 5px solid #007bff; white-space: pre-wrap; min-height: 50px; font-size: 15px; }
+        .label { font-weight: bold; display: block; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>z.ai Direct Connection</h2>
+    <p style="font-size: 0.9em; color: #666;">ブラウザから直接 z.ai API を呼び出します。</p>
+
+    <label class="label">質問内容:</label>
+    <textarea id="promptInput">GLM-4モデルの特徴を簡潔に教えてください。</textarea>
+    
+    <button id="sendBtn">AIに質問する</button>
+
+    <div id="output">回答がここに表示されます...</div>
+</div>
+
+<script>
+    // 提供されたAPIキー
+    const ZAI_API_KEY = "e002302a082043a2a02242e6d10cc924.IjQhg2afcjmJEfYW";
+    const ZAI_API_URL = "https://api.z.ai/api/paas/v4/chat/completions";
+
+    const promptInput = document.getElementById('promptInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const outputDiv = document.getElementById('output');
+
+    sendBtn.addEventListener('click', async () => {
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
+
+        // UI更新
+        sendBtn.disabled = true;
+        outputDiv.innerText = "z.ai と通信中...";
+
+        try {
+            const response = await fetch(ZAI_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${ZAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'glm-4.7-flash',
+                    messages: [{ role: 'user', content: prompt }],
+                    max_tokens: 4096,
+                    temperature: 0.5,
+                    stream: false, // 一括取得
+                    thinking: { type: 'disabled' }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`APIエラー: ${response.status} ${JSON.stringify(errorData)}`);
+            }
+
+            const data = await response.json();
+            
+            // 回答の抽出
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                outputDiv.innerText = data.choices[0].message.content;
+            } else {
+                outputDiv.innerText = "予期しないレスポンス形式です。";
+            }
+
+        } catch (error) {
+            console.error('Fetch Error:', error);
+            outputDiv.innerHTML = `<span style="color:red;">エラー: ${error.message}</span>`;
+        } finally {
+            sendBtn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>

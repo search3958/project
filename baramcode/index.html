@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BaramCode Architect | Elite</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-canvas: #fcfbf9;
+            --bg-card: #ffffff;
+            --text-main: #121212;
+            --text-sub: #6b6b6b;
+            --accent: #000000;
+            --border: #eceae5;
+            --shadow-lux: 0 20px 50px rgba(0,0,0,0.08);
+            --radius-lg: 24px;
+        }
+
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif;
+            margin: 0; background-color: var(--bg-canvas); color: var(--text-main);
+            height: 100vh; display: flex; overflow: hidden;
+        }
+
+        /* Layout */
+        #main-layout { flex: 1; display: flex; flex-direction: column; position: relative; transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+        #preview-panel {
+            width: 0; background: #ffffff; border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+            overflow: hidden;
+        }
+        #preview-panel.open { width: 55%; }
+
+        /* Header */
+        header { padding: 32px 48px; display: flex; justify-content: space-between; align-items: center; background: rgba(252, 251, 249, 0.8); backdrop-filter: blur(10px); z-index: 10; }
+        header h1 { font-size: 20px; font-weight: 800; margin: 0; letter-spacing: -0.03em; display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+
+        /* Chat History */
+        #chat-history { flex: 1; overflow-y: auto; padding: 20px 60px 200px; display: flex; flex-direction: column; gap: 48px; }
+        .msg-wrapper { animation: msgIn 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes msgIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        .ai-label { font-size: 10px; font-weight: 800; color: var(--text-sub); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.15em; display: flex; align-items: center; gap: 6px; }
+        .user-bubble { font-size: 32px; font-weight: 700; line-height: 1.2; margin: 32px 0; color: var(--accent); letter-spacing: -0.02em; }
+        .ai-content { line-height: 1.8; font-size: 16px; color: #333; }
+
+        /* Pattern Cards */
+        .pattern-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 24px; }
+        .card { 
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); 
+            padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); transition: all 0.3s;
+            display: flex; flex-direction: column;
+        }
+        .card:hover { border-color: var(--accent); box-shadow: var(--shadow-lux); transform: translateY(-4px); }
+        .btn-select { 
+            margin-top: auto; padding: 16px; border-radius: 16px; border: 1px solid var(--accent); 
+            background: transparent; cursor: pointer; font-weight: 700; font-size: 14px;
+            display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
+        }
+        .btn-select:hover { background: var(--accent); color: #fff; }
+
+        /* Input Control */
+        #controls { position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 800px; z-index: 100; }
+        .input-box {
+            background: #fff; border: 1px solid var(--border); border-radius: 32px; padding: 12px 24px;
+            box-shadow: var(--shadow-lux); display: flex; align-items: flex-end; gap: 16px;
+        }
+        textarea { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; padding: 12px 0; resize: none; max-height: 240px; font-family: inherit; line-height: 1.6; }
+        
+        #send-btn { 
+            background: var(--accent); color: #fff; border: none; width: 48px; height: 48px; 
+            border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+        }
+        #send-btn:hover { transform: scale(1.05); }
+
+        #phase-actions { display: none; gap: 16px; justify-content: center; margin-bottom: 24px; }
+        .btn-phase { padding: 16px 40px; border-radius: 32px; border: none; cursor: pointer; font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        /* Icons (Inline SVG) */
+        .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        /* Preview Toggle */
+        #preview-toggle {
+            display: none; position: fixed; right: 40px; bottom: 48px; z-index: 1000;
+            background: var(--accent); color: #fff; border: none; width: 64px; height: 64px;
+            border-radius: 50%; cursor: pointer; box-shadow: var(--shadow-lux);
+            display: none; align-items: center; justify-content: center;
+        }
+
+        .step-item { display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: 18px; font-size: 15px; margin-bottom: 12px; transition: 0.3s; }
+        .step-item.active { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-weight: 700; transform: scale(1.02); }
+        .loader-dot { width: 10px; height: 10px; background: #ddd; border-radius: 50%; position: relative; }
+        .active .loader-dot { background: var(--accent); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+
+        iframe { flex: 1; border: none; background: #fff; }
+    </style>
+</head>
+<body>
+
+<button id="preview-toggle" onclick="togglePreview()">
+    <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+</button>
+
+<div id="main-layout">
+    <header>
+        <h1><div class="status-dot"></div> BaramCode Architect</h1>
+        <div id="status-text" style="font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: var(--text-sub);">SYSTEM IDLE</div>
+    </header>
+    
+    <div id="chat-history">
+        <div class="msg-wrapper">
+            <div class="ai-label">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                Assistant
+            </div>
+            <div class="ai-content">プロジェクトのビジョンを共有してください。最高の実装プランを構築します。</div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div id="phase-actions">
+            <button class="btn-phase" style="background:#fff; border:1px solid var(--border)" onclick="prepareRedo()">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                修正
+            </button>
+            <button class="btn-phase" style="background:#000; color:#fff" onclick="startExecution()">
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                実装を開始
+            </button>
+        </div>
+        <div class="input-box">
+            <textarea id="promptInput" rows="1" placeholder="どのようなアプリケーションを構築しますか？" oninput="autoResize(this)"></textarea>
+            <button id="send-btn" onclick="handleSend()">
+                <svg class="icon" style="stroke: #fff;" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="preview-panel">
+    <div style="padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 800; font-size: 13px; letter-spacing: 0.05em;">LIVE PREVIEW</span>
+        <button onclick="downloadZip()" style="background:var(--accent); color:#fff; border:none; padding:10px 20px; border-radius:12px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+            <svg class="icon" style="width:14px; height:14px;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            ZIP
+        </button>
+    </div>
+    <iframe id="output-frame"></iframe>
+</div>
+
+<script>
+    const API_URL = 'https://sbmatwewsgkuidzbxbxp.supabase.co/functions/v1/zai';
+    let state = { phase: 1, prompt: "", selected: "", files: {}, steps: [] };
+
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+    function togglePreview() { document.getElementById('preview-panel').classList.toggle('open'); }
+    function setStatus(t) { document.getElementById('status-text').innerText = t.toUpperCase(); }
+
+    function addMessage(content, side) {
+        const h = document.getElementById('chat-history');
+        const w = document.createElement('div');
+        w.className = 'msg-wrapper';
+        if (side === 'user') {
+            w.innerHTML = `<div class="user-bubble">${content}</div>`;
+        } else {
+            w.innerHTML = `<div class="ai-label"><svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>Assistant</div><div class="ai-content">${marked.parse(content)}</div>`;
+        }
+        h.appendChild(w);
+        h.scrollTo({ top: h.scrollHeight, behavior: 'smooth' });
+    }
+
+    async function callAI(p) {
+        setStatus('Processing');
+        try {
+            const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: p }) });
+            const d = await r.json();
+            setStatus('System Idle');
+            return d.choices[0].message.content;
+        } catch (e) { setStatus('Error'); return null; }
+    }
+
+    async function handleSend() {
+        const i = document.getElementById('promptInput');
+        const t = i.value.trim(); if (!t) return;
+        addMessage(t, 'user'); i.value = ''; autoResize(i);
+
+        if (state.phase === 1) {
+            state.prompt = t;
+            const res = await callAI(`ユーザー要望: "${t}"。HTML/CSS/JS限定。モダンで使いやすい実装案を3つ。以下のJSON配列形式のみで提案せよ。
+            [{"name": "タイトル", "info": "詳細な特徴と技術構成"}]`);
+            const m = res.match(/\[[\s\S]*\]/);
+            if (m) {
+                const plans = JSON.parse(m[0]);
+                let h = '<div class="pattern-grid">';
+                plans.forEach((p, idx) => h += `<div class="card"><h3>${p.name}</h3><p style="font-size:14px;color:var(--text-sub)">${p.info}</p><button class="btn-select" onclick="selectPlan(\`${p.name}\`, \`${p.info}\`)">このプランを選択 <svg class="icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button></div>`);
+                addMessage(h + '</div>', 'ai');
+            }
+        }
+    }
+
+    async function selectPlan(name, info) {
+        state.selected = info; state.phase = 2;
+        addMessage(`プラン「${name}」を採択しました。構成ファイルを定義します。`, 'ai');
+        const res = await callAI(`要望: "${state.prompt}" 案: "${info}"。完璧な開発ステップを定義せよ。以下のJSONのみを返せ：\n{"files": ["index.html", "style.css", "script.js"], "steps": [{"id": 1, "task": "具体的な実装内容", "file": "対象ファイル"}]}`);
+        const m = res.match(/\{[\s\S]*\}/);
+        if (m) {
+            const d = JSON.parse(m[0]);
+            state.steps = d.steps;
+            d.files.forEach(f => state.files[f] = "");
+            let h = '<div class="card" style="width:100%"><h4 style="margin:0 0 20px 0">Build Roadmap</h4>';
+            d.steps.forEach(s => h += `<div class="step-item" id="st-${s.id}"><div class="loader-dot"></div>${s.task}</div>`);
+            addMessage(h + '</div>', 'ai');
+            document.querySelector('.input-box').style.display = 'none';
+            document.getElementById('phase-actions').style.display = 'flex';
+        }
+    }
+
+    async function startExecution() {
+        document.getElementById('phase-actions').style.display = 'none';
+        const pt = document.getElementById('preview-toggle');
+        pt.style.display = 'flex';
+        if (!document.getElementById('preview-panel').classList.contains('open')) togglePreview();
+
+        for (const s of state.steps) {
+            const el = document.getElementById(`st-${s.id}`);
+            if (el) el.classList.add('active');
+            
+            const ctx = Object.entries(state.files).map(([n, c]) => `[File: ${n}]\n${c}`).join('\n\n');
+            const prompt = `あなたは世界最高峰のWebエンジニアです。
+            タスク: "${s.task}"
+            対象ファイル: "${s.file}"
+            
+            現在のプロジェクト全体のコード状況:
+            ${ctx}
+            
+            上記を完全に理解した上で、"${s.file}" の全コードを省略なしで出力してください。コードブロック \`\`\` で囲んでください。整合性を最優先してください。`;
+
+            const res = await callAI(prompt);
+            const cm = res.match(/```[\s\S]*?\n([\s\S]*?)```/);
+            state.files[s.file] = cm ? cm[1].trim() : res.trim();
+            updateFrame();
+            if (el) { el.classList.remove('active'); el.style.opacity = "0.4"; }
+        }
+        addMessage("すべてのコードがビルドされました。プレビューを確認し、必要であれば修正を指示してください。", 'ai');
+        document.querySelector('.input-box').style.display = 'flex';
+    }
+
+    function updateFrame() {
+        const frame = document.getElementById('output-frame');
+        let html = state.files['index.html'] || "\<html>\<body><\/body><\/html>";
+        const css = Object.keys(state.files).filter(f => f.endsWith('.css')).map(f => `\<style>${state.files[f]}<\/style>`).join('\n');
+        const js = Object.keys(state.files).filter(f => f.endsWith('.js')).map(f => `\<script>${state.files[f]}<\/script>`).join('\n');
+
+        let src = html;
+        if (src.includes('<\/head>')) src = src.replace('<\/head>', `${css}<\/head>`);
+        else src = css + src;
+        
+        if (src.includes('<\/body>')) src = src.replace('<\/body>', `${js}<\/body>`);
+        else src = src + js;
+        
+        frame.srcdoc = src;
+    }
+
+    async function downloadZip() {
+        const zip = new JSZip();
+        Object.entries(state.files).forEach(([n, c]) => { if(c) zip.file(n, c); });
+        const b = await zip.generateAsync({ type: "blob" });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `project_${Date.now()}.zip`; a.click();
+    }
+
+    function prepareRedo() {
+        document.getElementById('phase-actions').style.display = 'none';
+        const box = document.querySelector('.input-box');
+        box.style.display = 'flex';
+        const inp = document.getElementById('promptInput');
+        inp.placeholder = "どの部分をどのように変更しますか？";
+        inp.focus();
+    }
+</script>
+</body>
+</html>

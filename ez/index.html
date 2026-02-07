@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>EZS Integrated Runtime</title>
+    <style>
+        :root { --bg: #0d1117; --panel: #161b22; --accent: #238636; --text: #c9d1d9; --border: #30363d; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        header { background: #161b22; padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .controls { display: flex; gap: 10px; align-items: center; }
+        
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* エディタ & ターミナル */
+        .workspace { flex: 2; display: flex; flex-direction: column; padding: 15px; gap: 10px; border-right: 1px solid var(--border); }
+        textarea { flex: 1; background: #010409; color: #e6edf3; padding: 15px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.5; resize: none; outline: none; }
+        
+        .terminal-container { flex: 1; display: flex; flex-direction: column; background: #000; border-radius: 6px; border: 1px solid var(--border); overflow: hidden; }
+        #console { flex: 1; padding: 15px; overflow-y: auto; white-space: pre-wrap; color: #39ff14; font-family: 'Consolas', monospace; font-size: 15px; }
+        .input-area { display: flex; background: #0d1117; padding: 10px; border-top: 1px solid var(--border); align-items: center; }
+        .input-area span { color: #39ff14; margin-right: 10px; font-weight: bold; }
+        input { flex: 1; background: transparent; border: none; color: white; font-family: inherit; font-size: 15px; outline: none; }
+
+        /* 仕様書 */
+        .docs-panel { width: 320px; background: var(--panel); padding: 20px; overflow-y: auto; transition: 0.3s; border-left: 1px solid var(--border); }
+        .docs-panel.hidden { width: 0; padding: 0; border: none; }
+        .docs-panel h3 { color: #58a6ff; margin-top: 0; }
+        .docs-panel code { background: #30363d; padding: 2px 4px; border-radius: 3px; color: #f1c40f; }
+        .docs-panel pre { background: #000; padding: 10px; border-radius: 5px; font-size: 12px; }
+
+        /* ボタン */
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); font-weight: bold; transition: 0.2s; }
+        .btn-run { background: var(--accent); color: white; border: none; font-size: 16px; }
+        .btn-run:hover { background: #2ea043; }
+        .btn-docs { background: #21262d; color: #c9d1d9; }
+        select { background: #21262d; color: #c9d1d9; border: 1px solid var(--border); padding: 8px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="font-weight: bold; font-size: 1.2rem; color: #fff;">EZ-Shell (EZS) <span style="color:#58a6ff;">Full Integrated</span></div>
+    <div class="controls">
+        <select id="sampleSelect" onchange="loadSample()">
+            <optgroup label="Core Logic Samples">
+                <option value="fizzbuzz">1. FizzBuzz (全自動ループ)</option>
+                <option value="calculator">2. 対話型 合計計算</option>
+                <option value="rpg">3. ミニRPG (Waitデモ)</option>
+            </optgroup>
+            <optgroup label="OS Command Samples">
+                <option value="system_demo">4. OSコマンド (Clear/Color)</option>
+                <option value="login_flow">5. ログイン認証フロー</option>
+                <option value="color_show">6. カラー・ショーケース</option>
+            </optgroup>
+        </select>
+        <button class="btn btn-run" onclick="runEZS()">▶ RUN</button>
+        <button class="btn btn-docs" onclick="toggleDocs()">Docs</button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="workspace">
+        <textarea id="code" spellcheck="false"></textarea>
+        <div class="terminal-container">
+            <div id="console"></div>
+            <div class="input-area">
+                <span>&gt;</span>
+                <input type="text" id="term-input" placeholder="入力待ち中..." disabled>
+            </div>
+        </div>
+    </div>
+
+    <div id="docs-panel" class="docs-panel">
+        <h3>EZS 全仕様</h3>
+        <p><b>変数と計算</b><br>
+        <code>set val 10</code><br>
+        <code>set a calc($val + 5)</code></p>
+        
+        <h3>OSコマンド</h3>
+        <p><code>clear</code>: 画面消去<br>
+        <code>color [色]</code>: 文字色(red等)<br>
+        <code>reset</code>: 初期色(緑)に戻す<br>
+        <code>wait [ms]</code>: 一時停止</p>
+
+        <h3>対話と出力</h3>
+        <p><code>echo "文" + $変数</code><br>
+        <code>input 変数 "問い"</code></p>
+
+        <h3>制御と関数</h3>
+        <pre>loop $i < 5 { ... }
+if $a == 1 { ... }
+func.ezs { ... }
+ezs func</pre>
+    </div>
+</div>
+
+<script>
+    const samples = {
+        fizzbuzz: `set i 1\nloop $i <= 15 {\n  ezs check\n  set i calc($i + 1)\n}\n\ncheck.ezs {\n  if $i % 15 == 0 { echo "FizzBuzz" }\n  if $i % 15 != 0 {\n    if $i % 3 == 0 { echo "Fizz" }\n    if $i % 5 == 0 { echo "Buzz" }\n    if $i % 3 != 0 { if $i % 5 != 0 { echo $i } }\n  }\n}`,
+        calculator: `echo "=== ユーザー入力合計器 ==="\ninput name "お名前を教えてください"\necho "こんにちは " + $name + " さん！"\ninput max "いくつまで足しますか？"\nset total 0\nset i 1\nloop $i <= $max {\n  set total calc($total + $i)\n  echo $i + " を加算 (合計: " + $total + ")"\n  set i calc($i + 1)\n}\necho "最終結果: " + $total`,
+        rpg: `echo "モンスターが現れた！"\nset hp 50\nloop $hp > 0 {\n  echo "モンスターの攻撃！"\n  wait 800\n  set dmg 15\n  set hp calc($hp - $dmg)\n  echo $dmg + " ダメージ！ (残HP: " + $hp + ")"\n  wait 500\n  if $hp > 0 { echo "冒険者は立ち上がった！" }\n  wait 1000\n}\necho "GAME OVER"`,
+        system_demo: `echo "システムチェック..." \nwait 1000\nclear\ncolor cyan\necho "=== SYSTEM READY ==="\nreset\necho "画面をクリアしますか？ (yes/no)"\ninput ans ""\nif $ans == "yes" {\n  color yellow\n  echo "3秒後にクリアします..."\n  wait 3000\n  clear\n}\necho "終了"`,
+        login_flow: `clear\ncolor white\necho "--- ACCESS RESTRICTED ---"\nreset\ninput pass "PASSWORD"\nif $pass == "admin" {\n  color blue\n  echo "Access Granted."\n  wait 1000\n  ezs secret\n}\nif $pass != "admin" { color red\n echo "Access Denied." }\n\nsecret.ezs {\n  clear\n  echo "EZS SECRET DATA: 12345"\n}`,
+        color_show: `color red\necho "Red Text"\ncolor blue\necho "Blue Text"\ncolor yellow\necho "Yellow Text"\nreset\necho "Back to Green"`
+    };
+
+    let inputResolver = null;
+    function loadSample() { document.getElementById('code').value = samples[document.getElementById('sampleSelect').value]; }
+    function toggleDocs() { document.getElementById('docs-panel').classList.toggle('hidden'); }
+    function askInput() {
+        const inp = document.getElementById('term-input');
+        inp.disabled = false; inp.focus();
+        return new Promise(r => { inputResolver = r; });
+    }
+
+    document.getElementById('term-input').addEventListener('keypress', e => {
+        if (e.key === 'Enter' && inputResolver) {
+            const v = e.target.value; e.target.value = ''; e.target.disabled = true;
+            document.getElementById('console').textContent += v + "\n";
+            inputResolver(v); inputResolver = null;
+        }
+    });
+
+    window.onload = loadSample;
+
+    async function runEZS() {
+        const consoleEl = document.getElementById('console');
+        consoleEl.textContent = ""; consoleEl.style.color = "#39ff14";
+        const code = document.getElementById('code').value;
+        let memory = {}; let functions = {};
+        let lines = code.split('\n').map(l => l.trim()).filter(l => l !== "");
+        let mainCode = [];
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes(".ezs {")) {
+                let name = lines[i].split(".ezs")[0]; let body = []; i++;
+                while (i < lines.length && lines[i] !== "}") { body.push(lines[i]); i++; }
+                functions[name] = body;
+            } else mainCode.push(lines[i]);
+        }
+        const getValue = (v) => {
+            let p = v.replace(/\$([a-zA-Z0-9_]+)/g, (_, n) => memory[n] ?? 0);
+            if (p.includes("calc(")) { try { return eval(p.match(/calc\((.+)\)/)[1]); } catch { return 0; } }
+            if (p.includes('"') || p.includes('+')) return p.split('+').map(s => s.trim().replace(/^"|"$/g, '')).join('');
+            return isNaN(p) ? p : Number(p);
+        };
+        const exec = async (cls) => {
+            for (let i = 0; i < cls.length; i++) {
+                let line = cls[i]; let p = line.split(/\s+/); let cmd = p[0];
+                if (cmd === "echo") { consoleEl.textContent += getValue(line.substring(5)) + "\n"; consoleEl.scrollTop = consoleEl.scrollHeight; }
+                else if (cmd === "set") memory[p[1]] = getValue(line.substring(line.indexOf(p[2])));
+                else if (cmd === "clear") consoleEl.textContent = "";
+                else if (cmd === "color") consoleEl.style.color = p[1];
+                else if (cmd === "reset") consoleEl.style.color = "#39ff14";
+                else if (cmd === "wait") await new Promise(r => setTimeout(r, getValue(p[1])));
+                else if (cmd === "input") { consoleEl.textContent += getValue(line.substring(line.indexOf(p[2]))) + " "; memory[p[1]] = await askInput(); }
+                else if (cmd === "ezs") { if (functions[p[1]]) await exec(functions[p[1]]); }
+                else if (cmd === "if" || cmd === "loop") {
+                    let cond = line.match(/(if|loop)\s+(.+)\s+\{/)[2];
+                    let body = []; let d = 1; i++;
+                    while (i < cls.length && d > 0) {
+                        if (cls[i].includes("{")) d++; if (cls[i] === "}") d--;
+                        if (d > 0) body.push(cls[i]); i++;
+                    } i--;
+                    let ev = () => eval(cond.replace(/\$([a-zA-Z0-9_]+)/g, (_, n) => memory[n] ?? 0));
+                    if (cmd === "if" && ev()) await exec(body);
+                    else if (cmd === "loop") while (ev()) await exec(body);
+                }
+            }
+        };
+        try { await exec(mainCode); } catch (e) { consoleEl.textContent += "\n[Error]: " + e.message; }
+    }
+</script>
+</body>
+</html>
