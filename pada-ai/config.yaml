@@ -1,0 +1,27 @@
+# 基本設定
+model: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+data: "data"       # 追加・変更分だけを入れた新しいフォルダを指定
+train: true
+iters: 1800              # 追加データ量に合わせて調整（数百〜1000程度で十分）
+batch_size: 1
+learning_rate: 1e-6      # 継続学習は「微調整」なので、前回より桁を1つ下げて慎重に
+
+# ★前回の成果を引き継ぐ設定★
+resume_adapter_file: "./adapters/adapters.safetensors"
+
+# メモリ死守設定
+max_seq_length: 256
+grad_checkpoint: true
+
+# レポートと保存
+steps_per_report: 10
+steps_per_eval: 100      # データが少ないので少し早めにチェック
+save_every: 500
+adapter_path: "./adapters_new" # 上書きが怖いので一旦別の場所に保存するのがおすすめ
+
+# LoRA設定（前回と必ず一致させること）
+# LoRA設定 (前回の 32 に戻してください)
+adapter_config:
+  rank: 32
+  alpha: 64
+  dropout: 0.05

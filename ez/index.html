@@ -2,174 +2,1149 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>EZS Integrated Runtime</title>
+    <title>EZ-Shell Ultimate Runtime v5.1</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root { --bg: #0d1117; --panel: #161b22; --accent: #238636; --text: #c9d1d9; --border: #30363d; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
-        header { background: #161b22; padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .controls { display: flex; gap: 10px; align-items: center; }
-        
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { background: #161b22; padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
         .main-container { display: flex; flex: 1; overflow: hidden; }
-        
-        /* エディタ & ターミナル */
         .workspace { flex: 2; display: flex; flex-direction: column; padding: 15px; gap: 10px; border-right: 1px solid var(--border); }
+        h2 { font-size: 0.8rem; color: #8b949e; margin: 0; text-transform: uppercase; }
         textarea { flex: 1; background: #010409; color: #e6edf3; padding: 15px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.5; resize: none; outline: none; }
+        .terminal-container { flex: 1; display: flex; flex-direction: column; background: #000; border-radius: 6px; border: 1px solid var(--border); overflow: hidden; position: relative; }
+        #console { flex: 1; padding: 15px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 15px; line-height: 0; }
         
-        .terminal-container { flex: 1; display: flex; flex-direction: column; background: #000; border-radius: 6px; border: 1px solid var(--border); overflow: hidden; }
-        #console { flex: 1; padding: 15px; overflow-y: auto; white-space: pre-wrap; color: #39ff14; font-family: 'Consolas', monospace; font-size: 15px; }
-        .input-area { display: flex; background: #0d1117; padding: 10px; border-top: 1px solid var(--border); align-items: center; }
+        /* ビットマップ文字表示用 */
+        .console-line { 
+            display: block; 
+            line-height: 8px;
+            height: 8px;
+            white-space: nowrap;
+            font-size: 0;
+        }
+        .text-span {
+            display: inline-block;
+            line-height: 8px;
+            height: 8px;
+            font-size: 15px;
+            vertical-align: top;
+            font-family: 'Consolas', monospace;
+        }
+        .bitmap-char {
+            display: inline-grid;
+            grid-template-columns: repeat(4, 1px);
+            grid-template-rows: repeat(8, 1px);
+            width: 4px;
+            height: 8px;
+            gap: 0;
+            vertical-align: top;
+            line-height: 0;
+        }
+        .bitmap-pixel {
+            width: 1px;
+            height: 1px;
+            display: block;
+        }
+        
+        /* スケール対応 */
+        .scale-2 .bitmap-char { 
+            grid-template-columns: repeat(4, 2px);
+            grid-template-rows: repeat(8, 2px);
+            width: 8px;
+            height: 16px;
+        }
+        .scale-2 .bitmap-pixel { width: 2px; height: 2px; }
+        .scale-2 .console-line { line-height: 16px; height: 16px; }
+        .scale-2 .text-span { line-height: 16px; height: 16px; font-size: 30px; }
+        
+        .scale-3 .bitmap-char { 
+            grid-template-columns: repeat(4, 3px);
+            grid-template-rows: repeat(8, 3px);
+            width: 12px;
+            height: 24px;
+        }
+        .scale-3 .bitmap-pixel { width: 3px; height: 3px; }
+        .scale-3 .console-line { line-height: 24px; height: 24px; }
+        .scale-3 .text-span { line-height: 24px; height: 24px; font-size: 45px; }
+        
+        .input-area { display: flex; background: #0d1117; padding: 10px; border-top: 1px solid var(--border); align-items: center; z-index: 5; }
         .input-area span { color: #39ff14; margin-right: 10px; font-weight: bold; }
-        input { flex: 1; background: transparent; border: none; color: white; font-family: inherit; font-size: 15px; outline: none; }
-
-        /* 仕様書 */
-        .docs-panel { width: 320px; background: var(--panel); padding: 20px; overflow-y: auto; transition: 0.3s; border-left: 1px solid var(--border); }
-        .docs-panel.hidden { width: 0; padding: 0; border: none; }
-        .docs-panel h3 { color: #58a6ff; margin-top: 0; }
-        .docs-panel code { background: #30363d; padding: 2px 4px; border-radius: 3px; color: #f1c40f; }
-        .docs-panel pre { background: #000; padding: 10px; border-radius: 5px; font-size: 12px; }
-
-        /* ボタン */
-        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); font-weight: bold; transition: 0.2s; }
+        #term-input { flex: 1; background: transparent; border: none; color: white; font-family: inherit; font-size: 15px; outline: none; }
+        .docs-panel { width: 400px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+        .docs-panel.hidden { width: 0; border: none; overflow: hidden; }
+        #docs-content { padding: 20px; overflow-y: auto; font-size: 14px; line-height: 1.6; }
+        #docs-content h1 { color: #58a6ff; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+        #docs-content h2 { color: #58a6ff; margin-top: 24px; }
+        #docs-content h3 { color: #8b949e; margin-top: 16px; }
+        #docs-content code { background: #161b22; padding: 2px 6px; border-radius: 3px; color: #ff7b72; }
+        #docs-content pre { background: #161b22; padding: 12px; border-radius: 6px; overflow-x: auto; }
+        #docs-content pre code { background: none; padding: 0; }
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); font-weight: bold; }
         .btn-run { background: var(--accent); color: white; border: none; font-size: 16px; }
-        .btn-run:hover { background: #2ea043; }
-        .btn-docs { background: #21262d; color: #c9d1d9; }
+        .btn-stop { background: #da3633; color: white; border: none; font-size: 16px; display: none; }
         select { background: #21262d; color: #c9d1d9; border: 1px solid var(--border); padding: 8px; border-radius: 6px; }
+        .status-bar { font-size: 0.75rem; color: #8b949e; padding: 5px 10px; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight: bold; font-size: 1.2rem; color: #fff;">EZ-Shell (EZS) <span style="color:#58a6ff;">Full Integrated</span></div>
-    <div class="controls">
+    <div style="font-weight: bold; font-size: 1.2rem;">EZ-Shell (EZS) <span style="color:#58a6ff;">v5.1 Bitmap</span></div>
+    <div style="display: flex; gap: 10px; align-items: center;">
         <select id="sampleSelect" onchange="loadSample()">
-            <optgroup label="Core Logic Samples">
-                <option value="fizzbuzz">1. FizzBuzz (全自動ループ)</option>
-                <option value="calculator">2. 対話型 合計計算</option>
-                <option value="rpg">3. ミニRPG (Waitデモ)</option>
-            </optgroup>
-            <optgroup label="OS Command Samples">
-                <option value="system_demo">4. OSコマンド (Clear/Color)</option>
-                <option value="login_flow">5. ログイン認証フロー</option>
-                <option value="color_show">6. カラー・ショーケース</option>
-            </optgroup>
+            <option value="intro">1. イントロ</option>
+            <option value="bitmap_basic">2. カスタムビットマップ文字</option>
+            <option value="loading_bar">3. ローディングバー (画面幅)</option>
+            <option value="spinner">4. スピナーアニメーション</option>
+            <option value="array_demo">5. 配列とループ</option>
+            <option value="file_system">6. 仮想ファイルシステム</option>
+            <option value="math_lib">7. 数学ライブラリ</option>
+            <option value="rpg_advanced">8. RPG (配列+関数)</option>
         </select>
-        <button class="btn btn-run" onclick="runEZS()">▶ RUN</button>
-        <button class="btn btn-docs" onclick="toggleDocs()">Docs</button>
+        <button class="btn btn-run" id="runBtn" onclick="runScript()">▶ RUN SCRIPT</button>
+        <button class="btn btn-stop" id="stopBtn" onclick="stopScript()">⬛ STOP</button>
+        <button class="btn btn-docs" onclick="toggleDocs()">📘 仕様書</button>
     </div>
 </header>
 
 <div class="main-container">
     <div class="workspace">
-        <textarea id="code" spellcheck="false"></textarea>
+        <textarea id="code" spellcheck="false" placeholder="# EZ-Shell スクリプトをここに記述&#10;# RUN SCRIPT で実行 / 下部の端末で直接コマンド入力も可能"></textarea>
         <div class="terminal-container">
             <div id="console"></div>
             <div class="input-area">
                 <span>&gt;</span>
-                <input type="text" id="term-input" placeholder="入力待ち中..." disabled>
+                <input type="text" id="term-input" placeholder="コマンドを入力...">
             </div>
         </div>
+        <div class="status-bar">
+            <span id="status">Ready | Screen: <span id="screen-size"></span></span>
+        </div>
     </div>
-
     <div id="docs-panel" class="docs-panel">
-        <h3>EZS 全仕様</h3>
-        <p><b>変数と計算</b><br>
-        <code>set val 10</code><br>
-        <code>set a calc($val + 5)</code></p>
-        
-        <h3>OSコマンド</h3>
-        <p><code>clear</code>: 画面消去<br>
-        <code>color [色]</code>: 文字色(red等)<br>
-        <code>reset</code>: 初期色(緑)に戻す<br>
-        <code>wait [ms]</code>: 一時停止</p>
-
-        <h3>対話と出力</h3>
-        <p><code>echo "文" + $変数</code><br>
-        <code>input 変数 "問い"</code></p>
-
-        <h3>制御と関数</h3>
-        <pre>loop $i < 5 { ... }
-if $a == 1 { ... }
-func.ezs { ... }
-ezs func</pre>
+        <div id="docs-content">仕様書を読み込み中...</div>
     </div>
 </div>
 
 <script>
     const samples = {
-        fizzbuzz: `set i 1\nloop $i <= 15 {\n  ezs check\n  set i calc($i + 1)\n}\n\ncheck.ezs {\n  if $i % 15 == 0 { echo "FizzBuzz" }\n  if $i % 15 != 0 {\n    if $i % 3 == 0 { echo "Fizz" }\n    if $i % 5 == 0 { echo "Buzz" }\n    if $i % 3 != 0 { if $i % 5 != 0 { echo $i } }\n  }\n}`,
-        calculator: `echo "=== ユーザー入力合計器 ==="\ninput name "お名前を教えてください"\necho "こんにちは " + $name + " さん！"\ninput max "いくつまで足しますか？"\nset total 0\nset i 1\nloop $i <= $max {\n  set total calc($total + $i)\n  echo $i + " を加算 (合計: " + $total + ")"\n  set i calc($i + 1)\n}\necho "最終結果: " + $total`,
-        rpg: `echo "モンスターが現れた！"\nset hp 50\nloop $hp > 0 {\n  echo "モンスターの攻撃！"\n  wait 800\n  set dmg 15\n  set hp calc($hp - $dmg)\n  echo $dmg + " ダメージ！ (残HP: " + $hp + ")"\n  wait 500\n  if $hp > 0 { echo "冒険者は立ち上がった！" }\n  wait 1000\n}\necho "GAME OVER"`,
-        system_demo: `echo "システムチェック..." \nwait 1000\nclear\ncolor cyan\necho "=== SYSTEM READY ==="\nreset\necho "画面をクリアしますか？ (yes/no)"\ninput ans ""\nif $ans == "yes" {\n  color yellow\n  echo "3秒後にクリアします..."\n  wait 3000\n  clear\n}\necho "終了"`,
-        login_flow: `clear\ncolor white\necho "--- ACCESS RESTRICTED ---"\nreset\ninput pass "PASSWORD"\nif $pass == "admin" {\n  color blue\n  echo "Access Granted."\n  wait 1000\n  ezs secret\n}\nif $pass != "admin" { color red\n echo "Access Denied." }\n\nsecret.ezs {\n  clear\n  echo "EZS SECRET DATA: 12345"\n}`,
-        color_show: `color red\necho "Red Text"\ncolor blue\necho "Blue Text"\ncolor yellow\necho "Yellow Text"\nreset\necho "Back to Green"`
+        intro: `// EZ-Shell v5.1 イントロダクション
+echo "EZ-Shell Ultimate へようこそ！"
+color cyan
+echo "カスタムビットマップ文字が使えます"
+reset
+
+// システム変数
+echo "画面サイズ: " + $SCREEN_WIDTH + " x " + $SCREEN_HEIGHT + " 文字"
+
+// ビットマップ文字定義
+bitmap.define "heart" "0110,1111,1111,0110,0110,0100,0000,0000"
+bitmap.print "heart"
+echo " ハート文字！"`,
+
+        bitmap_basic: `// カスタムビットマップ文字の基本
+scale 2
+
+color yellow
+echo "=== 1bit (モノクロ) ==="
+
+// スマイル
+bitmap.define "smile" "0110,1001,1001,0000,1001,0110,0000,0000" 1bit
+bitmap.print "smile"
+bitmap.print "smile"
+bitmap.print "smile"
+
+echo ""
+color cyan
+echo "=== 2bit (グレースケール 4階調) ==="
+
+// グラデーション
+bitmap.define "grad" "0000,0111,1222,2333" 2bit
+bitmap.print "grad"
+bitmap.print "grad"
+bitmap.print "grad"
+
+echo ""
+color white
+echo "=== フルカラー ==="
+
+// 虹色ブロック
+bitmap.define "rainbow" "#f00,#f80,#ff0,#0f0,#00f,#808,#f0f,#000" color
+bitmap.print "rainbow"
+bitmap.print "rainbow"
+
+reset
+scale 1`,
+
+        loading_bar: `
+        // 画面幅いっぱいのローディングバー (5秒で完了)
+scale 2
+color cyan
+echo "ローディング開始..."
+
+// バーの文字を定義
+bitmap.define "bar_full" "1111,1111,1111,1111,1111,1111,1111,1111" 1bit
+bitmap.define "bar_empty" "1111,1001,1001,1001,1001,1001,1001,1111" 1bit
+
+set total_chars calc($SCREEN_WIDTH - 10)
+set steps 50
+set delay calc(5000 / $steps)
+
+set i 0
+loop $i <= $steps {
+    // 進捗率計算
+    set progress calc($i * 100 / $steps)
+    set filled calc($i * $total_chars / $steps)
+    
+    // バー描画
+    color yellow
+    echo -n "["
+    
+    color green
+    set j 0
+    loop $j < $filled {
+        bitmap.print "bar_full"
+        set j calc($j + 1)
+    }
+    
+    color #333333
+    loop $j < $total_chars {
+        bitmap.print "bar_empty"
+        set j calc($j + 1)
+    }
+    
+    color yellow
+    echo "] " + $progress + "%"
+    
+    wait $delay
+    cursor.up 1
+    set i calc($i + 1)
+}
+
+cursor.down 1
+color green
+echo "完了！"
+reset
+scale 1\`,
+
+        spinner: \`// スピナーアニメーション
+scale 2
+
+// スピナーフレーム定義
+bitmap.define "spin0" "0010,0100,1000,0000,0000,0000,0000,0000" 1bit
+bitmap.define "spin1" "0001,0010,0100,1000,0000,0000,0000,0000" 1bit
+bitmap.define "spin2" "0000,0001,0010,0100,1000,0000,0000,0000" 1bit
+bitmap.define "spin3" "0000,0000,0001,0010,0100,1000,0000,0000" 1bit
+bitmap.define "spin4" "0000,0000,0000,0001,0010,0100,1000,0000" 1bit
+bitmap.define "spin5" "0000,0000,0000,0000,0001,0010,0100,1000" 1bit
+
+color cyan
+set i 0
+loop $i < 20 {
+    set frame calc($i % 6)
+    
+    bitmap.print "spin" + $frame
+    echo " 読み込み中..."
+    
+    wait 100
+    cursor.up 1
+    set i calc($i + 1)
+}
+
+cursor.down 1
+color green
+echo "✓ 完了！"
+reset
+scale 1`
+,
+
+        array_demo: `
+array.new fruits
+array.push fruits "りんご"
+array.push fruits "バナナ"
+array.push fruits "オレンジ"
+
+color yellow
+echo "=== フルーツリスト ==="
+set i 0
+loop $i < $fruits.length {
+    echo ($i + 1) + ". " + $fruits[$i]
+    set i calc($i + 1)
+}
+
+reset
+echo ""
+echo "配列長: " + $fruits.length`,
+
+        file_system: `// 仮想ファイルシステム
+color cyan
+echo "=== ファイルシステムデモ ==="
+
+fs.write "readme.txt" "EZ-Shellへようこそ！"
+fs.write "data.txt" "Sample Data 123"
+
+echo ""
+echo "ファイル一覧:"
+fs.ls
+
+echo ""
+color yellow
+echo "readme.txt の内容:"
+set content $fs.read("readme.txt")
+echo $content
+
+reset`,
+
+        math_lib: `// 数学ライブラリ
+color magenta
+echo "=== 数学関数デモ ==="
+
+set x 16
+echo "sqrt(16) = " + $math.sqrt($x)
+
+set y 5
+echo "pow(2, 5) = " + $math.pow(2, $y)
+
+set z -10
+echo "abs(-10) = " + $math.abs($z)
+
+set nums "3,7,2,9,1"
+echo "max(3,7,2,9,1) = " + $math.max($nums)
+
+set rand $math.random(1, 100)
+color cyan
+echo "ランダム(1-100): " + $rand`,
+
+        rpg_advanced: `// RPG戦闘システム
+func attack(target, damage) {
+    set $target calc($$target - $damage)
+    return $damage
+}
+
+color white
+echo "=== モンスター戦闘 ==="
+
+array.new enemies
+array.push enemies "スライム:30"
+array.push enemies "ゴブリン:50"
+array.push enemies "ドラゴン:100"
+
+set current 0
+loop $current < $enemies.length {
+    set enemy $enemies[$current]
+    set data $string.split($enemy, ":")
+    set name $data[0]
+    set hp $data[1]
+    
+    color yellow
+    echo ""
+    echo $name + " が現れた！ (HP: " + $hp + ")"
+    
+    loop $hp > 0 {
+        set dmg $math.random(10, 25)
+        set hp calc($hp - $dmg)
+        color red
+        echo "→ " + $dmg + " ダメージ！残りHP: " + $hp
+        wait 400
+    }
+    
+    color green
+    echo "✓ " + $name + " を倒した！"
+    wait 500
+    set current calc($current + 1)
+}
+
+color cyan
+echo ""
+echo "=== 全ての敵を倒した！ ==="`
     };
 
-    let inputResolver = null;
-    function loadSample() { document.getElementById('code').value = samples[document.getElementById('sampleSelect').value]; }
-    function toggleDocs() { document.getElementById('docs-panel').classList.toggle('hidden'); }
-    function askInput() {
-        const inp = document.getElementById('term-input');
-        inp.disabled = false; inp.focus();
-        return new Promise(r => { inputResolver = r; });
+    // グローバル状態管理
+    let runtime = {
+        memory: {},
+        functions: {},
+        arrays: {},
+        filesystem: {},
+        bitmapChars: {},
+        running: false,
+        stopFlag: false,
+        currentColor: "#39ff14",
+        currentScale: 1,
+        commandHistory: [],
+        historyIndex: -1,
+        screenWidth: 0,
+        screenHeight: 0,
+        cursorY: 0
+    };
+
+    function updateScreenSize() {
+        const console = document.getElementById('console');
+        const charWidth = 4 * runtime.currentScale;
+        const charHeight = 8 * runtime.currentScale;
+        
+        runtime.screenWidth = Math.floor(console.clientWidth / charWidth);
+        runtime.screenHeight = Math.floor(console.clientHeight / charHeight);
+        
+        // システム変数設定
+        runtime.memory['SCREEN_WIDTH'] = runtime.screenWidth;
+        runtime.memory['SCREEN_HEIGHT'] = runtime.screenHeight;
+        
+        document.getElementById('screen-size').textContent = 
+            `${runtime.screenWidth}x${runtime.screenHeight} (${runtime.currentScale}x)`;
     }
 
-    document.getElementById('term-input').addEventListener('keypress', e => {
-        if (e.key === 'Enter' && inputResolver) {
-            const v = e.target.value; e.target.value = ''; e.target.disabled = true;
-            document.getElementById('console').textContent += v + "\n";
-            inputResolver(v); inputResolver = null;
+    function appendConsole(content, color = runtime.currentColor, newline = true) {
+        const consoleEl = document.getElementById('console');
+        
+        // 最後の行を取得または新規作成
+        let currentLine = consoleEl.lastElementChild;
+        if (!currentLine || currentLine.dataset.completed === 'true') {
+            currentLine = document.createElement('div');
+            currentLine.className = `console-line scale-${runtime.currentScale}`;
+            currentLine.dataset.completed = 'false';
+            consoleEl.appendChild(currentLine);
+            runtime.cursorY++;
+        }
+        
+        // テキストまたはビットマップを追加
+        if (typeof content === 'string') {
+            const span = document.createElement('span');
+            span.className = 'text-span';
+            span.style.color = color;
+            span.textContent = content;
+            currentLine.appendChild(span);
+        } else if (content.type === 'bitmap') {
+            currentLine.appendChild(content.element);
+        }
+        
+        if (newline) {
+            currentLine.dataset.completed = 'true';
+        }
+        
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function createBitmapChar(name) {
+        const def = runtime.bitmapChars[name];
+        if (!def) return null;
+        
+        const charDiv = document.createElement('div');
+        charDiv.className = 'bitmap-char';
+        
+        if (def.type === '1bit') {
+            // モノクロ: 0=透明, 1=現在色
+            def.data.forEach(row => {
+                row.split('').forEach(pixel => {
+                    const pixelDiv = document.createElement('div');
+                    pixelDiv.className = 'bitmap-pixel';
+                    pixelDiv.style.backgroundColor = pixel === '1' ? runtime.currentColor : 'transparent';
+                    charDiv.appendChild(pixelDiv);
+                });
+            });
+        } else if (def.type === '2bit') {
+            // グレースケール: 0-3の明度
+            const baseColor = runtime.currentColor;
+            const rgb = hexToRgb(baseColor);
+            
+            def.data.forEach(row => {
+                row.split('').forEach(pixel => {
+                    const pixelDiv = document.createElement('div');
+                    pixelDiv.className = 'bitmap-pixel';
+                    const intensity = parseInt(pixel) / 3;
+                    pixelDiv.style.backgroundColor = 
+                        `rgb(${Math.floor(rgb.r * intensity)}, ${Math.floor(rgb.g * intensity)}, ${Math.floor(rgb.b * intensity)})`;
+                    charDiv.appendChild(pixelDiv);
+                });
+            });
+        } else if (def.type === 'color') {
+            // フルカラー: 各ピクセルに色指定
+            def.data.forEach(color => {
+                const pixelDiv = document.createElement('div');
+                pixelDiv.className = 'bitmap-pixel';
+                pixelDiv.style.backgroundColor = color;
+                charDiv.appendChild(pixelDiv);
+            });
+        }
+        
+        return { type: 'bitmap', element: charDiv };
+    }
+
+    function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 57, g: 255, b: 20 };
+    }
+
+    function setStatus(msg) {
+        document.getElementById('status').textContent = msg;
+    }
+
+    // 値の解決
+    function getValue(expr) {
+        if (!expr) return "";
+        
+        // 配列アクセス
+        expr = expr.replace(/\$([a-zA-Z0-9_]+)\[(\d+|\$[a-zA-Z0-9_]+)\]/g, (match, name, idx) => {
+            const index = idx.startsWith('$') ? getValue(idx) : parseInt(idx);
+            if (runtime.arrays[name] && runtime.arrays[name][index] !== undefined) {
+                const val = runtime.arrays[name][index];
+                return typeof val === 'string' ? `"${val}"` : val;
+            }
+            return "undefined";
+        });
+
+        // 配列の長さ
+        expr = expr.replace(/\$([a-zA-Z0-9_]+)\.length/g, (match, name) => {
+            return runtime.arrays[name] ? runtime.arrays[name].length : 0;
+        });
+
+        // 変数展開
+        expr = expr.replace(/\$\$([a-zA-Z0-9_]+)/g, (_, name) => {
+            return runtime.memory[name] ?? 0;
+        });
+
+        expr = expr.replace(/\$([a-zA-Z0-9_]+)/g, (_, name) => {
+            const val = runtime.memory[name];
+            if (val === undefined) return "0";
+            return typeof val === 'string' ? `"${val}"` : val;
+        });
+
+        // calc() 評価
+        if (expr.includes("calc(")) {
+            try {
+                const calcExpr = expr.match(/calc\((.+)\)/)[1];
+                return eval(calcExpr);
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        // 文字列連結
+        if (expr.includes('+') && !expr.match(/^\d+\s*\+\s*\d+$/)) {
+            return expr.split('+').map(s => {
+                s = s.trim();
+                if (s.startsWith('"') && s.endsWith('"')) return s.slice(1, -1);
+                if (s.startsWith('(') && s.endsWith(')')) return getValue(s.slice(1, -1));
+                return String(s);
+            }).join('');
+        }
+
+        if (expr.startsWith('"') && expr.endsWith('"')) return expr.slice(1, -1);
+        if (!isNaN(expr)) return Number(expr);
+        
+        return expr;
+    }
+
+    // 標準ライブラリ
+    const stdlib = {
+        'array.new': (name) => { runtime.arrays[name] = []; },
+        'array.push': (name, val) => { if (runtime.arrays[name]) runtime.arrays[name].push(getValue(val)); },
+        'array.pop': (name) => { return runtime.arrays[name] ? runtime.arrays[name].pop() : null; },
+        'array.clear': (name) => { if (runtime.arrays[name]) runtime.arrays[name] = []; },
+        
+        'math.sqrt': (n) => Math.sqrt(Number(getValue(n))),
+        'math.pow': (a, b) => Math.pow(Number(getValue(a)), Number(getValue(b))),
+        'math.abs': (n) => Math.abs(Number(getValue(n))),
+        'math.random': (min, max) => {
+            const a = Number(getValue(min));
+            const b = Number(getValue(max));
+            return Math.floor(Math.random() * (b - a + 1)) + a;
+        },
+        'math.max': (nums) => {
+            const arr = String(getValue(nums)).split(',').map(n => Number(n.trim()));
+            return Math.max(...arr);
+        },
+        'math.min': (nums) => {
+            const arr = String(getValue(nums)).split(',').map(n => Number(n.trim()));
+            return Math.min(...arr);
+        },
+
+        'string.split': (str, delim) => {
+            const s = String(getValue(str));
+            const d = String(getValue(delim));
+            const result = s.split(d);
+            const arrName = '_split_result_' + Date.now();
+            runtime.arrays[arrName] = result;
+            return arrName;
+        },
+        'string.length': (str) => String(getValue(str)).length,
+        'string.upper': (str) => String(getValue(str)).toUpperCase(),
+        'string.lower': (str) => String(getValue(str)).toLowerCase(),
+
+        'fs.write': (name, content) => { runtime.filesystem[getValue(name)] = getValue(content); },
+        'fs.read': (name) => runtime.filesystem[getValue(name)] || "",
+        'fs.delete': (name) => { delete runtime.filesystem[getValue(name)]; },
+        'fs.ls': () => {
+            const files = Object.keys(runtime.filesystem);
+            files.forEach(f => appendConsole("  " + f));
+        },
+
+        'bitmap.define': (name, data, type = '1bit') => {
+            const charName = getValue(name);
+            const charData = getValue(data);
+            const charType = getValue(type);
+            
+            if (charType === 'color') {
+                // フルカラー: "#RGB,#RGB,..." 形式
+                const colors = charData.split(',');
+                runtime.bitmapChars[charName] = { type: 'color', data: colors };
+            } else if (charType === '2bit') {
+                // 2bit: "0123,0123,..." 形式
+                const rows = charData.split(',');
+                runtime.bitmapChars[charName] = { type: '2bit', data: rows };
+            } else {
+                // 1bit: "0110,1001,..." 形式
+                const rows = charData.split(',');
+                runtime.bitmapChars[charName] = { type: '1bit', data: rows };
+            }
+        },
+
+        'bitmap.print': (name) => {
+            const charName = getValue(name);
+            const bitmapElement = createBitmapChar(charName);
+            if (bitmapElement) {
+                appendConsole(bitmapElement, null, false);
+            }
+        },
+
+        'cursor.up': (n) => {
+            const lines = n ? getValue(n) : 1;
+            const consoleEl = document.getElementById('console');
+            for (let i = 0; i < lines; i++) {
+                if (consoleEl.lastElementChild) {
+                    consoleEl.removeChild(consoleEl.lastElementChild);
+                }
+            }
+        },
+
+        'cursor.down': (n) => {
+            const lines = n ? getValue(n) : 1;
+            for (let i = 0; i < lines; i++) {
+                appendConsole('');
+            }
+        }
+    };
+
+    function callLibFunction(expr) {
+        const match = expr.match(/^([a-z]+)\.([a-z_]+)\s*(.*)$/);
+        if (!match) return null;
+        
+        const [, lib, func, argsStr] = match;
+        const funcName = `${lib}.${func}`;
+        
+        if (!stdlib[funcName]) return null;
+        
+        if (argsStr.trim()) {
+            const args = argsStr.split(',').map(a => a.trim());
+            return stdlib[funcName](...args);
+        } else {
+            return stdlib[funcName]();
+        }
+    }
+
+    // コマンド実行
+    async function executeCommand(line) {
+        if (runtime.stopFlag) return;
+        if (!line || line.startsWith("//")) return;
+
+        const parts = line.split(/\s+/);
+        const cmd = parts[0];
+
+        try {
+            // ライブラリコール
+            if (line.match(/^[a-z]+\.[a-z_]+/)) {
+                const result = callLibFunction(line);
+                if (result !== null && result !== undefined) {
+                    runtime.memory['_last_result'] = result;
+                }
+                return;
+            }
+
+            switch(cmd) {
+                case 'echo': {
+                    const content = line.substring(5);
+                    const isNoNewline = content.startsWith('-n ');
+                    const text = isNoNewline ? content.substring(3) : content;
+                    appendConsole(getValue(text), runtime.currentColor, !isNoNewline);
+                    break;
+                }
+
+                case 'set': {
+                    const varName = parts[1];
+                    const valueExpr = line.substring(line.indexOf(parts[2]));
+                    
+                    if (valueExpr.includes('.') && valueExpr.includes('(')) {
+                        const result = callLibFunction(valueExpr);
+                        runtime.memory[varName] = result !== null ? result : getValue(valueExpr);
+                    } else {
+                        runtime.memory[varName] = getValue(valueExpr);
+                    }
+                    break;
+                }
+
+                case 'color':
+                    runtime.currentColor = parts[1] || "#39ff14";
+                    break;
+
+                case 'reset':
+                    runtime.currentColor = "#39ff14";
+                    break;
+
+                case 'scale':
+                    runtime.currentScale = parseInt(parts[1]) || 1;
+                    updateScreenSize();
+                    break;
+
+                case 'clear':
+                    document.getElementById('console').textContent = "";
+                    runtime.cursorY = 0;
+                    break;
+
+                case 'wait':
+                    await new Promise(r => setTimeout(r, getValue(parts[1])));
+                    break;
+
+                case 'input': {
+                    const promptText = line.substring(line.indexOf(parts[2] || ""));
+                    if (promptText) appendConsole(getValue(promptText));
+                    
+                    runtime.memory[parts[1]] = await new Promise(resolve => {
+                        const input = document.getElementById('term-input');
+                        const handler = (e) => {
+                            if (e.key === 'Enter') {
+                                const val = e.target.value;
+                                e.target.value = '';
+                                appendConsole(val, "#ffffff");
+                                input.removeEventListener('keypress', handler);
+                                resolve(val);
+                            }
+                        };
+                        input.addEventListener('keypress', handler);
+                        input.focus();
+                    });
+                    break;
+                }
+
+                case 'func':
+                case 'return':
+                case 'try':
+                    break;
+
+                default: {
+                    const funcMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\((.+)\)/);
+                    if (funcMatch && runtime.functions[funcMatch[1]]) {
+                        const funcName = funcMatch[1];
+                        const argsStr = funcMatch[2];
+                        const args = argsStr.split(',').map(a => getValue(a.trim()));
+                        await executeFunction(funcName, args);
+                    }
+                }
+            }
+        } catch (e) {
+            appendConsole("⚠ Error: " + e.message, "#ff0000");
+        }
+    }
+
+    async function executeFunction(name, args) {
+        const func = runtime.functions[name];
+        if (!func) return;
+
+        const oldVars = {};
+        func.params.forEach((param, i) => {
+            oldVars[param] = runtime.memory[param];
+            runtime.memory[param] = args[i] !== undefined ? args[i] : null;
+        });
+
+        await executeLines(func.body);
+
+        func.params.forEach(param => {
+            runtime.memory[param] = oldVars[param];
+        });
+
+        return runtime.memory['_return'];
+    }
+
+    async function executeLines(lines) {
+        for (let i = 0; i < lines.length; i++) {
+            if (runtime.stopFlag) break;
+
+            const line = lines[i].trim();
+            const cmd = line.split(/\s+/)[0];
+
+            if (cmd === 'if' || cmd === 'loop') {
+                const condMatch = line.match(/(if|loop)\s+(.+)\s*\{/);
+                if (!condMatch) continue;
+
+                const condition = condMatch[2];
+                const body = [];
+                let depth = 1;
+                i++;
+
+                while (i < lines.length && depth > 0) {
+                    if (lines[i].includes('{')) depth++;
+                    if (lines[i].trim() === '}') depth--;
+                    if (depth > 0) body.push(lines[i]);
+                    i++;
+                }
+                i--;
+
+                const evalCondition = () => {
+                    let cond = condition.replace(/\$([a-zA-Z0-9_]+)/g, (_, n) => {
+                        const v = runtime.memory[n];
+                        return typeof v === 'string' ? `"${v}"` : (v ?? 0);
+                    });
+                    try { return eval(cond); } catch { return false; }
+                };
+
+                if (cmd === 'if' && evalCondition()) {
+                    await executeLines(body);
+                } else if (cmd === 'loop') {
+                    while (evalCondition() && !runtime.stopFlag) {
+                        await executeLines(body);
+                    }
+                }
+            } else if (cmd === 'try') {
+                const body = [];
+                let catchBody = [];
+                let depth = 1;
+                let inCatch = false;
+                i++;
+
+                while (i < lines.length && depth > 0) {
+                    if (lines[i].trim() === 'catch' && depth === 1) {
+                        inCatch = true;
+                        i++;
+                        continue;
+                    }
+                    if (lines[i].includes('{')) depth++;
+                    if (lines[i].trim() === '}') depth--;
+                    
+                    if (depth > 0) {
+                        if (inCatch) catchBody.push(lines[i]);
+                        else body.push(lines[i]);
+                    }
+                    i++;
+                }
+                i--;
+
+                try {
+                    await executeLines(body);
+                } catch (e) {
+                    await executeLines(catchBody);
+                }
+            } else {
+                await executeCommand(line);
+            }
+        }
+    }
+
+    async function runScript() {
+        runtime.stopFlag = false;
+        runtime.running = true;
+        document.getElementById('runBtn').style.display = 'none';
+        document.getElementById('stopBtn').style.display = 'inline-block';
+        setStatus("Running Script...");
+
+        const code = document.getElementById('code').value;
+        const lines = code.split('\n')
+            .map(l => l.trim())
+            .filter(l => l && !l.startsWith("//"));
+
+        runtime.functions = {};
+        for (let i = 0; i < lines.length; i++) {
+            const funcMatch = lines[i].match(/^func\s+([a-zA-Z_][a-zA-Z0-9_]*)\(([^)]*)\)\s*\{/);
+            if (funcMatch) {
+                const funcName = funcMatch[1];
+                const params = funcMatch[2].split(',').map(p => p.trim()).filter(p => p);
+                const body = [];
+                let depth = 1;
+                i++;
+
+                while (i < lines.length && depth > 0) {
+                    if (lines[i].includes('{')) depth++;
+                    if (lines[i].trim() === '}') depth--;
+                    if (depth > 0) body.push(lines[i]);
+                    i++;
+                }
+                i--;
+
+                runtime.functions[funcName] = { params, body };
+            }
+        }
+
+        const mainLines = lines.filter(l => !l.match(/^func\s+/) && l !== '}');
+        await executeLines(mainLines);
+
+        runtime.running = false;
+        document.getElementById('runBtn').style.display = 'inline-block';
+        document.getElementById('stopBtn').style.display = 'none';
+        updateScreenSize();
+        setStatus(`Ready | Screen: ${runtime.screenWidth}x${runtime.screenHeight} (${runtime.currentScale}x)`);
+    }
+
+    function stopScript() {
+        runtime.stopFlag = true;
+        runtime.running = false;
+        appendConsole("⚠ Script stopped by user", "#ffaa00");
+        document.getElementById('runBtn').style.display = 'inline-block';
+        document.getElementById('stopBtn').style.display = 'none';
+        setStatus("Stopped | REPL Mode Active");
+    }
+
+    document.getElementById('term-input').addEventListener('keydown', async (e) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (runtime.commandHistory.length > 0 && runtime.historyIndex < runtime.commandHistory.length - 1) {
+                runtime.historyIndex++;
+                e.target.value = runtime.commandHistory[runtime.commandHistory.length - 1 - runtime.historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (runtime.historyIndex > 0) {
+                runtime.historyIndex--;
+                e.target.value = runtime.commandHistory[runtime.commandHistory.length - 1 - runtime.historyIndex];
+            } else {
+                runtime.historyIndex = -1;
+                e.target.value = '';
+            }
         }
     });
 
-    window.onload = loadSample;
+    document.getElementById('term-input').addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && !runtime.running) {
+            const input = e.target.value.trim();
+            if (!input) return;
 
-    async function runEZS() {
-        const consoleEl = document.getElementById('console');
-        consoleEl.textContent = ""; consoleEl.style.color = "#39ff14";
-        const code = document.getElementById('code').value;
-        let memory = {}; let functions = {};
-        let lines = code.split('\n').map(l => l.trim()).filter(l => l !== "");
-        let mainCode = [];
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].includes(".ezs {")) {
-                let name = lines[i].split(".ezs")[0]; let body = []; i++;
-                while (i < lines.length && lines[i] !== "}") { body.push(lines[i]); i++; }
-                functions[name] = body;
-            } else mainCode.push(lines[i]);
+            e.target.value = '';
+            runtime.commandHistory.push(input);
+            runtime.historyIndex = -1;
+
+            appendConsole('> ' + input, "#58a6ff");
+            
+            const lines = input.split('\n').map(l => l.trim()).filter(l => l);
+            await executeLines(lines);
         }
-        const getValue = (v) => {
-            let p = v.replace(/\$([a-zA-Z0-9_]+)/g, (_, n) => memory[n] ?? 0);
-            if (p.includes("calc(")) { try { return eval(p.match(/calc\((.+)\)/)[1]); } catch { return 0; } }
-            if (p.includes('"') || p.includes('+')) return p.split('+').map(s => s.trim().replace(/^"|"$/g, '')).join('');
-            return isNaN(p) ? p : Number(p);
-        };
-        const exec = async (cls) => {
-            for (let i = 0; i < cls.length; i++) {
-                let line = cls[i]; let p = line.split(/\s+/); let cmd = p[0];
-                if (cmd === "echo") { consoleEl.textContent += getValue(line.substring(5)) + "\n"; consoleEl.scrollTop = consoleEl.scrollHeight; }
-                else if (cmd === "set") memory[p[1]] = getValue(line.substring(line.indexOf(p[2])));
-                else if (cmd === "clear") consoleEl.textContent = "";
-                else if (cmd === "color") consoleEl.style.color = p[1];
-                else if (cmd === "reset") consoleEl.style.color = "#39ff14";
-                else if (cmd === "wait") await new Promise(r => setTimeout(r, getValue(p[1])));
-                else if (cmd === "input") { consoleEl.textContent += getValue(line.substring(line.indexOf(p[2]))) + " "; memory[p[1]] = await askInput(); }
-                else if (cmd === "ezs") { if (functions[p[1]]) await exec(functions[p[1]]); }
-                else if (cmd === "if" || cmd === "loop") {
-                    let cond = line.match(/(if|loop)\s+(.+)\s+\{/)[2];
-                    let body = []; let d = 1; i++;
-                    while (i < cls.length && d > 0) {
-                        if (cls[i].includes("{")) d++; if (cls[i] === "}") d--;
-                        if (d > 0) body.push(cls[i]); i++;
-                    } i--;
-                    let ev = () => eval(cond.replace(/\$([a-zA-Z0-9_]+)/g, (_, n) => memory[n] ?? 0));
-                    if (cmd === "if" && ev()) await exec(body);
-                    else if (cmd === "loop") while (ev()) await exec(body);
-                }
-            }
-        };
-        try { await exec(mainCode); } catch (e) { consoleEl.textContent += "\n[Error]: " + e.message; }
+    });
+
+    function loadSample() {
+        const sample = samples[document.getElementById('sampleSelect').value];
+        document.getElementById('code').value = sample;
     }
+
+    function toggleDocs() {
+        document.getElementById('docs-panel').classList.toggle('hidden');
+    }
+
+    async function loadDocs() {
+        const content = document.getElementById('docs-content');
+        const docsMarkdown = `# EZ-Shell v5.1 完全仕様書
+
+## 📘 概要
+
+EZ-Shell (EZS) v5.1 は、カスタムビットマップ文字、グレースケール/フルカラー対応、画面サイズシステム変数を備えた実用的なスクリプト言語です。
+
+---
+
+## 🎨 ビットマップ文字システム
+
+### bitmap.define
+4x8ピクセルのカスタム文字を定義
+
+**1bit (モノクロ)**
+\`\`\`ezs
+bitmap.define "heart" "0110,1111,1111,0110,0110,0100,0000,0000" 1bit
+\`\`\`
+
+**2bit (グレースケール 4階調)**
+\`\`\`ezs
+bitmap.define "grad" "0000,0111,1222,2333" 2bit
+\`\`\`
+
+**フルカラー (32ピクセル個別指定)**
+\`\`\`ezs
+bitmap.define "rainbow" "#f00,#f80,#ff0,#0f0,#00f,#808,#f0f,#000,#f00,#f80,#ff0,#0f0,#00f,#808,#f0f,#000,#f00,#f80,#ff0,#0f0,#00f,#808,#f0f,#000,#f00,#f80,#ff0,#0f0,#00f,#808,#f0f,#000" color
+\`\`\`
+
+### bitmap.print
+定義した文字を出力
+\`\`\`ezs
+bitmap.print "heart"
+\`\`\`
+
+---
+
+## 📏 スケールと画面サイズ
+
+### scale
+表示倍率を変更 (1, 2, 3対応)
+\`\`\`ezs
+scale 2
+echo "2倍サイズ"
+scale 1
+\`\`\`
+
+### システム変数
+- **$SCREEN_WIDTH**: 画面横幅 (文字数)
+- **$SCREEN_HEIGHT**: 画面縦幅 (文字数)
+
+\`\`\`ezs
+echo "画面サイズ: " + $SCREEN_WIDTH + " x " + $SCREEN_HEIGHT
+\`\`\`
+
+---
+
+## 🖥️ カーソル制御
+
+### cursor.up
+カーソルを上に移動 (行削除)
+\`\`\`ezs
+cursor.up 1
+\`\`\`
+
+### cursor.down
+カーソルを下に移動 (空行追加)
+\`\`\`ezs
+cursor.down 1
+\`\`\`
+
+### echo -n
+改行なしで出力
+\`\`\`ezs
+echo -n "進行中..."
+\`\`\`
+
+---
+
+## 🎯 基本構文
+
+### 変数と出力
+\`\`\`ezs
+set name "太郎"
+echo "こんにちは、" + $name
+\`\`\`
+
+### 計算
+\`\`\`ezs
+set x calc(10 * 2 + 5)
+\`\`\`
+
+---
+
+## 🎨 色制御
+
+\`\`\`ezs
+color red
+echo "赤色"
+color #00ff00
+echo "緑色"
+reset
+\`\`\`
+
+---
+
+## 📊 配列
+
+\`\`\`ezs
+array.new fruits
+array.push fruits "りんご"
+echo $fruits[0]
+echo $fruits.length
+\`\`\`
+
+---
+
+## 🔁 制御構文
+
+\`\`\`ezs
+if $x > 5 {
+    echo "大きい"
+}
+
+loop $i < 10 {
+    echo $i
+    set i calc($i + 1)
+}
+\`\`\`
+
+---
+
+## 🛠️ 関数
+
+\`\`\`ezs
+func greet(name) {
+    echo "Hello, " + $name
+}
+
+greet("World")
+\`\`\`
+
+---
+
+## 📐 数学ライブラリ
+
+- \`math.sqrt(n)\`: 平方根
+- \`math.pow(a, b)\`: 累乗
+- \`math.abs(n)\`: 絶対値
+- \`math.random(min, max)\`: ランダム整数
+- \`math.max(nums)\`: 最大値
+- \`math.min(nums)\`: 最小値
+
+---
+
+## 📝 文字列ライブラリ
+
+- \`string.split(str, delim)\`: 分割
+- \`string.length(str)\`: 長さ
+- \`string.upper(str)\`: 大文字化
+- \`string.lower(str)\`: 小文字化
+
+---
+
+## 💾 ファイルシステム
+
+- \`fs.write(name, content)\`: 書き込み
+- \`fs.read(name)\`: 読み込み
+- \`fs.ls\`: 一覧表示
+- \`fs.delete(name)\`: 削除
+
+---
+
+## 🚀 実行例: ローディングバー
+
+\`\`\`ezs
+scale 2
+bitmap.define "bar" "1111,1111,1111,1111,1111,1111,1111,1111" 1bit
+
+set i 0
+loop $i < $SCREEN_WIDTH {
+    color green
+    bitmap.print "bar"
+    wait 50
+    set i calc($i + 1)
+}
+\`\`\`
+
+---
+
+**Version**: 5.1 Bitmap  
+**License**: MIT
+`;
+
+        content.innerHTML = marked.parse(docsMarkdown);
+    }
+
+    window.onload = () => {
+        updateScreenSize();
+        loadDocs();
+        loadSample();
+        document.getElementById('term-input').focus();
+        
+        window.addEventListener('resize', updateScreenSize);
+    };
 </script>
 </body>
 </html>

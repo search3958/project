@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>JSONL Realtime Converter</title>
+    <style>
+        body { font-family: sans-serif; margin: 30px; background: #1a1a1a; color: #eee; }
+        .container { max-width: 800px; margin: 0 auto; }
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: #bbb; }
+        
+        textarea { 
+            width: 100%; height: 180px; padding: 12px; border: 1px solid #444; 
+            background: #252525; color: #fff; border-radius: 4px; box-sizing: border-box;
+            font-family: monospace; font-size: 14px; margin-bottom: 20px;
+        }
+
+        #output { 
+            background: #000; color: #00ff41; padding: 15px; border-radius: 4px; 
+            white-space: pre-wrap; word-wrap: break-word; font-family: monospace; 
+            cursor: pointer; border: 1px solid #333; min-height: 50px; position: relative;
+        }
+        #output:hover { background: #111; border-color: #00ff41; }
+        #output::after { 
+            content: "Click to Copy"; position: absolute; right: 10px; top: 5px; 
+            font-size: 10px; color: #555; 
+        }
+        
+        .status { font-size: 12px; color: #888; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <label>入力 (ここに貼り付け)</label>
+    <textarea id="inputText" placeholder="#aa&#10;aa" oninput="convert()"></textarea>
+
+    <label>出力 (クリックでコピー)</label>
+    <div id="output" onclick="copyToClipboard()"></div>
+    <div id="status" class="status"></div>
+</div>
+
+<script>
+    function convert() {
+        const input = document.getElementById('inputText').value;
+        const outputElement = document.getElementById('output');
+        
+        if (!input.trim()) {
+            outputElement.textContent = "";
+            return;
+        }
+
+        // # で分割して空要素を除去
+        const blocks = input.split('#').filter(b => b.trim() !== "");
+        
+        const results = blocks.map(block => {
+            const lines = block.trim().split('\n');
+            const userText = lines[0] ? lines[0].trim() : "";
+            // 2行目以降をassistantとして結合
+            const assistantText = lines.slice(1).join('\n').trim();
+            
+            // JSONオブジェクトを作成（これで引用符や改行が適切にエスケープされる）
+            const data = {
+                "text": `<|user|>\n${userText}\n<|assistant|>\n${assistantText}`
+            };
+            
+            // JSON文字列に変換（生テキストとして出力）
+            return JSON.stringify(data);
+        });
+
+        outputElement.textContent = results.join('\n');
+    }
+
+    function copyToClipboard() {
+        const text = document.getElementById('output').textContent;
+        if (!text) return;
+
+        navigator.clipboard.writeText(text).then(() => {
+            const status = document.getElementById('status');
+            status.textContent = "コピーしました！";
+            status.style.color = "#00ff41";
+            setTimeout(() => { status.textContent = ""; }, 2000);
+        }).catch(err => {
+            console.error('コピー失敗', err);
+        });
+    }
+
+    // 初期実行
+    convert();
+</script>
+
+</body>
+</html>
