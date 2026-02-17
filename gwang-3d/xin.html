@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced 3D Shader System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0f;
+            color: #e8e8e8;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            max-height: calc(100vh - 40px);
+            background: linear-gradient(145deg, rgba(20, 20, 30, 0.95), rgba(10, 10, 18, 0.98));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 100;
+            overflow-y: auto;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #fff;
+            letter-spacing: 0.5px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .material-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .material-tab {
+            flex: 1;
+            padding: 10px 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            color: #888;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .material-tab:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #ccc;
+        }
+
+        .material-tab.active {
+            background: linear-gradient(135deg, rgba(100, 200, 255, 0.2), rgba(150, 100, 255, 0.2));
+            border-color: rgba(100, 200, 255, 0.4);
+            color: #fff;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-value {
+            font-family: 'SF Mono', 'Consolas', monospace;
+            color: #64c8ff;
+            font-size: 11px;
+        }
+
+        .slider-container {
+            position: relative;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: visible;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+            z-index: 2;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #64c8ff, #a064ff);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(100, 200, 255, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 16px rgba(100, 200, 255, 0.6);
+        }
+
+        .slider-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #a064ff);
+            border-radius: 3px;
+            pointer-events: none;
+        }
+
+        .color-picker-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .color-picker {
+            width: 48px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .color-picker::-webkit-color-swatch {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+        }
+
+        .color-hex {
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            margin: 20px 0;
+        }
+
+        .object-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .object-btn {
+            padding: 12px 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            color: #888;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        .object-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #ccc;
+        }
+
+        .object-btn.active {
+            background: rgba(255, 180, 100, 0.15);
+            border-color: rgba(255, 180, 100, 0.4);
+            color: #ffb464;
+        }
+
+        .info-text {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.6;
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+        }
+
+        .fps-counter {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 12px;
+            color: #64c8ff;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 14px;
+            border-radius: 6px;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            .control-panel {
+                width: calc(100% - 40px);
+                right: 20px;
+                max-height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="fps-counter">FPS: <span id="fps">60</span></div>
+
+    <div class="control-panel">
+        <div class="panel-title">Material Shader System</div>
+
+        <div class="object-selector">
+            <button class="object-btn active" data-object="sphere">Sphere</button>
+            <button class="object-btn" data-object="cube">Cube</button>
+            <button class="object-btn" data-object="torus">Torus</button>
+            <button class="object-btn" data-object="knot">Knot</button>
+            <button class="object-btn" data-object="cylinder">Cylinder</button>
+            <button class="object-btn" data-object="cone">Cone</button>
+        </div>
+
+        <div class="material-tabs">
+            <div class="material-tab active" data-type="glass">Glass</div>
+            <div class="material-tab" data-type="metal">Metal</div>
+            <div class="material-tab" data-type="matte">Matte</div>
+        </div>
+
+        <div id="controls-container">
+            <!-- Controls will be dynamically generated -->
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="control-group">
+            <div class="control-label">
+                <span>Base Color</span>
+            </div>
+            <div class="color-picker-row">
+                <input type="color" class="color-picker" id="baseColor" value="#88ccff">
+                <span class="color-hex" id="colorHex">#88ccff</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">
+                <span>Environment Intensity</span>
+                <span class="control-value" id="envIntensityValue">1.00</span>
+            </div>
+            <div class="slider-container">
+                <div class="slider-fill" id="envIntensityFill" style="width: 50%"></div>
+                <input type="range" class="slider" id="envIntensity" min="0" max="2" step="0.01" value="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">
+                <span>Normal Intensity</span>
+                <span class="control-value" id="normalIntensityValue">1.00</span>
+            </div>
+            <div class="slider-container">
+                <div class="slider-fill" id="normalIntensityFill" style="width: 50%"></div>
+                <input type="range" class="slider" id="normalIntensity" min="0" max="2" step="0.01" value="1">
+            </div>
+        </div>
+
+        <div class="info-text">
+            Drag to rotate. Scroll to zoom. Adjust parameters above to modify material properties in real-time.
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 6);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 2;
+        controls.maxDistance = 15;
+
+        // Environment map generation
+        function createEnvironmentMap() {
+            const size = 256;
+            const data = new Float32Array(size * size * 4);
+            
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const i = (y * size + x) * 4;
+                    const u = x / size;
+                    const v = y / size;
+                    
+                    // Create a gradient environment
+                    const nx = Math.cos(u * Math.PI * 2) * Math.sin(v * Math.PI);
+                    const ny = Math.cos(v * Math.PI);
+                    const nz = Math.sin(u * Math.PI * 2) * Math.sin(v * Math.PI);
+                    
+                    // Sky gradient
+                    const skyMix = Math.pow(Math.max(0, ny), 0.5);
+                    const r = THREE.MathUtils.lerp(8, 40, skyMix) + Math.pow(Math.max(0, ny), 8) * 200;
+                    const g = THREE.MathUtils.lerp(12, 60, skyMix) + Math.pow(Math.max(0, ny), 8) * 220;
+                    const b = THREE.MathUtils.lerp(20, 100, skyMix) + Math.pow(Math.max(0, ny), 8) * 255;
+                    
+                    // Add some variation
+                    const noise = Math.sin(u * 20) * Math.sin(v * 20) * 0.1;
+                    
+                    data[i] = Math.max(0, r + noise * 10) / 255;
+                    data[i + 1] = Math.max(0, g + noise * 10) / 255;
+                    data[i + 2] = Math.max(0, b + noise * 10) / 255;
+                    data[i + 3] = 1;
+                }
+            }
+            
+            const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.FloatType);
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        const envMap = createEnvironmentMap();
+        scene.environment = envMap;
+        scene.background = new THREE.Color(0x0a0a12);
+
+        // Shader chunks
+        const commonChunk = `
+            uniform float uTime;
+            uniform float uEnvIntensity;
+            uniform float uNormalIntensity;
+            uniform vec3 uBaseColor;
+            
+            varying vec3 vWorldPosition;
+            varying vec3 vWorldNormal;
+            varying vec2 vUv;
+            varying vec3 vViewDirection;
+            
+            // Fresnel calculation
+            float fresnelSchlick(float cosTheta, float f0) {
+                return f0 + (1.0 - f0) * pow(1.0 - cosTheta, 5.0);
+            }
+            
+            // Enhanced fresnel with dispersion
+            vec3 fresnelSchlickDispersion(float cosTheta, vec3 f0) {
+                return f0 + (1.0 - f0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), vec3(5.0, 4.5, 4.0));
+            }
+            
+            // GGX/Trowbridge-Reitz normal distribution function
+            float distributionGGX(vec3 N, vec3 H, float roughness) {
+                float a = roughness * roughness;
+                float a2 = a * a;
+                float NdotH = max(dot(N, H), 0.0);
+                float NdotH2 = NdotH * NdotH;
+                float num = a2;
+                float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+                denom = 3.14159 * denom * denom;
+                return num / denom;
+            }
+            
+            // Geometry function
+            float geometrySchlickGGX(float NdotV, float roughness) {
+                float r = (roughness + 1.0);
+                float k = (r * r) / 8.0;
+                float num = NdotV;
+                float denom = NdotV * (1.0 - k) + k;
+                return num / denom;
+            }
+            
+            float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+                float NdotV = max(dot(N, V), 0.0);
+                float NdotL = max(dot(N, L), 0.0);
+                float ggx2 = geometrySchlickGGX(NdotV, roughness);
+                float ggx1 = geometrySchlickGGX(NdotL, roughness);
+                return ggx1 * ggx2;
+            }
+            
+            // Sample environment with fake reflection
+            vec3 sampleEnv(vec3 dir) {
+                float t = uTime * 0.1;
+                vec3 col = vec3(0.0);
+                
+                // Sky
+                float sky = max(0.0, dir.y);
+                col += vec3(0.15, 0.25, 0.45) * pow(sky, 0.5);
+                col += vec3(0.8, 0.9, 1.0) * pow(sky, 8.0) * 0.5;
+                
+                // Ground
+                float ground = max(0.0, -dir.y);
+                col += vec3(0.02, 0.02, 0.03) * ground;
+                
+                // Fake lights
+                vec3 lightDir1 = normalize(vec3(sin(t), 0.5, cos(t)));
+                vec3 lightDir2 = normalize(vec3(-sin(t * 0.7), 0.3, -cos(t * 0.7)));
+                vec3 lightDir3 = normalize(vec3(cos(t * 0.5), 0.7, sin(t * 0.5)));
+                
+                float light1 = pow(max(0.0, dot(dir, lightDir1)), 64.0);
+                float light2 = pow(max(0.0, dot(dir, lightDir2)), 64.0);
+                float light3 = pow(max(0.0, dot(dir, lightDir3)), 32.0);
+                
+                col += vec3(1.0, 0.95, 0.8) * light1 * 3.0;
+                col += vec3(0.8, 0.9, 1.0) * light2 * 2.0;
+                col += vec3(1.0, 0.8, 0.6) * light3 * 1.5;
+                
+                // Ambient
+                col += vec3(0.02, 0.02, 0.04);
+                
+                return col * uEnvIntensity;
+            }
+        `;
+
+        const vertexShader = `
+            ${commonChunk}
+            
+            void main() {
+                vUv = uv;
+                
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                vWorldNormal = normalize(mat3(modelMatrix) * normal);
+                vViewDirection = normalize(cameraPosition - worldPosition.xyz);
+                
+                gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            }
+        `;
+
+        // Glass Shader
+        const glassFragmentShader = `
+            ${commonChunk}
+            
+            uniform float uTransparency;
+            uniform float uRefractionIndex;
+            uniform float uThickness;
+            uniform vec3 uAbsorptionColor;
+            uniform float uAbsorptionDistance;
+            
+            void main() {
+                vec3 N = normalize(vWorldNormal);
+                vec3 V = normalize(vViewDirection);
+                
+                // Apply normal intensity
+                N = mix(N, normalize(vWorldNormal * uNormalIntensity), 0.5);
+                N = normalize(N);
+                
+                float NdotV = max(dot(N, V), 0.0);
+                
+                // Fresnel for glass
+                vec3 f0 = vec3(0.04); // Base reflectivity for glass
+                vec3 F = fresnelSchlickDispersion(NdotV, f0);
+                
+                // Refraction with chromatic aberration
+                vec3 refractR = refract(-V, N, 1.0 / (uRefractionIndex + 0.02));
+                vec3 refractG = refract(-V, N, 1.0 / uRefractionIndex);
+                vec3 refractB = refract(-V, N, 1.0 / (uRefractionIndex - 0.02));
+                
+                vec3 refractedColor;
+                refractedColor.r = sampleEnv(refractR).r;
+                refractedColor.g = sampleEnv(refractG).g;
+                refractedColor.b = sampleEnv(refractB).b;
+                
+                // Absorption
+                float absorbDist = uThickness / max(NdotV, 0.1);
+                vec3 absorption = exp(-uAbsorptionColor * absorbDist * uAbsorptionDistance);
+                refractedColor *= absorption;
+                
+                // Reflection
+                vec3 R = reflect(-V, N);
+                vec3 reflectedColor = sampleEnv(R);
+                
+                // Tint
+                vec3 tintedRefract = refractedColor * uBaseColor;
+                
+                // Mix reflection and refraction based on fresnel
+                vec3 color = mix(tintedRefract, reflectedColor, F);
+                
+                // Edge highlight
+                float edgeFactor = 1.0 - NdotV;
+                color += vec3(1.0) * pow(edgeFactor, 4.0) * 0.3;
+                
+                // Specular highlights
+                vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+                vec3 H = normalize(lightDir + V);
+                float spec = pow(max(dot(N, H), 0.0), 256.0);
+                color += vec3(1.0, 0.98, 0.95) * spec * 0.5;
+                
+                gl_FragColor = vec4(color, mix(1.0, 0.1, uTransparency * (1.0 - F.r)));
+            }
+        `;
+
+        // Metal Shader
+        const metalFragmentShader = `
+            ${commonChunk}
+            
+            uniform float uMetalness;
+            uniform float uRoughness;
+            uniform float uAnisotropy;
+            uniform vec3 uSpecularColor;
+            
+            void main() {
+                vec3 N = normalize(vWorldNormal);
+                vec3 V = normalize(vViewDirection);
+                
+                // Apply normal intensity
+                N = normalize(mix(N, vWorldNormal * uNormalIntensity, 0.5));
+                
+                float NdotV = max(dot(N, V), 0.001);
+                
+                // Base reflectivity colored for metals
+                vec3 f0 = mix(vec3(0.04), uBaseColor, uMetalness);
+                
+                // Multiple light sources
+                vec3 Lo = vec3(0.0);
+                
+                for (int i = 0; i < 3; i++) {
+                    float angle = uTime * 0.3 + float(i) * 2.094;
+                    vec3 lightDir = normalize(vec3(sin(angle), 0.5 + float(i) * 0.2, cos(angle)));
+                    vec3 lightColor = vec3(1.0, 0.95 - float(i) * 0.1, 0.9 - float(i) * 0.15);
+                    
+                    vec3 L = lightDir;
+                    vec3 H = normalize(V + L);
+                    
+                    // Calculate fresnel
+                    vec3 F = fresnelSchlickDispersion(max(dot(H, V), 0.0), f0);
+                    
+                    // For metals, F is the albedo
+                    vec3 metalF = F * uBaseColor;
+                    
+                    // Normal distribution
+                    float rough = uRoughness * (1.0 - uAnisotropy * 0.3);
+                    float NDF = distributionGGX(N, H, rough);
+                    
+                    // Geometry
+                    float G = geometrySmith(N, V, L, rough);
+                    
+                    // Specular
+                    vec3 numerator = NDF * G * F;
+                    float denominator = 4.0 * NdotV * max(dot(N, L), 0.0) + 0.001;
+                    vec3 specular = numerator / denominator;
+                    
+                    // For metals, no diffuse
+                    vec3 kD = vec3(0.0);
+                    vec3 kS = metalF;
+                    
+                    float NdotL = max(dot(N, L), 0.0);
+                    Lo += (kD + kS * specular) * lightColor * NdotL * 2.0;
+                }
+                
+                // Environment reflection
+                vec3 R = reflect(-V, N);
+                
+                // Rougher reflections
+                vec3 reflectedColor;
+                if (uRoughness < 0.5) {
+                    reflectedColor = sampleEnv(R);
+                } else {
+                    // Blur approximation
+                    vec3 blurR = reflect(-V, N + vec3(0.1, 0.0, 0.0));
+                    vec3 blurL = reflect(-V, N + vec3(-0.1, 0.0, 0.0));
+                    vec3 blurU = reflect(-V, N + vec3(0.0, 0.1, 0.0));
+                    vec3 blurD = reflect(-V, N + vec3(0.0, -0.1, 0.0));
+                    reflectedColor = (sampleEnv(R) + sampleEnv(blurR) + sampleEnv(blurL) + 
+                                     sampleEnv(blurU) + sampleEnv(blurD)) * 0.2;
+                }
+                
+                // Fresnel for reflection
+                vec3 F = fresnelSchlickDispersion(NdotV, f0);
+                
+                // Mix
+                vec3 color = Lo + reflectedColor * F * uMetalness * 0.5;
+                
+                // Edge darkening for metals
+                float edge = pow(1.0 - NdotV, 3.0);
+                color *= 1.0 - edge * 0.3;
+                
+                // Specular highlight enhancement
+                color += uSpecularColor * pow(max(dot(N, normalize(vec3(1.0, 1.0, 1.0) + V)), 0.0), 128.0) * 0.2;
+                
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        // Matte Shader
+        const matteFragmentShader = `
+            ${commonChunk}
+            
+            uniform float uRoughness;
+            uniform float uSubsurface;
+            uniform vec3 uSubsurfaceColor;
+            uniform float uAmbientOcclusion;
+            
+            // Simple noise for surface detail
+            float hash(vec2 p) {
+                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            }
+            
+            float noise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(
+                    mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+                    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+                    f.y
+                );
+            }
+            
+            void main() {
+                vec3 N = normalize(vWorldNormal);
+                vec3 V = normalize(vViewDirection);
+                
+                // Apply normal intensity with surface noise
+                float surfaceNoise = noise(vUv * 20.0 + uTime * 0.1) * 0.1;
+                N = normalize(mix(N, vWorldNormal * (uNormalIntensity + surfaceNoise), 0.5));
+                
+                float NdotV = max(dot(N, V), 0.0);
+                
+                // Oren-Nayar diffuse for rough surfaces
+                vec3 diffuseColor = uBaseColor;
+                
+                vec3 Lo = vec3(0.0);
+                
+                // Multiple lights
+                for (int i = 0; i < 3; i++) {
+                    float angle = uTime * 0.2 + float(i) * 2.094;
+                    vec3 lightDir = normalize(vec3(sin(angle), 0.5, cos(angle)));
+                    vec3 lightColor = vec3(1.0, 0.98, 0.95) * (1.5 - float(i) * 0.3);
+                    
+                    float NdotL = max(dot(N, lightDir), 0.0);
+                    
+                    // Oren-Nayar
+                    float LdotV = max(dot(lightDir, V), 0.0);
+                    float s = LdotV - NdotL * NdotV;
+                    float t = mix(1.0, max(NdotL, NdotV), step(0.0, s));
+                    float sigma2 = uRoughness * uRoughness;
+                    float A = 1.0 - 0.5 * sigma2 / (sigma2 + 0.33);
+                    float B = 0.45 * sigma2 / (sigma2 + 0.09);
+                    
+                    float diffuse = NdotL * (A + B * s / t);
+                    
+                    // Subsurface scattering approximation
+                    vec3 scatter = vec3(0.0);
+                    if (uSubsurface > 0.0) {
+                        float scatterAngle = max(0.0, dot(V, -lightDir));
+                        scatter = uSubsurfaceColor * pow(scatterAngle, 2.0) * uSubsurface * 0.5;
+                        
+                        // Wrap lighting for SSS
+                        float wrapDiffuse = max(0.0, (dot(N, lightDir) + 0.5) / 1.5);
+                        scatter += uSubsurfaceColor * wrapDiffuse * uSubsurface * 0.3;
+                    }
+                    
+                    Lo += (diffuseColor * diffuse + scatter) * lightColor;
+                }
+                
+                // Ambient
+                vec3 ambient = diffuseColor * vec3(0.03, 0.03, 0.05);
+                
+                // Rim lighting
+                float rim = pow(1.0 - NdotV, 3.0);
+                vec3 rimColor = uBaseColor * rim * 0.2;
+                
+                // AO
+                float ao = 1.0 - uAmbientOcclusion * 0.3;
+                
+                // Final color
+                vec3 color = (Lo + ambient + rimColor) * ao;
+                
+                // Subtle velvet sheen
+                float sheen = pow(max(0.0, dot(N, V)), 4.0);
+                color += vec3(1.0, 0.98, 0.95) * sheen * 0.1;
+                
+                // Surface detail
+                float detail = noise(vUv * 50.0) * 0.05;
+                color *= 1.0 - detail;
+                
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        // Material configurations
+        const materialConfigs = {
+            glass: {
+                uniforms: {
+                    uTime: { value: 0 },
+                    uBaseColor: { value: new THREE.Color(0x88ccff) },
+                    uEnvIntensity: { value: 1.0 },
+                    uNormalIntensity: { value: 1.0 },
+                    uTransparency: { value: 0.9 },
+                    uRefractionIndex: { value: 1.5 },
+                    uThickness: { value: 1.0 },
+                    uAbsorptionColor: { value: new THREE.Color(0x1, 0x3, 0x5) },
+                    uAbsorptionDistance: { value: 1.0 }
+                },
+                fragmentShader: glassFragmentShader,
+                transparent: true
+            },
+            metal: {
+                uniforms: {
+                    uTime: { value: 0 },
+                    uBaseColor: { value: new THREE.Color(0xd4af37) },
+                    uEnvIntensity: { value: 1.0 },
+                    uNormalIntensity: { value: 1.0 },
+                    uMetalness: { value: 1.0 },
+                    uRoughness: { value: 0.2 },
+                    uAnisotropy: { value: 0.0 },
+                    uSpecularColor: { value: new THREE.Color(1, 1, 1) }
+                },
+                fragmentShader: metalFragmentShader,
+                transparent: false
+            },
+            matte: {
+                uniforms: {
+                    uTime: { value: 0 },
+                    uBaseColor: { value: new THREE.Color(0x8b4513) },
+                    uEnvIntensity: { value: 1.0 },
+                    uNormalIntensity: { value: 1.0 },
+                    uRoughness: { value: 0.8 },
+                    uSubsurface: { value: 0.3 },
+                    uSubsurfaceColor: { value: new THREE.Color(0xffccaa) },
+                    uAmbientOcclusion: { value: 0.5 }
+                },
+                fragmentShader: matteFragmentShader,
+                transparent: false
+            }
+        };
+
+        // Control definitions for each material type
+        const controlDefs = {
+            glass: [
+                { id: 'uTransparency', label: 'Transparency', min: 0, max: 1, step: 0.01, default: 0.9 },
+                { id: 'uRefractionIndex', label: 'Refraction IOR', min: 1.0, max: 2.5, step: 0.01, default: 1.5 },
+                { id: 'uThickness', label: 'Thickness', min: 0.1, max: 5, step: 0.1, default: 1.0 },
+                { id: 'uAbsorptionDistance', label: 'Absorption', min: 0, max: 5, step: 0.1, default: 1.0 }
+            ],
+            metal: [
+                { id: 'uMetalness', label: 'Metalness', min: 0, max: 1, step: 0.01, default: 1.0 },
+                { id: 'uRoughness', label: 'Roughness', min: 0, max: 1, step: 0.01, default: 0.2 },
+                { id: 'uAnisotropy', label: 'Anisotropy', min: 0, max: 1, step: 0.01, default: 0.0 }
+            ],
+            matte: [
+                { id: 'uRoughness', label: 'Roughness', min: 0, max: 1, step: 0.01, default: 0.8 },
+                { id: 'uSubsurface', label: 'Subsurface', min: 0, max: 1, step: 0.01, default: 0.3 },
+                { id: 'uAmbientOcclusion', label: 'AO Strength', min: 0, max: 1, step: 0.01, default: 0.5 }
+            ]
+        };
+
+        // Geometries
+        const geometries = {
+            sphere: new THREE.SphereGeometry(1.2, 64, 64),
+            cube: new THREE.BoxGeometry(1.8, 1.8, 1.8, 32, 32, 32),
+            torus: new THREE.TorusGeometry(1, 0.4, 64, 128),
+            knot: new THREE.TorusKnotGeometry(0.8, 0.3, 128, 32),
+            cylinder: new THREE.CylinderGeometry(0.8, 0.8, 2, 64, 32),
+            cone: new THREE.ConeGeometry(1, 2, 64, 32)
+        };
+
+        // Current state
+        let currentMaterialType = 'glass';
+        let currentGeometryType = 'sphere';
+        let currentMaterial = null;
+        let currentMesh = null;
+
+        // Create material
+        function createMaterial(type) {
+            const config = materialConfigs[type];
+            return new THREE.ShaderMaterial({
+                uniforms: JSON.parse(JSON.stringify(config.uniforms)),
+                vertexShader: vertexShader,
+                fragmentShader: config.fragmentShader,
+                transparent: config.transparent
+            });
+        }
+
+        // Create mesh
+        function createMesh(geoType, matType) {
+            if (currentMesh) {
+                scene.remove(currentMesh);
+                currentMesh.geometry.dispose();
+            }
+            
+            currentMaterial = createMaterial(matType);
+            currentMaterialType = matType;
+            currentGeometryType = geoType;
+            
+            currentMesh = new THREE.Mesh(geometries[geoType], currentMaterial);
+            scene.add(currentMesh);
+            
+            // Sync color
+            const colorInput = document.getElementById('baseColor');
+            if (colorInput) {
+                currentMaterial.uniforms.uBaseColor.value.setStyle(colorInput.value);
+            }
+            
+            updateControls(matType);
+        }
+
+        // Update controls UI
+        function updateControls(type) {
+            const container = document.getElementById('controls-container');
+            const controls = controlDefs[type];
+            
+            let html = '';
+            controls.forEach(ctrl => {
+                const config = materialConfigs[type];
+                const defaultVal = config.uniforms[ctrl.id].value;
+                
+                html += `
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>${ctrl.label}</span>
+                            <span class="control-value" id="${ctrl.id}Value">${defaultVal.toFixed(2)}</span>
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-fill" id="${ctrl.id}Fill" style="width: ${((defaultVal - ctrl.min) / (ctrl.max - ctrl.min)) * 100}%"></div>
+                            <input type="range" class="slider" id="${ctrl.id}" 
+                                   min="${ctrl.min}" max="${ctrl.max}" step="${ctrl.step}" value="${defaultVal}">
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            // Add event listeners
+            controls.forEach(ctrl => {
+                const slider = document.getElementById(ctrl.id);
+                const valueEl = document.getElementById(`${ctrl.id}Value`);
+                const fillEl = document.getElementById(`${ctrl.id}Fill`);
+                
+                slider.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    if (currentMaterial) {
+                        currentMaterial.uniforms[ctrl.id].value = val;
+                    }
+                    valueEl.textContent = val.toFixed(2);
+                    fillEl.style.width = `${((val - ctrl.min) / (ctrl.max - ctrl.min)) * 100}%`;
+                });
+            });
+        }
+
+        // Initialize
+        createMesh('sphere', 'glass');
+
+        // Event listeners for tabs
+        document.querySelectorAll('.material-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.material-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                createMesh(currentGeometryType, tab.dataset.type);
+            });
+        });
+
+        // Event listeners for object buttons
+        document.querySelectorAll('.object-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.object-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                createMesh(btn.dataset.object, currentMaterialType);
+            });
+        });
+
+        // Color picker の修正
+const colorPicker = document.getElementById('baseColor');
+const colorHex = document.getElementById('colorHex');
+
+colorPicker.addEventListener('input', (e) => {
+    if (currentMaterial && currentMaterial.uniforms.uBaseColor) {
+        const colorValue = currentMaterial.uniforms.uBaseColor.value;
+        
+        // もし Color オブジェクトでない場合は新しく作成して代入
+        if (!(colorValue instanceof THREE.Color)) {
+            currentMaterial.uniforms.uBaseColor.value = new THREE.Color(e.target.value);
+        } else {
+            // Color オブジェクトであれば setStyle が使える
+            colorValue.setStyle(e.target.value);
+        }
+    }
+    colorHex.textContent = e.target.value;
+});
+        // Common controls
+        ['envIntensity', 'normalIntensity'].forEach(id => {
+            const slider = document.getElementById(id);
+            const valueEl = document.getElementById(`${id}Value`);
+            const fillEl = document.getElementById(`${id}Fill`);
+            
+            slider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                if (currentMaterial) {
+                    currentMaterial.uniforms[`u${id.charAt(0).toUpperCase() + id.slice(1)}`].value = val;
+                }
+                valueEl.textContent = val.toFixed(2);
+                fillEl.style.width = `${(val / parseFloat(slider.max)) * 100}%`;
+            });
+        });
+
+        // Background particles
+        const particleCount = 200;
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 30;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 30 - 5;
+            sizes[i] = Math.random() * 3 + 1;
+        }
+        
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const particleMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 }
+            },
+            vertexShader: `
+                attribute float size;
+                varying float vAlpha;
+                uniform float uTime;
+                
+                void main() {
+                    vec3 pos = position;
+                    pos.y += sin(uTime * 0.3 + position.x) * 0.2;
+                    pos.x += cos(uTime * 0.2 + position.z) * 0.1;
+                    
+                    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                    gl_PointSize = size * (300.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                    
+                    vAlpha = 0.3 + 0.3 * sin(uTime + position.x * 0.5);
+                }
+            `,
+            fragmentShader: `
+                varying float vAlpha;
+                
+                void main() {
+                    float dist = length(gl_PointCoord - vec2(0.5));
+                    if (dist > 0.5) discard;
+                    
+                    float alpha = smoothstep(0.5, 0.0, dist) * vAlpha;
+                    gl_FragColor = vec4(0.4, 0.6, 0.9, alpha * 0.5);
+                }
+            `,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // Animation
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 60;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const now = performance.now();
+            frameCount++;
+            
+            if (now - lastTime >= 1000) {
+                fps = frameCount;
+                document.getElementById('fps').textContent = fps;
+                frameCount = 0;
+                lastTime = now;
+            }
+            
+            const time = now * 0.001;
+            
+            if (currentMaterial) {
+                currentMaterial.uniforms.uTime.value = time;
+            }
+            
+            particleMaterial.uniforms.uTime.value = time;
+            
+            if (currentMesh) {
+                currentMesh.rotation.y = time * 0.1;
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
