@@ -1,0 +1,4 @@
+[00:00:01.228] Server  LOG     ✓ Ready in 916ms
+[00:00:04.105] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:04.479] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:02:00.379] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.

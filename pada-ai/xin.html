@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Forge - LLM Training System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --fg-primary: #e8e8f0;
+            --fg-secondary: #8888a0;
+            --fg-muted: #555568;
+            --accent: #00d4aa;
+            --accent-dim: #00a080;
+            --warning: #ffaa00;
+            --error: #ff4466;
+            --card: #15151f;
+            --border: #2a2a3a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--fg-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Background Effects */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(0, 212, 170, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 170, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-orb {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-orb-1 {
+            background: var(--accent);
+            top: -200px;
+            right: -200px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .glow-orb-2 {
+            background: #6644ff;
+            bottom: -200px;
+            left: -200px;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(50px, 30px); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--fg-muted);
+        }
+
+        /* Panel Styles */
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-title {
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--fg-muted);
+            transition: all 0.3s;
+        }
+
+        .status-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.training {
+            background: var(--warning);
+            box-shadow: 0 0 10px var(--warning);
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Input Styles */
+        .input-field {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--fg-primary);
+            font-family: inherit;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+        }
+
+        .input-field::placeholder {
+            color: var(--fg-muted);
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-dim);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(0, 212, 170, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--fg-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: rgba(255, 68, 102, 0.2);
+            color: var(--error);
+            border: 1px solid rgba(255, 68, 102, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 68, 102, 0.3);
+        }
+
+        /* Range Slider */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .slider-label span:first-child {
+            color: var(--fg-secondary);
+        }
+
+        .slider-label span:last-child {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-dim));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            animation: messageIn 0.3s ease;
+        }
+
+        @keyframes messageIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-user {
+            background: var(--accent);
+            color: var(--bg-primary);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-assistant {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input-area {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Training Log */
+        .log-container {
+            height: 200px;
+            overflow-y: auto;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            color: var(--fg-secondary);
+            margin-bottom: 4px;
+        }
+
+        .log-entry.info { color: var(--fg-primary); }
+        .log-entry.success { color: var(--accent); }
+        .log-entry.warning { color: var(--warning); }
+        .log-entry.error { color: var(--error); }
+
+        /* Chart */
+        .chart-container {
+            height: 200px;
+            padding: 16px;
+            position: relative;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 16px;
+        }
+
+        .metric-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--fg-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--fg-primary);
+        }
+
+        .metric-value.accent {
+            color: var(--accent);
+        }
+
+        /* File Upload */
+        .file-upload {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-upload:hover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 170, 0.05);
+        }
+
+        .file-upload.active {
+            border-color: var(--accent);
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--fg-secondary);
+        }
+
+        .tab:hover {
+            color: var(--fg-primary);
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        /* Architecture Diagram */
+        .arch-diagram {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .arch-layer {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .arch-box {
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .arch-box.highlight {
+            background: rgba(0, 212, 170, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .arch-arrow {
+            color: var(--fg-muted);
+            font-size: 18px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Reduced Motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Token visualization */
+        .token-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .token {
+            padding: 4px 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--fg-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+
+    <div class="relative z-10 min-h-screen p-4 md:p-6">
+        <!-- Header -->
+        <header class="mb-6">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Neural Forge</h1>
+                    <p class="text-sm mt-1" style="color: var(--fg-secondary);">Browser-based LLM Training System</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-lg" style="background: var(--bg-secondary);">
+                        <div class="status-dot" id="modelStatus"></div>
+                        <span class="text-sm font-mono" id="modelStatusText">未初期化</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Grid -->
+        <div class="main-grid grid gap-6" style="grid-template-columns: 350px 1fr;">
+            <!-- Left Sidebar -->
+            <div class="space-y-6">
+                <!-- Data Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14,2 14,8 20,8"/>
+                        </svg>
+                        <span class="panel-title">学習データ</span>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div class="file-upload" id="fileUpload">
+                            <input type="file" id="fileInput" accept=".jsonl" class="hidden">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--fg-muted); margin: 0 auto 12px;">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17,8 12,3 7,8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <p class="text-sm" style="color: var(--fg-secondary);">train.jsonlをドラッグ&ドロップ</p>
+                            <p class="text-xs mt-1" style="color: var(--fg-muted);">またはクリックして選択</p>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span style="color: var(--fg-secondary);">読み込み状態:</span>
+                            <span id="dataStatus" class="font-mono" style="color: var(--fg-muted);">未読み込み</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span style="color: var(--fg-secondary);">サンプル数:</span>
+                            <span id="sampleCount" class="font-mono" style="color: var(--accent);">0</span>
+                        </div>
+                        <button class="btn btn-secondary w-full" id="loadSampleBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                            サンプルデータを使用
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Model Config -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                        <span class="panel-title">モデル設定</span>
+                    </div>
+                    <div class="p-4 space-y-5">
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>埋め込み次元</span>
+                                <span id="embedDimVal">128</span>
+                            </div>
+                            <input type="range" id="embedDim" min="64" max="256" value="128" step="32">
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Transformer層数</span>
+                                <span id="layersVal">2</span>
+                            </div>
+                            <input type="range" id="numLayers" min="1" max="4" value="2">
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Attention Heads</span>
+                                <span id="headsVal">4</span>
+                            </div>
+                            <input type="range" id="numHeads" min="1" max="8" value="4">
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>コンテキスト長</span>
+                                <span id="ctxLenVal">128</span>
+                            </div>
+                            <input type="range" id="ctxLen" min="64" max="256" value="128" step="32">
+                        </div>
+                        <div class="pt-2 border-t" style="border-color: var(--border);">
+                            <div class="flex items-center justify-between text-sm mb-2">
+                                <span style="color: var(--fg-secondary);">パラメータ数</span>
+                                <span id="paramCount" class="font-mono" style="color: var(--accent);">-</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary w-full" id="initModelBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/>
+                            </svg>
+                            モデル初期化
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Training Config -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                        </svg>
+                        <span class="panel-title">学習設定</span>
+                    </div>
+                    <div class="p-4 space-y-5">
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>学習エポック数</span>
+                                <span id="epochsVal">10</span>
+                            </div>
+                            <input type="range" id="epochs" min="1" max="50" value="10">
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>学習率</span>
+                                <span id="lrVal">0.001</span>
+                            </div>
+                            <input type="range" id="learningRate" min="0.0001" max="0.01" value="0.001" step="0.0001">
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>バッチサイズ</span>
+                                <span id="batchVal">4</span>
+                            </div>
+                            <input type="range" id="batchSize" min="1" max="16" value="4">
+                        </div>
+                        <div class="flex gap-3">
+                            <button class="btn btn-primary flex-1" id="trainBtn" disabled>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5,3 19,12 5,21"/>
+                                </svg>
+                                学習開始
+                            </button>
+                            <button class="btn btn-danger" id="stopBtn" disabled>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="6" y="6" width="12" height="12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="space-y-6">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" data-tab="chat">チャット</div>
+                    <div class="tab" data-tab="training">学習モニター</div>
+                    <div class="tab" data-tab="architecture">モデル構造</div>
+                </div>
+
+                <!-- Chat Tab -->
+                <div class="tab-content" id="tab-chat">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            <span class="panel-title">推論インターフェース</span>
+                        </div>
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="message message-assistant">
+                                    モデルを初期化して学習させると、ここでチャットできます。
+                                </div>
+                            </div>
+                            <div class="chat-input-area">
+                                <input type="text" class="input-field" id="chatInput" placeholder="メッセージを入力..." disabled>
+                                <button class="btn btn-primary" id="sendBtn" disabled>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="22" y1="2" x2="11" y2="13"/>
+                                        <polygon points="22,2 15,22 11,13 2,9"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generation Config -->
+                    <div class="panel mt-6">
+                        <div class="panel-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                            </svg>
+                            <span class="panel-title">生成パラメータ</span>
+                        </div>
+                        <div class="p-4 grid grid-cols-2 gap-4">
+                            <div class="slider-container">
+                                <div class="slider-label">
+                                    <span>Temperature</span>
+                                    <span id="tempVal">0.8</span>
+                                </div>
+                                <input type="range" id="temperature" min="0.1" max="2" value="0.8" step="0.1">
+                            </div>
+                            <div class="slider-container">
+                                <div class="slider-label">
+                                    <span>最大トークン数</span>
+                                    <span id="maxTokVal">50</span>
+                                </div>
+                                <input type="range" id="maxTokens" min="10" max="200" value="50" step="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training Tab -->
+                <div class="tab-content hidden" id="tab-training">
+                    <div class="grid gap-6" style="grid-template-columns: 1fr 1fr;">
+                        <!-- Loss Chart -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="20" x2="18" y2="10"/>
+                                    <line x1="12" y1="20" x2="12" y2="4"/>
+                                    <line x1="6" y1="20" x2="6" y2="14"/>
+                                </svg>
+                                <span class="panel-title">損失グラフ</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="lossChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Metrics -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                                </svg>
+                                <span class="panel-title">学習メトリクス</span>
+                            </div>
+                            <div class="metrics-grid">
+                                <div class="metric-card">
+                                    <div class="metric-label">現在の損失</div>
+                                    <div class="metric-value accent" id="currentLoss">-</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">エポック</div>
+                                    <div class="metric-value" id="currentEpoch">0/0</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">進捗</div>
+                                    <div class="metric-value" id="progressPct">0%</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-label">推定残り時間</div>
+                                    <div class="metric-value" id="eta">-</div>
+                                </div>
+                            </div>
+                            <div class="px-4 pb-4">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Training Log -->
+                    <div class="panel mt-6">
+                        <div class="panel-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            <span class="panel-title">学習ログ</span>
+                        </div>
+                        <div class="p-4">
+                            <div class="log-container" id="trainingLog"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Architecture Tab -->
+                <div class="tab-content hidden" id="tab-architecture">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
+                                <rect x="9" y="9" width="6" height="6"/>
+                                <line x1="9" y1="1" x2="9" y2="4"/>
+                                <line x1="15" y1="1" x2="15" y2="4"/>
+                                <line x1="9" y1="20" x2="9" y2="23"/>
+                                <line x1="15" y1="20" x2="15" y2="23"/>
+                                <line x1="20" y1="9" x2="23" y2="9"/>
+                                <line x1="20" y1="14" x2="23" y2="14"/>
+                                <line x1="1" y1="9" x2="4" y2="9"/>
+                                <line x1="1" y1="14" x2="4" y2="14"/>
+                            </svg>
+                            <span class="panel-title">Transformer アーキテクチャ</span>
+                        </div>
+                        <div class="arch-diagram">
+                            <div class="arch-layer">
+                                <div class="arch-box">Input Tokens</div>
+                                <span class="arch-arrow">→</span>
+                                <div class="arch-box highlight">Token Embedding</div>
+                            </div>
+                            <div class="arch-layer" style="padding-left: 60px;">
+                                <span class="arch-arrow">↓</span>
+                            </div>
+                            <div class="arch-layer">
+                                <div class="arch-box highlight">Positional Encoding</div>
+                            </div>
+                            <div class="arch-layer" style="padding-left: 60px;">
+                                <span class="arch-arrow">↓</span>
+                            </div>
+                            <div id="transformerLayers">
+                                <!-- Generated by JS -->
+                            </div>
+                            <div class="arch-layer" style="padding-left: 60px;">
+                                <span class="arch-arrow">↓</span>
+                            </div>
+                            <div class="arch-layer">
+                                <div class="arch-box highlight">Layer Norm</div>
+                                <span class="arch-arrow">→</span>
+                                <div class="arch-box">Linear (Vocab Size)</div>
+                            </div>
+                            <div class="arch-layer" style="padding-left: 60px;">
+                                <span class="arch-arrow">↓</span>
+                            </div>
+                            <div class="arch-layer">
+                                <div class="arch-box highlight">Softmax</div>
+                                <span class="arch-arrow">→</span>
+                                <div class="arch-box">Output Probabilities</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tokenizer Info -->
+                    <div class="panel mt-6">
+                        <div class="panel-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 7V4h16v3"/>
+                                <path d="M9 20h6"/>
+                                <path d="M12 4v16"/>
+                            </svg>
+                            <span class="panel-title">トークナイザー</span>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div class="flex items-center justify-between text-sm">
+                                <span style="color: var(--fg-secondary);">ボキャブラリサイズ</span>
+                                <span id="vocabSize" class="font-mono" style="color: var(--accent);">-</span>
+                            </div>
+                            <div class="text-sm" style="color: var(--fg-secondary);">トークンプレビュー:</div>
+                            <div class="token-display" id="tokenPreview">
+                                <span class="token">初期化待ち...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // Neural Forge - LLM Training System
+        // ============================================
+
+        // Math utilities
+        const MathUtils = {
+            // Xavier initialization
+            xavier(shape) {
+                const fanIn = shape[0];
+                const fanOut = shape[1] || shape[0];
+                const std = Math.sqrt(2 / (fanIn + fanOut));
+                const size = shape.reduce((a, b) => a * b, 1);
+                return new Float32Array(size).map(() => (Math.random() * 2 - 1) * std);
+            },
+
+            // Zeros
+            zeros(shape) {
+                const size = shape.reduce((a, b) => a * b, 1);
+                return new Float32Array(size);
+            },
+
+            // Softmax
+            softmax(arr) {
+                const max = Math.max(...arr);
+                const exp = arr.map(x => Math.exp(x - max));
+                const sum = exp.reduce((a, b) => a + b, 0);
+                return exp.map(x => x / sum);
+            },
+
+            // GELU activation
+            gelu(x) {
+                return 0.5 * x * (1 + Math.tanh(Math.sqrt(2 / Math.PI) * (x + 0.044715 * x * x * x)));
+            },
+
+            // Layer normalization
+            layerNorm(x, gamma, beta, eps = 1e-5) {
+                const mean = x.reduce((a, b) => a + b, 0) / x.length;
+                const variance = x.reduce((a, b) => a + (b - mean) ** 2, 0) / x.length;
+                const std = Math.sqrt(variance + eps);
+                return x.map((v, i) => gamma[i] * (v - mean) / std + beta[i]);
+            }
+        };
+
+        // ============================================
+        // Tokenizer
+        // ============================================
+        class BPETokenizer {
+            constructor() {
+                this.vocab = new Map();
+                this.reverseVocab = new Map();
+                this.merges = [];
+                this.vocabSize = 0;
+                this.specialTokens = {
+                    '<pad>': 0,
+                    '<unk>': 1,
+                    '<bos>': 2,
+                    '<eos>': 3
+                };
+            }
+
+            train(texts, vocabSize = 1000) {
+                // Initialize with character-level tokens
+                const charFreq = new Map();
+                
+                for (const text of texts) {
+                    for (const char of text) {
+                        const current = charFreq.get(char) || 0;
+                        charFreq.set(char, current + 1);
+                    }
+                }
+
+                // Add special tokens
+                for (const [token, id] of Object.entries(this.specialTokens)) {
+                    this.vocab.set(token, id);
+                    this.reverseVocab.set(id, token);
+                }
+
+                // Add character tokens
+                let nextId = Object.keys(this.specialTokens).length;
+                const sortedChars = [...charFreq.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([char]) => char);
+
+                for (const char of sortedChars) {
+                    if (!this.vocab.has(char)) {
+                        this.vocab.set(char, nextId);
+                        this.reverseVocab.set(nextId, char);
+                        nextId++;
+                    }
+                }
+
+                // BPE merge iterations
+                const numMerges = vocabSize - this.vocab.size;
+                
+                for (let i = 0; i < numMerges && i < 100; i++) {
+                    const pairs = this.getPairCounts(texts);
+                    if (pairs.size === 0) break;
+                    
+                    let maxPair = null;
+                    let maxCount = 0;
+                    for (const [pair, count] of pairs) {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            maxPair = pair;
+                        }
+                    }
+                    
+                    if (maxPair) {
+                        const mergedToken = maxPair;
+                        if (!this.vocab.has(mergedToken)) {
+                            this.vocab.set(mergedToken, nextId);
+                            this.reverseVocab.set(nextId, mergedToken);
+                            this.merges.push(maxPair);
+                            nextId++;
+                        }
+                    }
+                }
+
+                this.vocabSize = this.vocab.size;
+                return this.vocabSize;
+            }
+
+            getPairCounts(texts) {
+                const pairs = new Map();
+                for (const text of texts.slice(0, 100)) {
+                    const chars = Array.from(text);
+                    for (let i = 0; i < chars.length - 1; i++) {
+                        const pair = chars[i] + chars[i + 1];
+                        pairs.set(pair, (pairs.get(pair) || 0) + 1);
+                    }
+                }
+                return pairs;
+            }
+
+            encode(text) {
+                let tokens = Array.from(text);
+                
+                // Apply BPE merges
+                for (const merge of this.merges) {
+                    const newTokens = [];
+                    let i = 0;
+                    while (i < tokens.length) {
+                        if (i < tokens.length - 1 && tokens[i] + tokens[i + 1] === merge) {
+                            newTokens.push(merge);
+                            i += 2;
+                        } else {
+                            newTokens.push(tokens[i]);
+                            i++;
+                        }
+                    }
+                    tokens = newTokens;
+                }
+
+                return tokens.map(t => this.vocab.get(t) || this.specialTokens['<unk>']);
+            }
+
+            decode(ids) {
+                return ids.map(id => this.reverseVocab.get(id) || '<unk>').join('');
+            }
+        }
+
+        // ============================================
+        // Tensor Operations (Simplified)
+        // ============================================
+        class Tensor {
+            constructor(data, shape) {
+                this.data = new Float32Array(data);
+                this.shape = shape;
+            }
+
+            static zeros(shape) {
+                const size = shape.reduce((a, b) => a * b, 1);
+                return new Tensor(new Float32Array(size), shape);
+            }
+
+            static random(shape, std = 0.02) {
+                const size = shape.reduce((a, b) => a * b, 1);
+                const data = new Float32Array(size);
+                for (let i = 0; i < size; i++) {
+                    data[i] = (Math.random() * 2 - 1) * std;
+                }
+                return new Tensor(data, shape);
+            }
+
+            get(indices) {
+                let idx = 0;
+                let stride = 1;
+                for (let i = this.shape.length - 1; i >= 0; i--) {
+                    idx += (indices[i] || 0) * stride;
+                    stride *= this.shape[i];
+                }
+                return this.data[idx];
+            }
+
+            set(indices, value) {
+                let idx = 0;
+                let stride = 1;
+                for (let i = this.shape.length - 1; i >= 0; i--) {
+                    idx += (indices[i] || 0) * stride;
+                    stride *= this.shape[i];
+                }
+                this.data[idx] = value;
+            }
+
+            add(other) {
+                const result = new Tensor(new Float32Array(this.data.length), this.shape);
+                for (let i = 0; i < this.data.length; i++) {
+                    result.data[i] = this.data[i] + other.data[i];
+                }
+                return result;
+            }
+
+            scale(s) {
+                const result = new Tensor(new Float32Array(this.data.length), this.shape);
+                for (let i = 0; i < this.data.length; i++) {
+                    result.data[i] = this.data[i] * s;
+                }
+                return result;
+            }
+        }
+
+        // ============================================
+        // Transformer Model
+        // ============================================
+        class Transformer {
+            constructor(config) {
+                this.config = config;
+                this.embedDim = config.embedDim;
+                this.numHeads = config.numHeads;
+                this.numLayers = config.numLayers;
+                this.ctxLen = config.ctxLen;
+                this.vocabSize = config.vocabSize;
+                
+                this.headDim = Math.floor(this.embedDim / this.numHeads);
+                
+                this.initWeights();
+            }
+
+            initWeights() {
+                // Token embeddings
+                this.tokenEmbed = Tensor.random([this.vocabSize, this.embedDim], 0.02);
+                
+                // Position embeddings
+                this.posEmbed = Tensor.random([this.ctxLen, this.embedDim], 0.02);
+                
+                // Transformer layers
+                this.layers = [];
+                for (let i = 0; i < this.numLayers; i++) {
+                    this.layers.push({
+                        // Multi-head attention
+                        wq: Tensor.random([this.embedDim, this.embedDim], 0.02),
+                        wk: Tensor.random([this.embedDim, this.embedDim], 0.02),
+                        wv: Tensor.random([this.embedDim, this.embedDim], 0.02),
+                        wo: Tensor.random([this.embedDim, this.embedDim], 0.02),
+                        
+                        // Feed forward
+                        w1: Tensor.random([this.embedDim, this.embedDim * 4], 0.02),
+                        b1: Tensor.zeros([this.embedDim * 4]),
+                        w2: Tensor.random([this.embedDim * 4, this.embedDim], 0.02),
+                        b2: Tensor.zeros([this.embedDim]),
+                        
+                        // Layer norms
+                        ln1_gamma: Tensor.random([this.embedDim], 0.02),
+                        ln1_beta: Tensor.zeros([this.embedDim]),
+                        ln2_gamma: Tensor.random([this.embedDim], 0.02),
+                        ln2_beta: Tensor.zeros([this.embedDim])
+                    });
+                }
+                
+                // Output layer
+                this.ln_f_gamma = Tensor.random([this.embedDim], 0.02);
+                this.ln_f_beta = Tensor.zeros([this.embedDim]);
+                this.lm_head = Tensor.random([this.embedDim, this.vocabSize], 0.02);
+            }
+
+            countParameters() {
+                let count = 0;
+                count += this.tokenEmbed.data.length;
+                count += this.posEmbed.data.length;
+                
+                for (const layer of this.layers) {
+                    count += layer.wq.data.length;
+                    count += layer.wk.data.length;
+                    count += layer.wv.data.length;
+                    count += layer.wo.data.length;
+                    count += layer.w1.data.length;
+                    count += layer.b1.data.length;
+                    count += layer.w2.data.length;
+                    count += layer.b2.data.length;
+                    count += layer.ln1_gamma.data.length;
+                    count += layer.ln1_beta.data.length;
+                    count += layer.ln2_gamma.data.length;
+                    count += layer.ln2_beta.data.length;
+                }
+                
+                count += this.ln_f_gamma.data.length;
+                count += this.ln_f_beta.data.length;
+                count += this.lm_head.data.length;
+                
+                return count;
+            }
+
+            // Matrix multiplication helper
+            matmul(a, b, aRows, aCols, bCols) {
+                const result = new Float32Array(aRows * bCols);
+                for (let i = 0; i < aRows; i++) {
+                    for (let j = 0; j < bCols; j++) {
+                        let sum = 0;
+                        for (let k = 0; k < aCols; k++) {
+                            sum += a[i * aCols + k] * b[k * bCols + j];
+                        }
+                        result[i * bCols + j] = sum;
+                    }
+                }
+                return result;
+            }
+
+            // Forward pass
+            forward(inputIds) {
+                const seqLen = inputIds.length;
+                const dim = this.embedDim;
+                
+                // Get embeddings
+                let hidden = new Float32Array(seqLen * dim);
+                
+                for (let i = 0; i < seqLen; i++) {
+                    const tokenId = inputIds[i];
+                    // Token embedding
+                    for (let j = 0; j < dim; j++) {
+                        hidden[i * dim + j] = this.tokenEmbed.data[tokenId * dim + j];
+                    }
+                    // Add positional embedding
+                    for (let j = 0; j < dim; j++) {
+                        hidden[i * dim + j] += this.posEmbed.data[i * dim + j];
+                    }
+                }
+
+                // Process through transformer layers
+                for (const layer of this.layers) {
+                    hidden = this.transformerBlock(hidden, layer, seqLen, dim);
+                }
+
+                // Final layer norm
+                const normalized = this.layerNorm(hidden, this.ln_f_gamma.data, this.ln_f_beta.data, seqLen, dim);
+                
+                // Project to vocabulary
+                const logits = this.matmul(normalized, this.lm_head.data, seqLen, dim, this.vocabSize);
+                
+                return logits;
+            }
+
+            transformerBlock(hidden, layer, seqLen, dim) {
+                // Pre-norm
+                const normed = this.layerNorm(hidden, layer.ln1_gamma.data, layer.ln1_beta.data, seqLen, dim);
+                
+                // Self-attention
+                const q = this.matmul(normed, layer.wq.data, seqLen, dim, dim);
+                const k = this.matmul(normed, layer.wk.data, seqLen, dim, dim);
+                const v = this.matmul(normed, layer.wv.data, seqLen, dim, dim);
+                
+                // Multi-head attention
+                const attnOut = this.multiHeadAttention(q, k, v, seqLen, dim);
+                
+                // Output projection + residual
+                const attnProj = this.matmul(attnOut, layer.wo.data, seqLen, dim, dim);
+                for (let i = 0; i < hidden.length; i++) {
+                    hidden[i] += attnProj[i];
+                }
+                
+                // Feed forward with pre-norm
+                const normed2 = this.layerNorm(hidden, layer.ln2_gamma.data, layer.ln2_beta.data, seqLen, dim);
+                const ff = this.feedForward(normed2, layer, seqLen, dim);
+                
+                for (let i = 0; i < hidden.length; i++) {
+                    hidden[i] += ff[i];
+                }
+                
+                return hidden;
+            }
+
+            multiHeadAttention(q, k, v, seqLen, dim) {
+                const numHeads = this.numHeads;
+                const headDim = Math.floor(dim / numHeads);
+                const output = new Float32Array(seqLen * dim);
+                const scale = 1 / Math.sqrt(headDim);
+                
+                for (let h = 0; h < numHeads; h++) {
+                    const headOffset = h * headDim;
+                    
+                    for (let i = 0; i < seqLen; i++) {
+                        const scores = new Float32Array(seqLen);
+                        
+                        // Compute attention scores
+                        for (let j = 0; j < seqLen; j++) {
+                            if (j <= i) { // Causal mask
+                                let score = 0;
+                                for (let d = 0; d < headDim; d++) {
+                                    score += q[i * dim + headOffset + d] * k[j * dim + headOffset + d];
+                                }
+                                scores[j] = score * scale;
+                            } else {
+                                scores[j] = -Infinity;
+                            }
+                        }
+                        
+                        // Softmax
+                        const maxScore = Math.max(...scores.filter(s => s !== -Infinity));
+                        let expSum = 0;
+                        for (let j = 0; j < seqLen; j++) {
+                            if (scores[j] !== -Infinity) {
+                                scores[j] = Math.exp(scores[j] - maxScore);
+                                expSum += scores[j];
+                            } else {
+                                scores[j] = 0;
+                            }
+                        }
+                        for (let j = 0; j < seqLen; j++) {
+                            scores[j] /= expSum;
+                        }
+                        
+                        // Weighted sum of values
+                        for (let d = 0; d < headDim; d++) {
+                            let val = 0;
+                            for (let j = 0; j < seqLen; j++) {
+                                val += scores[j] * v[j * dim + headOffset + d];
+                            }
+                            output[i * dim + headOffset + d] = val;
+                        }
+                    }
+                }
+                
+                return output;
+            }
+
+            feedForward(x, layer, seqLen, dim) {
+                const hidden = new Float32Array(seqLen * dim * 4);
+                
+                // First linear
+                for (let i = 0; i < seqLen; i++) {
+                    for (let j = 0; j < dim * 4; j++) {
+                        let sum = layer.b1.data[j];
+                        for (let k = 0; k < dim; k++) {
+                            sum += x[i * dim + k] * layer.w1.data[k * dim * 4 + j];
+                        }
+                        // GELU activation
+                        hidden[i * dim * 4 + j] = MathUtils.gelu(sum);
+                    }
+                }
+                
+                // Second linear
+                const output = new Float32Array(seqLen * dim);
+                for (let i = 0; i < seqLen; i++) {
+                    for (let j = 0; j < dim; j++) {
+                        let sum = layer.b2.data[j];
+                        for (let k = 0; k < dim * 4; k++) {
+                            sum += hidden[i * dim * 4 + k] * layer.w2.data[k * dim + j];
+                        }
+                        output[i * dim + j] = sum;
+                    }
+                }
+                
+                return output;
+            }
+
+            layerNorm(x, gamma, beta, seqLen, dim) {
+                const output = new Float32Array(x.length);
+                
+                for (let i = 0; i < seqLen; i++) {
+                    // Compute mean and variance
+                    let mean = 0;
+                    for (let j = 0; j < dim; j++) {
+                        mean += x[i * dim + j];
+                    }
+                    mean /= dim;
+                    
+                    let variance = 0;
+                    for (let j = 0; j < dim; j++) {
+                        variance += (x[i * dim + j] - mean) ** 2;
+                    }
+                    variance /= dim;
+                    
+                    const std = Math.sqrt(variance + 1e-5);
+                    
+                    // Normalize
+                    for (let j = 0; j < dim; j++) {
+                        output[i * dim + j] = gamma[j] * (x[i * dim + j] - mean) / std + beta[j];
+                    }
+                }
+                
+                return output;
+            }
+
+            // Training step with backprop (simplified)
+            trainStep(inputIds, targetIds, learningRate) {
+                const seqLen = inputIds.length;
+                const logits = this.forward(inputIds);
+                
+                // Compute cross-entropy loss and gradients
+                let loss = 0;
+                const gradLogits = new Float32Array(logits.length);
+                
+                for (let t = 0; t < seqLen; t++) {
+                    const target = targetIds[t];
+                    const logitStart = t * this.vocabSize;
+                    
+                    // Softmax
+                    const logitsSlice = Array.from(logits.slice(logitStart, logitStart + this.vocabSize));
+                    const probs = MathUtils.softmax(logitsSlice);
+                    
+                    // Cross entropy loss
+                    loss -= Math.log(probs[target] + 1e-10);
+                    
+                    // Gradient
+                    for (let v = 0; v < this.vocabSize; v++) {
+                        gradLogits[logitStart + v] = probs[v] - (v === target ? 1 : 0);
+                    }
+                }
+                
+                loss /= seqLen;
+                
+                // Simplified gradient descent on output layer
+                const dim = this.embedDim;
+                for (let t = 0; t < seqLen; t++) {
+                    for (let v = 0; v < this.vocabSize; v++) {
+                        const grad = gradLogits[t * this.vocabSize + v];
+                        for (let d = 0; d < dim; d++) {
+                            this.lm_head.data[d * this.vocabSize + v] -= learningRate * grad * 0.01;
+                        }
+                    }
+                }
+                
+                // Update embeddings
+                for (let t = 0; t < seqLen; t++) {
+                    const tokenId = inputIds[t];
+                    for (let v = 0; v < this.vocabSize; v++) {
+                        const grad = gradLogits[t * this.vocabSize + v];
+                        for (let d = 0; d < dim; d++) {
+                            this.tokenEmbed.data[tokenId * dim + d] -= learningRate * grad * this.lm_head.data[d * this.vocabSize + v] * 0.01;
+                        }
+                    }
+                }
+                
+                return loss;
+            }
+
+            // Generate text
+            generate(promptIds, maxTokens, temperature = 0.8) {
+                const generated = [...promptIds];
+                
+                for (let i = 0; i < maxTokens; i++) {
+                    if (generated.length >= this.ctxLen) break;
+                    
+                    const logits = this.forward(generated);
+                    const lastLogits = logits.slice((generated.length - 1) * this.vocabSize, generated.length * this.vocabSize);
+                    
+                    // Apply temperature
+                    const scaled = lastLogits.map(x => x / temperature);
+                    const probs = MathUtils.softmax(scaled);
+                    
+                    // Sample
+                    let r = Math.random();
+                    let nextToken = 0;
+                    for (let j = 0; j < probs.length; j++) {
+                        r -= probs[j];
+                        if (r <= 0) {
+                            nextToken = j;
+                            break;
+                        }
+                    }
+                    
+                    generated.push(nextToken);
+                    
+                    // Stop on EOS
+                    if (nextToken === 3) break;
+                }
+                
+                return generated;
+            }
+        }
+
+        // ============================================
+        // Training System
+        // ============================================
+        class TrainingSystem {
+            constructor() {
+                this.tokenizer = new BPETokenizer();
+                this.model = null;
+                this.trainingData = [];
+                this.isTraining = false;
+                this.lossHistory = [];
+                this.currentEpoch = 0;
+                this.totalEpochs = 0;
+            }
+
+            loadData(texts) {
+                this.trainingData = texts;
+                this.tokenizer.train(texts, 500);
+                return this.trainingData.length;
+            }
+
+            initModel(config) {
+                config.vocabSize = this.tokenizer.vocabSize;
+                this.model = new Transformer(config);
+                return this.model.countParameters();
+            }
+
+            async train(config, callbacks) {
+                if (!this.model || this.trainingData.length === 0) {
+                    throw new Error('Model or data not initialized');
+                }
+
+                this.isTraining = true;
+                this.totalEpochs = config.epochs;
+                this.lossHistory = [];
+                
+                const startTime = Date.now();
+                
+                for (let epoch = 0; epoch < config.epochs; epoch++) {
+                    if (!this.isTraining) break;
+                    
+                    this.currentEpoch = epoch + 1;
+                    let epochLoss = 0;
+                    let numBatches = 0;
+                    
+                    // Shuffle data
+                    const shuffled = [...this.trainingData].sort(() => Math.random() - 0.5);
+                    
+                    for (let i = 0; i < shuffled.length; i += config.batchSize) {
+                        if (!this.isTraining) break;
+                        
+                        const batch = shuffled.slice(i, i + config.batchSize);
+                        let batchLoss = 0;
+                        
+                        for (const text of batch) {
+                            const tokens = this.tokenizer.encode(text);
+                            if (tokens.length > 1 && tokens.length < this.model.ctxLen) {
+                                const inputIds = tokens.slice(0, -1);
+                                const targetIds = tokens.slice(1);
+                                const loss = this.model.trainStep(inputIds, targetIds, config.learningRate);
+                                batchLoss += loss;
+                            }
+                        }
+                        
+                        batchLoss /= batch.length;
+                        epochLoss += batchLoss;
+                        numBatches++;
+                        
+                        // Progress callback
+                        const progress = ((epoch * shuffled.length + i + config.batchSize) / (config.epochs * shuffled.length)) * 100;
+                        const elapsed = Date.now() - startTime;
+                        const eta = (elapsed / progress) * (100 - progress);
+                        
+                        callbacks.onProgress?.({
+                            epoch: epoch + 1,
+                            totalEpochs: config.epochs,
+                            batch: numBatches,
+                            loss: batchLoss,
+                            progress: Math.min(progress, 100),
+                            eta: eta
+                        });
+                        
+                        // Yield to UI
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+                    
+                    epochLoss /= numBatches;
+                    this.lossHistory.push(epochLoss);
+                    
+                    callbacks.onEpoch?.({
+                        epoch: epoch + 1,
+                        loss: epochLoss
+                    });
+                }
+                
+                this.isTraining = false;
+                callbacks.onComplete?.();
+            }
+
+            stopTraining() {
+                this.isTraining = false;
+            }
+
+            generate(prompt, maxTokens = 50, temperature = 0.8) {
+                const promptIds = this.tokenizer.encode(prompt);
+                const generated = this.model.generate(promptIds, maxTokens, temperature);
+                return this.tokenizer.decode(generated);
+            }
+        }
+
+        // ============================================
+        // UI Controller
+        // ============================================
+        class UIController {
+            constructor() {
+                this.system = new TrainingSystem();
+                this.chartCtx = null;
+                this.chartData = [];
+                this.initElements();
+                this.bindEvents();
+                this.initChart();
+            }
+
+            initElements() {
+                // Status
+                this.modelStatus = document.getElementById('modelStatus');
+                this.modelStatusText = document.getElementById('modelStatusText');
+                
+                // Data
+                this.fileUpload = document.getElementById('fileUpload');
+                this.fileInput = document.getElementById('fileInput');
+                this.dataStatus = document.getElementById('dataStatus');
+                this.sampleCount = document.getElementById('sampleCount');
+                
+                // Model config
+                this.embedDimSlider = document.getElementById('embedDim');
+                this.numLayersSlider = document.getElementById('numLayers');
+                this.numHeadsSlider = document.getElementById('numHeads');
+                this.ctxLenSlider = document.getElementById('ctxLen');
+                this.paramCount = document.getElementById('paramCount');
+                
+                // Training config
+                this.epochsSlider = document.getElementById('epochs');
+                this.lrSlider = document.getElementById('learningRate');
+                this.batchSlider = document.getElementById('batchSize');
+                
+                // Buttons
+                this.loadSampleBtn = document.getElementById('loadSampleBtn');
+                this.initModelBtn = document.getElementById('initModelBtn');
+                this.trainBtn = document.getElementById('trainBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.sendBtn = document.getElementById('sendBtn');
+                
+                // Chat
+                this.chatMessages = document.getElementById('chatMessages');
+                this.chatInput = document.getElementById('chatInput');
+                
+                // Training monitor
+                this.currentLoss = document.getElementById('currentLoss');
+                this.currentEpoch = document.getElementById('currentEpoch');
+                this.progressPct = document.getElementById('progressPct');
+                this.eta = document.getElementById('eta');
+                this.progressBar = document.getElementById('progressBar');
+                this.trainingLog = document.getElementById('trainingLog');
+                
+                // Generation
+                this.temperatureSlider = document.getElementById('temperature');
+                this.maxTokensSlider = document.getElementById('maxTokens');
+                
+                // Architecture
+                this.vocabSizeEl = document.getElementById('vocabSize');
+                this.tokenPreview = document.getElementById('tokenPreview');
+            }
+
+            bindEvents() {
+                // File upload
+                this.fileUpload.addEventListener('click', () => this.fileInput.click());
+                this.fileUpload.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    this.fileUpload.classList.add('active');
+                });
+                this.fileUpload.addEventListener('dragleave', () => {
+                    this.fileUpload.classList.remove('active');
+                });
+                this.fileUpload.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    this.fileUpload.classList.remove('active');
+                    const file = e.dataTransfer.files[0];
+                    if (file) this.loadFile(file);
+                });
+                this.fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) this.loadFile(file);
+                });
+                
+                // Sliders
+                this.embedDimSlider.addEventListener('input', () => {
+                    document.getElementById('embedDimVal').textContent = this.embedDimSlider.value;
+                    this.updateParamCount();
+                });
+                this.numLayersSlider.addEventListener('input', () => {
+                    document.getElementById('layersVal').textContent = this.numLayersSlider.value;
+                    this.updateParamCount();
+                    this.updateArchitectureDiagram();
+                });
+                this.numHeadsSlider.addEventListener('input', () => {
+                    document.getElementById('headsVal').textContent = this.numHeadsSlider.value;
+                });
+                this.ctxLenSlider.addEventListener('input', () => {
+                    document.getElementById('ctxLenVal').textContent = this.ctxLenSlider.value;
+                });
+                this.epochsSlider.addEventListener('input', () => {
+                    document.getElementById('epochsVal').textContent = this.epochsSlider.value;
+                });
+                this.lrSlider.addEventListener('input', () => {
+                    document.getElementById('lrVal').textContent = parseFloat(this.lrSlider.value).toFixed(4);
+                });
+                this.batchSlider.addEventListener('input', () => {
+                    document.getElementById('batchVal').textContent = this.batchSlider.value;
+                });
+                this.temperatureSlider.addEventListener('input', () => {
+                    document.getElementById('tempVal').textContent = this.temperatureSlider.value;
+                });
+                this.maxTokensSlider.addEventListener('input', () => {
+                    document.getElementById('maxTokVal').textContent = this.maxTokensSlider.value;
+                });
+                
+                // Buttons
+                this.loadSampleBtn.addEventListener('click', () => this.loadSampleData());
+                this.initModelBtn.addEventListener('click', () => this.initializeModel());
+                this.trainBtn.addEventListener('click', () => this.startTraining());
+                this.stopBtn.addEventListener('click', () => this.stopTraining());
+                this.sendBtn.addEventListener('click', () => this.sendMessage());
+                this.chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+                
+                // Tabs
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
+                });
+            }
+
+            async loadFile(file) {
+                this.log('info', `ファイル読み込み中: ${file.name}`);
+                this.dataStatus.textContent = '読み込み中...';
+                
+                try {
+                    const text = await file.text();
+                    const lines = text.trim().split('\n');
+                    const data = [];
+                    
+                    for (const line of lines) {
+                        try {
+                            const json = JSON.parse(line);
+                            if (json.text) {
+                                data.push(json.text);
+                            }
+                        } catch (e) {
+                            // Skip invalid lines
+                        }
+                    }
+                    
+                    const count = this.system.loadData(data);
+                    this.sampleCount.textContent = count;
+                    this.dataStatus.textContent = '読み込み完了';
+                    this.vocabSizeEl.textContent = this.system.tokenizer.vocabSize;
+                    this.updateTokenPreview();
+                    this.log('success', `${count}件のサンプルを読み込みました`);
+                    this.log('info', `ボキャブラリサイズ: ${this.system.tokenizer.vocabSize}`);
+                    this.updateButtonStates();
+                } catch (e) {
+                    this.log('error', `読み込みエラー: ${e.message}`);
+                    this.dataStatus.textContent = 'エラー';
+                }
+            }
+
+            loadSampleData() {
+                const sampleData = [
+                    "こんにちは、私はAIです。何かお手伝いできることはありますか？",
+                    "今日の天気はいかがですか？晴れていますか？",
+                    "JavaScriptはウェブ開発に非常に便利なプログラミング言語です。",
+                    "機械学習は、コンピュータに学習させる技術のことです。",
+                    "初心者がするべきJavascriptのことを教えて。変数宣言はconstとletを徹底してください。",
+                    "HTMLはウェブページの構造を定義するマークアップ言語です。",
+                    "CSSはウェブページのデザインを担当します。",
+                    "プログラミングを始めるには、まず基礎を学ぶことが大切です。",
+                    "エラーが出たときは、冷静にログを確認しましょう。",
+                    "コードを書くときは、可読性を意識することが重要です。",
+                    "テストコードを書くことで、バグを早期に発見できます。",
+                    "バージョン管理にはGitを使うのが一般的です。",
+                    "ドキュメントを書くことは、将来の自分へのプレゼントです。",
+                    "ペアプログラミングは、知識共有に効果的です。",
+                    "コードレビューは品質向上に欠かせません。",
+                    "リファクタリングは定期的に行いましょう。",
+                    "パフォーマンスチューニングは計測から始めます。",
+                    "セキュリティは最初から考慮すべき重要な要素です。",
+                    "ユーザビリティテストは実際のユーザーと行いましょう。",
+                    "アジャイル開発では、フィードバックループを短く保ちます。"
+                ];
+                
+                const count = this.system.loadData(sampleData);
+                this.sampleCount.textContent = count;
+                this.dataStatus.textContent = 'サンプル読込済み';
+                this.vocabSizeEl.textContent = this.system.tokenizer.vocabSize;
+                this.updateTokenPreview();
+                this.log('success', `サンプルデータ ${count}件を読み込みました`);
+                this.log('info', `ボキャブラリサイズ: ${this.system.tokenizer.vocabSize}`);
+                this.updateButtonStates();
+            }
+
+            initializeModel() {
+                this.log('info', 'モデル初期化中...');
+                this.modelStatus.className = 'status-dot';
+                
+                const config = {
+                    embedDim: parseInt(this.embedDimSlider.value),
+                    numLayers: parseInt(this.numLayersSlider.value),
+                    numHeads: parseInt(this.numHeadsSlider.value),
+                    ctxLen: parseInt(this.ctxLenSlider.value),
+                    vocabSize: this.system.tokenizer.vocabSize
+                };
+                
+                try {
+                    const params = this.system.initModel(config);
+                    this.paramCount.textContent = (params / 1000).toFixed(1) + 'K';
+                    this.modelStatus.className = 'status-dot active';
+                    this.modelStatusText.textContent = '準備完了';
+                    this.log('success', `モデル初期化完了 - パラメータ数: ${params.toLocaleString()}`);
+                    this.updateArchitectureDiagram();
+                    this.updateButtonStates();
+                } catch (e) {
+                    this.log('error', `初期化エラー: ${e.message}`);
+                    this.modelStatusText.textContent = 'エラー';
+                }
+            }
+
+            async startTraining() {
+                this.trainBtn.disabled = true;
+                this.stopBtn.disabled = false;
+                this.modelStatus.className = 'status-dot training';
+                this.modelStatusText.textContent = '学習中';
+                
+                const config = {
+                    epochs: parseInt(this.epochsSlider.value),
+                    learningRate: parseFloat(this.lrSlider.value),
+                    batchSize: parseInt(this.batchSlider.value)
+                };
+                
+                this.log('info', `学習開始 - エポック: ${config.epochs}, LR: ${config.learningRate}, Batch: ${config.batchSize}`);
+                this.chartData = [];
+                
+                await this.system.train(config, {
+                    onProgress: (data) => {
+                        this.currentLoss.textContent = data.loss.toFixed(4);
+                        this.currentEpoch.textContent = `${data.epoch}/${data.totalEpochs}`;
+                        this.progressPct.textContent = `${data.progress.toFixed(1)}%`;
+                        this.progressBar.style.width = `${data.progress}%`;
+                        
+                        const minutes = Math.floor(data.eta / 60000);
+                        const seconds = Math.floor((data.eta % 60000) / 1000);
+                        this.eta.textContent = `${minutes}m ${seconds}s`;
+                    },
+                    onEpoch: (data) => {
+                        this.log('success', `Epoch ${data.epoch} - Loss: ${data.loss.toFixed(4)}`);
+                        this.chartData.push(data.loss);
+                        this.updateChart();
+                    },
+                    onComplete: () => {
+                        this.log('success', '学習完了！');
+                        this.modelStatus.className = 'status-dot active';
+                        this.modelStatusText.textContent = '学習済み';
+                        this.updateButtonStates();
+                    }
+                });
+            }
+
+            stopTraining() {
+                this.system.stopTraining();
+                this.log('warning', '学習を停止しました');
+                this.modelStatus.className = 'status-dot active';
+                this.modelStatusText.textContent = '停止';
+                this.trainBtn.disabled = false;
+                this.stopBtn.disabled = true;
+            }
+
+            sendMessage() {
+                const message = this.chatInput.value.trim();
+                if (!message) return;
+                
+                // Add user message
+                const userMsg = document.createElement('div');
+                userMsg.className = 'message message-user';
+                userMsg.textContent = message;
+                this.chatMessages.appendChild(userMsg);
+                
+                this.chatInput.value = '';
+                
+                // Generate response
+                if (this.system.model) {
+                    const temp = parseFloat(this.temperatureSlider.value);
+                    const maxTokens = parseInt(this.maxTokensSlider.value);
+                    
+                    setTimeout(() => {
+                        const response = this.system.generate(message, maxTokens, temp);
+                        
+                        const assistantMsg = document.createElement('div');
+                        assistantMsg.className = 'message message-assistant';
+                        assistantMsg.textContent = response;
+                        this.chatMessages.appendChild(assistantMsg);
+                        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+                    }, 100);
+                } else {
+                    const assistantMsg = document.createElement('div');
+                    assistantMsg.className = 'message message-assistant';
+                    assistantMsg.textContent = 'モデルを初期化して学習させてください。';
+                    this.chatMessages.appendChild(assistantMsg);
+                }
+                
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }
+
+            switchTab(tabName) {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                
+                document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+                document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            }
+
+            updateButtonStates() {
+                const hasData = this.system.trainingData.length > 0;
+                const hasModel = this.system.model !== null;
+                
+                this.trainBtn.disabled = !hasData || !hasModel;
+                this.sendBtn.disabled = !hasModel;
+                this.chatInput.disabled = !hasModel;
+            }
+
+            updateParamCount() {
+                const embedDim = parseInt(this.embedDimSlider.value);
+                const numLayers = parseInt(this.numLayersSlider.value);
+                const vocabSize = this.system.tokenizer.vocabSize || 500;
+                
+                // Rough estimate
+                const embedParams = vocabSize * embedDim;
+                const layerParams = 4 * embedDim * embedDim + 2 * embedDim * 4 * embedDim;
+                const total = embedParams * 2 + layerParams * numLayers + embedDim * vocabSize;
+                
+                this.paramCount.textContent = (total / 1000).toFixed(1) + 'K';
+            }
+
+            updateArchitectureDiagram() {
+                const numLayers = parseInt(this.numLayersSlider.value);
+                const container = document.getElementById('transformerLayers');
+                container.innerHTML = '';
+                
+                for (let i = 0; i < numLayers; i++) {
+                    container.innerHTML += `
+                        <div class="arch-layer" style="padding-left: 60px;">
+                            <span class="arch-arrow">↓</span>
+                        </div>
+                        <div class="arch-layer">
+                            <div class="arch-box highlight">Transformer Layer ${i + 1}</div>
+                        </div>
+                        <div class="arch-layer" style="padding-left: 40px;">
+                            <div class="arch-box">Multi-Head Attention</div>
+                        </div>
+                        <div class="arch-layer" style="padding-left: 40px;">
+                            <div class="arch-box">Feed Forward</div>
+                        </div>
+                    `;
+                }
+            }
+
+            updateTokenPreview() {
+                const tokens = [...this.system.tokenizer.vocab.entries()]
+                    .slice(0, 50)
+                    .map(([token, id]) => `<span class="token" title="ID: ${id}">${token.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`)
+                    .join('');
+                
+                this.tokenPreview.innerHTML = tokens;
+            }
+
+            initChart() {
+                const canvas = document.getElementById('lossChart');
+                this.chartCtx = canvas.getContext('2d');
+                this.drawChart();
+            }
+
+            updateChart() {
+                this.drawChart();
+            }
+
+            drawChart() {
+                const canvas = document.getElementById('lossChart');
+                const ctx = this.chartCtx;
+                const width = canvas.width = canvas.parentElement.clientWidth;
+                const height = canvas.height = canvas.parentElement.clientHeight;
+                
+                ctx.clearRect(0, 0, width, height);
+                
+                // Background
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, width, height);
+                
+                if (this.chartData.length < 2) {
+                    ctx.fillStyle = '#555568';
+                    ctx.font = '12px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('学習開始後にグラフが表示されます', width / 2, height / 2);
+                    return;
+                }
+                
+                const padding = 40;
+                const chartWidth = width - padding * 2;
+                const chartHeight = height - padding * 2;
+                
+                const maxLoss = Math.max(...this.chartData);
+                const minLoss = Math.min(...this.chartData);
+                const range = maxLoss - minLoss || 1;
+                
+                // Grid
+                ctx.strokeStyle = '#2a2a3a';
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 4; i++) {
+                    const y = padding + (chartHeight * i / 4);
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(width - padding, y);
+                    ctx.stroke();
+                }
+                
+                // Loss line
+                ctx.strokeStyle = '#00d4aa';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                this.chartData.forEach((loss, i) => {
+                    const x = padding + (i / (this.chartData.length - 1)) * chartWidth;
+                    const y = padding + chartHeight - ((loss - minLoss) / range) * chartHeight;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                
+                ctx.stroke();
+                
+                // Points
+                ctx.fillStyle = '#00d4aa';
+                this.chartData.forEach((loss, i) => {
+                    const x = padding + (i / (this.chartData.length - 1)) * chartWidth;
+                    const y = padding + chartHeight - ((loss - minLoss) / range) * chartHeight;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                // Y axis labels
+                ctx.fillStyle = '#8888a0';
+                ctx.font = '10px JetBrains Mono';
+                ctx.textAlign = 'right';
+                for (let i = 0; i <= 4; i++) {
+                    const val = maxLoss - (range * i / 4);
+                    const y = padding + (chartHeight * i / 4);
+                    ctx.fillText(val.toFixed(3), padding - 8, y + 4);
+                }
+            }
+
+            log(type, message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${timestamp}] ${message}`;
+                this.trainingLog.appendChild(entry);
+                this.trainingLog.scrollTop = this.trainingLog.scrollHeight;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            window.ui = new UIController();
+        });
+    </script>
+</body>
+</html>

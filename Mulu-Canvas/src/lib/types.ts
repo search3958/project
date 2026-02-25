@@ -35,6 +35,7 @@ export interface Artwork {
   name: string;
   width: number;
   height: number;
+  backgroundColor: string;
   ambientColor: string;
   ambientIntensity: number;
   strokes: Stroke[];
@@ -48,6 +49,7 @@ export interface ProjectSettings {
   name: string;
   width: number;
   height: number;
+  backgroundColor: string;
   ambientColor: string;
   ambientIntensity: number;
 }
@@ -101,6 +103,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   name: '',
   width: 800,
   height: 600,
+  backgroundColor: '#ffffff',
   ambientColor: '#ffffff',
   ambientIntensity: 0.3,
 };

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Core - Hybrid Architecture Edition</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.5; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        h2 { border-bottom: 2px solid #333; padding-bottom: 5px; margin-top: 25px; }
+        .panel { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .control-group { background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .control-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="range"] { width: 70%; vertical-align: middle; }
+        .value-display { display: inline-block; width: 50px; text-align: right; font-family: monospace; }
+        textarea { width: 100%; box-sizing: border-box; font-size: 1.1em; padding: 10px; }
+        button { padding: 10px 15px; font-size: 1em; cursor: pointer; margin-right: 5px; }
+        #outputArea { border: 2px solid #333; padding: 15px; min-height: 150px; white-space: pre-wrap; font-size: 1.2em; background: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85em; }
+        th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+        th { background: #eee; }
+        .status-bar { margin-top: 10px; font-weight: bold; padding: 5px; background: #e0e0e0; }
+    </style>
+</head>
+<body>
+
+    <h2>1. Input (ユーザー入力)</h2>
+    <textarea id="rawInput" rows="3">CSSでcorner-shapeってどう使う？例えばborder-radiusに設定するにはどうする。</textarea>
+    <div class="status-bar">入力トークン: <span id="inTokens" style="color: #555;"></span></div>
+
+    <hr>
+
+    <h2>2. Neural Configuration (推論設定)</h2>
+    <div class="panel">
+        <div style="margin-bottom: 15px;">
+            <strong>推論モード選択 (複数選択可):</strong><br>
+            <label><input type="checkbox" id="modeNgram" checked> 統計モード (N-gram / 局所的)</label><br>
+            <label><input type="checkbox" id="modeAttention" checked> アテンションモード (Transformer / 広域的)</label><br>
+            <label><input type="checkbox" id="modeGeom"> 幾何学的モード (ベクトル近傍 / 意味的)</label>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Temperature (温度):</label>
+                <input type="range" id="tempRange" min="0.1" max="2.0" step="0.1" value="0.7">
+                <span class="value-display" id="tempVal">0.7</span>
+            </div>
+            <div class="control-group">
+                <label>Repeat Penalty (反復抑制):</label>
+                <input type="range" id="repPenRange" min="1.0" max="3.0" step="0.1" value="1.5">
+                <span class="value-display" id="repPenVal">1.5</span>
+            </div>
+            <div class="control-group">
+                <label>Top-K (候補数):</label>
+                <input type="range" id="topKRange" min="1" max="100" step="1" value="40">
+                <span class="value-display" id="topKVal">40</span>
+            </div>
+            <div class="control-group">
+                <label>Context Size (文脈長):</label>
+                <input type="range" id="ctxRange" min="10" max="512" step="10" value="128">
+                <span class="value-display" id="ctxVal">128</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <button onclick="autoGenerate()" style="background: #d4edda; font-weight: bold;">▶ 連続生成</button>
+            <button onclick="stepGenerate()">次の1トークン</button>
+            <button onclick="stopGeneration()" style="background: #f8d7da; color: red;">■ 停止</button>
+        </div>
+        <div class="status-bar">ステータス: <span id="status" style="color: #333;">初期化中...</span></div>
+    </div>
+
+    <hr>
+
+    <h2>3. Output (生成結果)</h2>
+    <div id="outputArea"></div>
+    <div class="status-bar">生成済み: <span id="outTokens" style="color: blue;"></span></div>
+
+    <hr>
+
+    <h2>4. Inference Log (内部スコア解析)</h2>
+    <p style="font-size:0.9em; color:#666;">各モードのスコア合成状況を表示します。Logitが高いほど選ばれやすくなります。</p>
+    <table>
+        <thead>
+            <tr>
+                <th>トークン</th>
+                <th>統計スコア</th>
+                <th>Attentionスコア</th>
+                <th>幾何学スコア</th>
+                <th>統合Logit</th>
+                <th>確率</th>
+            </tr>
+        </thead>
+        <tbody id="candidateTable"></tbody>
+    </table>
+
+    <script>
+        // ========================================================
+        // 定数・グローバル変数
+        // ========================================================
+        const DIMENSIONS = 128;
+        const NUM_HEADS = 4;
+        const HEAD_DIM = DIMENSIONS / NUM_HEADS;
+        const NUM_LAYERS = 2; // ブラウザでの実行速度を考慮し少なく設定
+
+        let tokenVecs = {};       // 埋め込みベクトル
+        let ngramModel = {};      // N-gram統計データ { 'prefix': { 'next': count } }
+        let allTokens = [];
+        let allTokensSet = new Set();
+        let isLoaded = false;
+        let isGenerating = false;
+        let generatedText = "";
+        
+        // Transformerパラメータ
+        let transformerParams = null;
+
+        // ========================================================
+        // UI更新系
+        // ========================================================
+        const setStatus = (msg, color = "black") => {
+            document.getElementById('status').innerText = msg;
+            document.getElementById('status').style.color = color;
+        };
+
+        // スライダー値表示の更新
+        const bindSlider = (id, displayId) => {
+            document.getElementById(id).oninput = e => {
+                document.getElementById(displayId).innerText = e.target.value;
+            };
+        };
+        bindSlider('tempRange', 'tempVal');
+        bindSlider('repPenRange', 'repPenVal');
+        bindSlider('topKRange', 'topKVal');
+        bindSlider('ctxRange', 'ctxVal');
+
+        const tokenize = (text) => {
+            if (!text) return [];
+            // 日本語・英語・記号を適切に分割する简易トークナイザ
+            return text.match(/[一-龠]+|[ぁ-ん]+|[ァ-ヴー]+|[a-zA-Z0-9_\-]+|<\|.*?\|>|[^\w\s\u3040-\u309F\u30A0-\u30FF一-龠]+/g)
+                       ?.map(s => s.trim()).filter(Boolean) || [];
+        };
+
+        const updateTokenDisplays = () => {
+            // 入力トークン表示
+            const rawIn = document.getElementById('rawInput').value;
+            document.getElementById('inTokens').innerText = tokenize(rawIn).join(' → ');
+            // 出力トークン表示
+            document.getElementById('outTokens').innerText = tokenize(generatedText).slice(-10).join(' → ');
+        };
+
+        // ========================================================
+        // 数学ユーティリティ
+        // ========================================================
+        const vecAdd = (a, b, scale = 1.0) => {
+            const res = new Float32Array(a.length);
+            for(let i=0; i<a.length; i++) res[i] = a[i] + b[i] * scale;
+            return res;
+        };
+
+        const vecNorm = (a) => {
+            let sum = 0;
+            for(let i=0; i<a.length; i++) sum += a[i]*a[i];
+            return Math.sqrt(sum);
+        };
+
+        const cosineSimilarity = (a, b) => {
+            let dot = 0, normA = 0, normB = 0;
+            for(let i=0; i<a.length; i++) {
+                dot += a[i]*b[i];
+                normA += a[i]*a[i];
+                normB += b[i]*b[i];
+            }
+            if(normA === 0 || normB === 0) return 0;
+            return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+        };
+
+        const softmax = (arr) => {
+            const max = Math.max(...arr);
+            const exps = arr.map(v => Math.exp(v - max));
+            const sum = exps.reduce((a, b) => a + b, 0);
+            return exps.map(e => e / sum);
+        };
+
+        // ========================================================
+        // Transformer アーキテクチャ (簡易実装)
+        // ========================================================
+        
+        const matMulVec = (W, x, inDim, outDim) => {
+            // x: [inDim], W: [inDim, outDim] -> y: [outDim]
+            const y = new Float32Array(outDim);
+            for(let j=0; j<outDim; j++) {
+                let sum = 0;
+                for(let i=0; i<inDim; i++) {
+                    sum += x[i] * W[i * outDim + j];
+                }
+                y[j] = sum;
+            }
+            return y;
+        };
+
+        const initTransformerParams = () => {
+            const scale = 0.02;
+            const randArr = (size) => Float32Array.from({length: size}, () => (Math.random()*2-1)*scale);
+            
+            // 注: 本来は層ごとにパラメータが必要ですが、簡略化のため単層相当の構造も内包
+            // ここでは「文脈ベクトルの変換」を行う簡易的な重みを用意
+            return {
+                // Query, Key, Value projection
+                Wq: randArr(DIMENSIONS * DIMENSIONS),
+                Wk: randArr(DIMENSIONS * DIMENSIONS),
+                Wv: randArr(DIMENSIONS * DIMENSIONS),
+                // Output projection
+                Wo: randArr(DIMENSIONS * DIMENSIONS),
+            };
+        };
+
+        // 簡易Self-Attention計算 (コンテキスト全体を考慮)
+        const calculateAttentionLogit = (contextTokens, candidateToken) => {
+            if(!transformerParams) return 0;
+            
+            // コンテキストの埋め込みを取得
+            const ctxVecs = contextTokens.map(t => tokenVecs[t] || new Float32Array(DIMENSIONS));
+            if(ctxVecs.length === 0) return 0;
+
+            // 候補トークンの埋め込み (Keyとして扱う)
+            const candVec = tokenVecs[candidateToken] || new Float32Array(DIMENSIONS);
+            
+            // 簡易的なAttention Score計算
+            // 各コンテキストトークンと候補トークンの関連度を計算
+            let totalScore = 0;
+            let totalWeight = 0;
+
+            // 直近のトークンほど重みを高くする位置エンコーディングもどき
+            const posWeights = ctxVecs.map((_, i) => 1.0 + i * 0.1); 
+
+            for(let i=0; i<ctxVecs.length; i++) {
+                const ctx = ctxVecs[i];
+                const pw = posWeights[i];
+                
+                // 類似度計算
+                const sim = cosineSimilarity(ctx, candVec);
+                
+                // 統計的な共起傾向をAttentionスコアとして利用（簡易的な模倣）
+                // 実際のTransformerは学習された重みWを使うが、ここではベクトル演算のみで代用
+                totalScore += sim * pw;
+                totalWeight += pw;
+            }
+            
+            return (totalWeight > 0) ? (totalScore / totalWeight) * 10.0 : 0; // スケール調整
+        };
+
+        // ========================================================
+        // 学習・データ構築
+        // ========================================================
+        const yieldToUI = () => new Promise(r => setTimeout(r, 0));
+
+        const learnEmbeddingsAndNgrams = async (sentences) => {
+            // 1. N-gramモデルの構築
+            sentences.forEach(words => {
+                for(let i=0; i<words.length; i++) {
+                    // Bigram
+                    const w1 = words[i];
+                    const w2 = words[i+1];
+                    if(w2) {
+                        if(!ngramModel[w1]) ngramModel[w1] = {};
+                        ngramModel[w1][w2] = (ngramModel[w1][w2] || 0) + 1;
+                    }
+                    // Trigram (少し先を見る)
+                    const w3 = words[i+2];
+                    if(w3 && w2) {
+                        const key = `${w1}::${w2}`;
+                        if(!ngramModel[key]) ngramModel[key] = {};
+                        ngramModel[key][w3] = (ngramModel[key][w3] || 0) + 1;
+                    }
+                }
+            });
+
+            // 2. 埋め込みベクトルの簡易学習
+            // 実際のAI学習ほど時間はかけられないため、共起関係に基づいてベクトルを近づける
+            const LR = 0.05;
+            const CHUNK = 500;
+            
+            for(let epoch=0; epoch<1; epoch++) { // 1エポックのみ
+                for(let start=0; start<sentences.length; start+=CHUNK) {
+                    const end = Math.min(start+CHUNK, sentences.length);
+                    
+                    for(let si=start; si<end; si++) {
+                        const words = sentences[si];
+                        for(let i=0; i<words.length; i++) {
+                            const t = words[i];
+                            const vec_t = tokenVecs[t];
+                            if(!vec_t) continue;
+
+                            // 前後の単語とベクトルを近づける
+                            const neighbors = [words[i-1], words[i+1]].filter(Boolean);
+                            neighbors.forEach(nb => {
+                                const vec_nb = tokenVecs[nb];
+                                if(!vec_nb) return;
+                                
+                                // 簡易的な引き寄せ
+                                for(let d=0; d<DIMENSIONS; d++) {
+                                    const diff = vec_nb[d] - vec_t[d];
+                                    vec_t[d] += diff * LR;
+                                }
+                            });
+                        }
+                    }
+                    
+                    setStatus(`学習中... ${Math.min(end, sentences.length)}/${sentences.length}`, "orange");
+                    await yieldToUI();
+                }
+            }
+        };
+
+        // ========================================================
+        // 初期化
+        // ========================================================
+        window.onload = async () => {
+            try {
+                setStatus("train.jsonl 読み込み中...", "orange");
+                const response = await fetch('train.jsonl');
+                if (!response.ok) throw new Error("train.jsonl が見つかりません");
+                
+                const text = await response.text();
+                const lines = text.split('\n').filter(l => l.trim() !== "");
+                
+                setStatus("トークナイズ & 辞書構築中...", "orange");
+                await yieldToUI();
+
+                const parsedSentences = [];
+                lines.forEach(line => {
+                    try {
+                        const words = tokenize(JSON.parse(line).text);
+                        if (words.length > 0) {
+                            parsedSentences.push(words);
+                            words.forEach(w => {
+                                if (!allTokensSet.has(w)) {
+                                    allTokensSet.add(w);
+                                    // ランダム初期化
+                                    tokenVecs[w] = Float32Array.from({length: DIMENSIONS}, () => (Math.random()*2-1)*0.1);
+                                }
+                            });
+                        }
+                    } catch(e) {}
+                });
+                allTokens = Array.from(allTokensSet);
+
+                setStatus("モデル学習中 (N-gram & Embedding)...", "orange");
+                await learnEmbeddingsAndNgrams(parsedSentences);
+
+                // Transformerパラメータ初期化
+                transformerParams = initTransformerParams();
+
+                isLoaded = true;
+                setStatus("準備完了", "green");
+                updateTokenDisplays();
+
+            } catch (e) {
+                console.error(e);
+                setStatus("エラー: " + e.message, "red");
+            }
+        };
+
+        // ========================================================
+        // 推論エンジン
+        // ========================================================
+        function calculateNextToken() {
+            if (!isLoaded) return null;
+
+            // パラメータ取得
+            const temp = parseFloat(document.getElementById('tempRange').value);
+            const repPen = parseFloat(document.getElementById('repPenRange').value);
+            const topK = parseInt(document.getElementById('topKRange').value);
+            const ctxLimit = parseInt(document.getElementById('ctxRange').value);
+            
+            const useNgram = document.getElementById('modeNgram').checked;
+            const useAttn = document.getElementById('modeAttention').checked;
+            const useGeom = document.getElementById('modeGeom').checked;
+
+            // コンテキスト構築
+            const rawIn = document.getElementById('rawInput').value;
+            // プロンプト書式: <|user|>入力<|assistant|出力
+            const promptCtx = tokenize(`<|user|>\n${rawIn}\n<|assistant|`);
+            const fullCtx = promptCtx.concat(tokenize(generatedText));
+            
+            // 文脈長制限
+            const context = fullCtx.slice(-ctxLimit);
+            if (context.length === 0) return null;
+
+            // 直近のトークン履歴 (N-gram用)
+            const last1 = context[context.length - 1];
+            const last2 = context.length > 1 ? `${context[context.length - 2]}::${last1}` : null;
+
+            // 候補スコア計算
+            // 効率化のため、N-gramで出現しうる候補 + ランダムサンプリング で絞り込み
+            // ここでは全語彙をスキャンするが、logitを保持する
+            const logits = {};
+            allTokens.forEach(t => logits[t] = 0);
+
+            // --- 1. 統計モード ---
+            if (useNgram) {
+                const candidates = new Set();
+                // Bigram候補
+                if (ngramModel[last1]) Object.keys(ngramModel[last1]).forEach(t => candidates.add(t));
+                // Trigram候補
+                if (last2 && ngramModel[last2]) Object.keys(ngramModel[last2]).forEach(t => candidates.add(t));
+
+                candidates.forEach(t => {
+                    let score = 0;
+                    // 単純な頻度を対数スコア化
+                    const countB = (ngramModel[last1] && ngramModel[last1][t]) || 0;
+                    const countT = (last2 && ngramModel[last2] && ngramModel[last2][t]) || 0;
+                    
+                    // Trigramを優遇
+                    score += Math.log(countT + 1) * 2.0; 
+                    score += Math.log(countB + 1) * 1.0;
+                    
+                    logits[t] = (logits[t] || 0) + score;
+                });
+            }
+
+            // --- 2. アテンションモード (Attention) ---
+            if (useAttn) {
+                // 全語彙に対してAttentionスコアを計算すると重いため、
+                // N-gram候補＋ランダム/高頻度トークンに対して計算するのが現実的
+                // ここではデモのため、N-gram候補が少ない場合に補完する形で計算
+                // (本来は全語彙に対して行列演算を行う)
+                
+                // 簡易的なコンテキストベクトル作成 (平均)
+                let contextVec = new Float32Array(DIMENSIONS);
+                context.forEach(t => {
+                    if(tokenVecs[t]) contextVec = vecAdd(contextVec, tokenVecs[t]);
+                });
+                contextVec = contextVec.map(v => v / context.length);
+
+                // スコア付与: コンテキストベクトルとの類似度
+                // (これにより、「文脈に関連する単語」が選ばれやすくなる)
+                allTokens.forEach(t => {
+                    if(!tokenVecs[t]) return;
+                    const sim = cosineSimilarity(contextVec, tokenVecs[t]);
+                    // 類似度をLogitに変換 (温度で調整済みの確率分布に近い形にするため係数をかける)
+                    logits[t] = (logits[t] || 0) + (sim * 5.0); 
+                });
+            }
+
+            // --- 3. 幾何学モード ---
+            if (useGeom) {
+                // 直前の単語とのベクトル距離を直接スコアにする
+                const lastVec = tokenVecs[last1];
+                if(lastVec) {
+                    allTokens.forEach(t => {
+                        if(!tokenVecs[t]) return;
+                        const sim = cosineSimilarity(lastVec, tokenVecs[t]);
+                        logits[t] = (logits[t] || 0) + (sim * 3.0);
+                    });
+                }
+            }
+
+            // --- 反復抑制 ---
+            const recentTokens = context.slice(-20); // 直近20トークン
+            recentTokens.forEach(rt => {
+                if (logits[rt] !== undefined) {
+                    logits[rt] /= repPen;
+                }
+            });
+
+            // --- Top-Kフィルタリング & Softmax ---
+            // Logitの配列化とソート
+            const items = Object.entries(logits).map(([token, score]) => ({token, score}));
+            items.sort((a, b) => b.score - a.score);
+            
+            // Top-Kに制限
+            const topItems = items.slice(0, topK);
+            
+            // Softmax計算
+            const scores = topItems.map(i => i.score / temp); // 温度適用
+            const probs = softmax(scores);
+
+            // テーブル表示更新
+            const tbody = document.getElementById('candidateTable');
+            tbody.innerHTML = topItems.slice(0, 10).map((item, idx) => {
+                const prob = probs[idx];
+                const t = item.token;
+                
+                // 内訳スコア計算 (表示用)
+                let sN = "-", sA = "-", sG = "-";
+                if(useNgram) sN = ((ngramModel[last1] && ngramModel[last1][t])||0) > 0 ? "Hit" : "0";
+                if(useAttn) sA = (tokenVecs[t] ? cosineSimilarity(tokenVecs[t], tokenVecs[last1]||new Float32Array(DIMENSIONS)) : 0).toFixed(2);
+                if(useGeom) sG = (tokenVecs[t] ? cosineSimilarity(tokenVecs[t], tokenVecs[last1]||new Float32Array(DIMENSIONS)) : 0).toFixed(2);
+
+                return `<tr>
+                    <td><strong>${t}</strong></td>
+                    <td>${sN}</td>
+                    <td>${sA}</td>
+                    <td>${sG}</td>
+                    <td>${item.score.toFixed(3)}</td>
+                    <td>${(prob * 100).toFixed(1)}%</td>
+                </tr>`;
+            }).join("");
+
+            // サンプリング
+            const rand = Math.random();
+            let cumSum = 0;
+            for (let i = 0; i < topItems.length; i++) {
+                cumSum += probs[i];
+                if (rand <= cumSum) {
+                    return topItems[i].token;
+                }
+            }
+            return topItems[0].token;
+        }
+
+        // ========================================================
+        // 実行制御
+        // ========================================================
+        async function stepGenerate() {
+            if (!isLoaded) return false;
+            try {
+                const next = calculateNextToken();
+                if (!next) return false;
+                
+                generatedText += next;
+                document.getElementById('outputArea').innerText = generatedText;
+                updateTokenDisplays();
+                
+                if (next === "<|end|>" || generatedText.length > 500) {
+                    stopGeneration();
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                console.error(e);
+                setStatus("Error: " + e.message, "red");
+                return false;
+            }
+        }
+
+        async function autoGenerate() {
+            if (isGenerating) return;
+            if (!isLoaded) { alert("モデルがロードされていません"); return; }
+            
+            isGenerating = true;
+            generatedText = "";
+            document.getElementById('outputArea').innerText = "";
+            setStatus("生成中...", "green");
+
+            while (isGenerating) {
+                const ok = await stepGenerate();
+                if (!ok) break;
+                await new Promise(r => setTimeout(r, 30)); // 生成速度調整
+            }
+        }
+
+        function stopGeneration() {
+            isGenerating = false;
+            setStatus("停止 / 完了", "blue");
+        }
+    </script>
+</body>
+</html>

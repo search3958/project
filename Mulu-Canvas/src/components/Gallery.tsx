@@ -12,7 +12,6 @@ import { Slider } from '@/components/ui/slider';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -35,7 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Language } from '@/lib/types';
-import { Plus, Trash2, Download, Upload, Palette, Settings, Globe } from 'lucide-react';
+import { Plus, Trash2, Download, Upload, Palette, Globe } from 'lucide-react';
 
 function t(language: Language, key: TranslationKey): string {
   return getTranslation(language, key);
@@ -44,7 +43,7 @@ function t(language: Language, key: TranslationKey): string {
 interface NewArtworkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (name: string, width: number, height: number, ambientColor: string, ambientIntensity: number) => void;
+  onCreate: (name: string, width: number, height: number, backgroundColor: string, ambientColor: string, ambientIntensity: number) => void;
 }
 
 function NewArtworkDialog({ open, onOpenChange, onCreate }: NewArtworkDialogProps) {
@@ -52,14 +51,16 @@ function NewArtworkDialog({ open, onOpenChange, onCreate }: NewArtworkDialogProp
   const [name, setName] = useState('');
   const [width, setWidth] = useState(800);
   const [height, setHeight] = useState(600);
+  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [ambientColor, setAmbientColor] = useState('#ffffff');
   const [ambientIntensity, setAmbientIntensity] = useState(0.3);
   
   const handleCreate = () => {
-    onCreate(name, width, height, ambientColor, ambientIntensity);
+    onCreate(name, width, height, backgroundColor, ambientColor, ambientIntensity);
     setName('');
     setWidth(800);
     setHeight(600);
+    setBackgroundColor('#ffffff');
     setAmbientColor('#ffffff');
     setAmbientIntensity(0.3);
     onOpenChange(false);
@@ -67,7 +68,7 @@ function NewArtworkDialog({ open, onOpenChange, onCreate }: NewArtworkDialogProp
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
           <DialogTitle>{t(state.language, 'newArtworkTitle')}</DialogTitle>
         </DialogHeader>
@@ -79,6 +80,7 @@ function NewArtworkDialog({ open, onOpenChange, onCreate }: NewArtworkDialogProp
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={`Artwork ${new Date().toLocaleDateString()}`}
+              className="bg-white"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -91,6 +93,7 @@ function NewArtworkDialog({ open, onOpenChange, onCreate }: NewArtworkDialogProp
                 onChange={(e) => setWidth(parseInt(e.target.value) || 800)}
                 min={100}
                 max={2000}
+                className="bg-white"
               />
             </div>
             <div className="grid gap-2">
@@ -102,6 +105,24 @@ function NewArtworkDialog({ open, onOpenChange, onCreate }: NewArtworkDialogProp
                 onChange={(e) => setHeight(parseInt(e.target.value) || 600)}
                 min={100}
                 max={2000}
+                className="bg-white"
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="backgroundColor">{t(state.language, 'backgroundColor')}</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="backgroundColor"
+                type="color"
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="w-12 h-10 p-1 bg-white"
+              />
+              <Input
+                value={backgroundColor}
+                onChange={(e) => setBackgroundColor(e.target.value)}
+                className="flex-1 bg-white"
               />
             </div>
           </div>
@@ -113,12 +134,12 @@ function NewArtworkDialog({ open, onOpenChange, onCreate }: NewArtworkDialogProp
                 type="color"
                 value={ambientColor}
                 onChange={(e) => setAmbientColor(e.target.value)}
-                className="w-12 h-10 p-1"
+                className="w-12 h-10 p-1 bg-white"
               />
               <Input
                 value={ambientColor}
                 onChange={(e) => setAmbientColor(e.target.value)}
-                className="flex-1"
+                className="flex-1 bg-white"
               />
             </div>
           </div>
@@ -163,16 +184,15 @@ function ArtworkCard({ artwork, onOpen, onDelete, onExport }: ArtworkCardProps) 
   
   return (
     <>
-      <Card className="group cursor-pointer hover:shadow-lg transition-shadow" onClick={onOpen}>
+      <Card className="group cursor-pointer hover:shadow-lg transition-shadow bg-white" onClick={onOpen}>
         <CardHeader className="p-4">
           <CardTitle className="text-base truncate">{artwork.name}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div 
-            className="aspect-video bg-gray-100 relative overflow-hidden"
+            className="aspect-video relative overflow-hidden"
             style={{ 
-              backgroundColor: artwork.ambientColor,
-              backgroundBlendMode: 'multiply',
+              backgroundColor: artwork.backgroundColor || '#ffffff',
             }}
           >
             {artwork.previewImage ? (
@@ -218,7 +238,7 @@ function ArtworkCard({ artwork, onOpen, onDelete, onExport }: ArtworkCardProps) 
       </Card>
       
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>{t(state.language, 'confirm')}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -252,10 +272,11 @@ export default function Gallery() {
     name: string,
     width: number,
     height: number,
+    backgroundColor: string,
     ambientColor: string,
     ambientIntensity: number
   ) => {
-    const artwork = await createArtwork(name, width, height, ambientColor, ambientIntensity);
+    const artwork = await createArtwork(name, width, height, backgroundColor, ambientColor, ambientIntensity);
     openArtwork(artwork.id);
   };
   
@@ -272,7 +293,7 @@ export default function Gallery() {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -281,11 +302,11 @@ export default function Gallery() {
           </h1>
           <div className="flex items-center gap-2">
             <Select value={state.language} onValueChange={(v) => handleLanguageChange(v as Language)}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[140px] bg-white">
                 <Globe className="w-4 h-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="ja">日本語</SelectItem>
                 <SelectItem value="zh">中文</SelectItem>
                 <SelectItem value="ko">한국어</SelectItem>
@@ -298,7 +319,7 @@ export default function Gallery() {
       
       {/* Toolbar */}
       <div className="max-w-7xl mx-auto px-4 py-4 flex gap-2">
-        <Button onClick={() => setShowNewDialog(true)}>
+        <Button onClick={() => setShowNewDialog(true)} className="bg-black hover:bg-gray-800">
           <Plus className="w-4 h-4 mr-2" />
           {t(state.language, 'newArtwork')}
         </Button>
@@ -312,6 +333,7 @@ export default function Gallery() {
         <Button 
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
+          className="bg-white"
         >
           <Upload className="w-4 h-4 mr-2" />
           {t(state.language, 'import')}
@@ -325,7 +347,7 @@ export default function Gallery() {
             <Palette className="w-16 h-16 mx-auto text-gray-300 mb-4" />
             <p className="text-gray-500 text-lg">{t(state.language, 'noArtworks')}</p>
             <p className="text-gray-400 mt-2">{t(state.language, 'createFirst')}</p>
-            <Button className="mt-4" onClick={() => setShowNewDialog(true)}>
+            <Button className="mt-4 bg-black hover:bg-gray-800" onClick={() => setShowNewDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               {t(state.language, 'newArtwork')}
             </Button>

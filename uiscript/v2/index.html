@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material 3 Button Design System</title>
+    <style>
+        :root {
+            --md-sys-color-surface: #ffffff;
+            --md-sys-color-surface-container: #f3f3f3;
+            --md-sys-color-primary: hsl(156, 91%, 22%);
+            --md-sys-color-on-primary: #ffffff;
+            --md-sys-color-secondary-container: #99fbb8;
+            --md-sys-color-on-surface: #1c1b1f;
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: var(--md-sys-color-surface-container);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            gap: 20px;
+            margin: 0;
+        }
+
+        /* --- 抽出したボタンのベーススタイル --- */
+        .btn{
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            transition: opacity 0.2s;
+        }
+
+        /* アニメーション用擬似要素 */
+        .btn::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10%; 
+            height: 100%;
+            border-radius: inherit;
+            opacity: 0;
+            pointer-events: none;
+            background-color: var(--ac-01);
+            transition: all 0.5s cubic-bezier(1, 0, 1, 0.01), opacity ease 0.5s;
+            will-change: transform, opacity, width, box-shadow;
+        }
+
+        /* アニメーション実行中状態 */
+        .btn.is-animating::before{
+            width: 100%;
+            opacity: 1;
+            box-shadow: var(--ac-0) 0px 0px 16px 0px inset;
+            transition: all 0.5s cubic-bezier(.1,.23,0,1), opacity ease 0.2s;
+        }
+
+        /* 2. プライマリボタン (Filled) */
+        .btn-primary {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border-radius: 28px;
+            padding: 40px 64px;
+            font-size: 1rem;
+            font-weight: bold;
+            min-width: 160px;
+            /* アニメーション色設定 */
+            --ac-1: hsl(139, 92%, 79%);
+            --ac-01: hsla(139, 92%, 79%, 0.2);
+            --ac-0: hsla(139, 92%, 79%, 0.4);
+        }
+
+        /* 3. トナールボタン (Tonal) */
+        .btn-tonal {
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-primary);
+            border-radius: 28px;
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: bold;
+            min-width: 160px;
+            /* アニメーション色設定 */
+            --ac-1: hsl(156, 91%, 22%);
+            --ac-01: hsla(156, 91%, 22%, 0.2);
+            --ac-0: hsla(156, 91%, 22%, 0.4);
+        }
+
+        svg { fill: currentColor; vertical-align: middle; margin-right: 4px; }
+    </style>
+</head>
+<body>
+
+    <button class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M320-200v-560l440 280-440 280Z"/></svg>
+        開始
+    </button>
+
+    <button class="btn btn-tonal">
+        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z"/></svg>
+        リセット
+    </button>
+
+    <script>
+        // ボタンアニメーションの制御
+        function handleBtnClick(event) {
+            const btn = event.currentTarget;
+            btn.classList.remove('is-animating');
+            void btn.offsetWidth; // リフロー強制（アニメーションを再トリガーするため）
+            btn.classList.add('is-animating');
+            
+            setTimeout(() => {
+                btn.classList.remove('is-animating');
+            }, 500); 
+        }
+
+        // イベントリスナーの一括登録
+        document.querySelectorAll('.btn, .back-btn').forEach(btn => {
+            btn.addEventListener('pointerdown', handleBtnClick);
+        });
+    </script>
+</body>
+</html>

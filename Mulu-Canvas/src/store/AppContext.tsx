@@ -192,7 +192,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 interface AppContextType {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  createArtwork: (name: string, width: number, height: number, ambientColor: string, ambientIntensity: number) => Promise<Artwork>;
+  createArtwork: (name: string, width: number, height: number, backgroundColor: string, ambientColor: string, ambientIntensity: number) => Promise<Artwork>;
   deleteArtwork: (id: string) => Promise<void>;
   saveCurrentArtwork: () => Promise<void>;
   openArtwork: (id: string) => void;
@@ -225,6 +225,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     name: string,
     width: number,
     height: number,
+    backgroundColor: string,
     ambientColor: string,
     ambientIntensity: number
   ): Promise<Artwork> => {
@@ -233,6 +234,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       name: name || `Artwork ${state.artworks.length + 1}`,
       width,
       height,
+      backgroundColor,
       ambientColor,
       ambientIntensity,
       strokes: [],

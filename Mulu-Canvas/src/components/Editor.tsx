@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Select,
   SelectContent,
@@ -41,9 +40,8 @@ import {
   Layers,
   Square,
   Rotate3D,
-  Globe,
-  Settings,
   Sun,
+  Palette,
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useDeviceOrientation, useMouseGravity } from '@/hooks/useDeviceOrientation';
@@ -53,18 +51,18 @@ function t(language: Language, key: TranslationKey): string {
   return getTranslation(language, key);
 }
 
-const BRUSH_ICONS: Record<BrushType, React.ReactNode> = {
-  pen: <Pen className="w-4 h-4" />,
-  fur: <Sparkles className="w-4 h-4" />,
-  glass: <GlassWater className="w-4 h-4" />,
-  slime: <Droplets className="w-4 h-4" />,
-  light: <Lightbulb className="w-4 h-4" />,
+const BRUSH_CONFIG: Record<BrushType, { icon: React.ReactNode; label: TranslationKey }> = {
+  pen: { icon: <Pen className="w-5 h-5" />, label: 'pen' },
+  fur: { icon: <Sparkles className="w-5 h-5" />, label: 'fur' },
+  glass: { icon: <GlassWater className="w-5 h-5" />, label: 'glass' },
+  slime: { icon: <Droplets className="w-5 h-5" />, label: 'slime' },
+  light: { icon: <Lightbulb className="w-5 h-5" />, label: 'light' },
 };
 
-const LAYER_ICONS: Record<LayerMode, React.ReactNode> = {
-  background: <Layers className="w-4 h-4" />,
-  wall: <Square className="w-4 h-4" />,
-  object: <Box className="w-4 h-4" />,
+const LAYER_CONFIG: Record<LayerMode, { icon: React.ReactNode; label: TranslationKey }> = {
+  background: { icon: <Layers className="w-5 h-5" />, label: 'background' },
+  wall: { icon: <Square className="w-5 h-5" />, label: 'wall' },
+  object: { icon: <Box className="w-5 h-5" />, label: 'object' },
 };
 
 export default function Editor() {
@@ -77,6 +75,9 @@ export default function Editor() {
   const lastTimeRef = useRef<number>(0);
   const gravityRef = useRef<{ x: number; y: number }>({ x: 0, y: 1 });
   
+  // Track if we need to save
+  const needsSaveRef = useRef(false);
+  
   const { currentArtwork, brushSettings, physics, currentLayerMode, is3DEffectEnabled, rotation3D } = state.editor;
   const language = state.language;
 
@@ -88,7 +89,6 @@ export default function Editor() {
       dispatch({ type: 'SET_GRAVITY', payload: gravity });
     }
     
-    // Also update 3D rotation if enabled
     if (is3DEffectEnabled) {
       dispatch({ 
         type: 'SET_3D_ROTATION', 
@@ -101,7 +101,6 @@ export default function Editor() {
     onGravityChange: handleGravityChange,
   });
   
-  // Mouse gravity for PC
   useMouseGravity(containerRef, handleGravityChange);
 
   // Physics simulation loop
@@ -113,14 +112,12 @@ export default function Editor() {
       lastTimeRef.current = timestamp;
       
       if (deltaTime > 0 && deltaTime < 100) {
-        // Create physics bodies from strokes
         const bodies: PhysicsBody[] = [];
         for (const stroke of currentArtwork.strokes) {
           const body = createPhysicsBody(stroke);
           if (body) bodies.push(body);
         }
         
-        // Update physics
         const updatedBodies = updatePhysics(
           bodies,
           physics.gravity,
@@ -129,7 +126,6 @@ export default function Editor() {
           deltaTime
         );
         
-        // Update strokes from physics bodies
         const updatedStrokes = currentArtwork.strokes.map(stroke => {
           const body = updatedBodies.find(b => b.strokeId === stroke.id);
           if (body && stroke.layerMode === 'object') {
@@ -144,6 +140,7 @@ export default function Editor() {
         });
         
         dispatch({ type: 'UPDATE_ARTWORK_STROKES', payload: updatedStrokes });
+        needsSaveRef.current = true;
       }
       
       animationFrameRef.current = requestAnimationFrame(simulate);
@@ -159,15 +156,61 @@ export default function Editor() {
     };
   }, [physics.isPlaying, physics.gravity, currentArtwork, dispatch]);
 
-  // Render canvas
+  // Render canvas - use a ref to track artwork for rendering
+  const artworkRef = useRef<Artwork | null>(null);
+  const currentStrokeRef = useRef<Point[]>([]);
+  
+  useEffect(() => {
+    artworkRef.current = currentArtwork;
+  }, [currentArtwork]);
+  
+  useEffect(() => {
+    currentStrokeRef.current = currentStroke;
+  }, [currentStroke]);
+
+  // Main render loop
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx || !currentArtwork) return;
+    if (!canvas) return;
     
-    renderCanvas(ctx, canvas, currentArtwork, currentStroke, brushSettings, currentLayerMode, gravityRef.current);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
-  }, [currentArtwork, currentStroke, brushSettings, currentLayerMode, physics.isPlaying]);
+    const render = () => {
+      if (!artworkRef.current) return;
+      
+      renderCanvas(
+        ctx, 
+        canvas, 
+        artworkRef.current, 
+        currentStrokeRef.current, 
+        brushSettings, 
+        currentLayerMode, 
+        gravityRef.current
+      );
+    };
+    
+    render();
+    
+    // Animation loop for continuous rendering when physics is playing
+    let frameId: number;
+    const animate = () => {
+      render();
+      frameId = requestAnimationFrame(animate);
+    };
+    
+    if (physics.isPlaying) {
+      frameId = requestAnimationFrame(animate);
+    } else {
+      render();
+    }
+    
+    return () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+      }
+    };
+  }, [brushSettings, currentLayerMode, physics.isPlaying]);
   
   // Mouse/Touch event handlers
   const getPointerPosition = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
@@ -209,7 +252,6 @@ export default function Editor() {
     
     setIsDrawing(false);
     
-    // Create stroke
     const stroke: Stroke = {
       id: uuidv4(),
       layerMode: currentLayerMode,
@@ -228,16 +270,16 @@ export default function Editor() {
     dispatch({ type: 'ADD_STROKE', payload: stroke });
     setCurrentStroke([]);
     
-    // Auto-save with preview
-    await saveWithPreview();
+    // Generate preview and save
+    setTimeout(() => {
+      saveWithPreview();
+    }, 50);
   };
   
-  // Save with preview image generation
   const saveWithPreview = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas || !currentArtwork) return;
     
-    // Generate preview image
     const previewCanvas = document.createElement('canvas');
     const previewCtx = previewCanvas.getContext('2d');
     if (previewCtx) {
@@ -246,7 +288,6 @@ export default function Editor() {
       previewCtx.drawImage(canvas, 0, 0, 320, 240);
       const previewImage = previewCanvas.toDataURL('image/png');
       
-      // Update artwork with preview
       const updatedArtwork: Artwork = {
         ...currentArtwork,
         previewImage,
@@ -254,9 +295,8 @@ export default function Editor() {
       };
       
       dispatch({ type: 'UPDATE_ARTWORK', payload: updatedArtwork });
+      await saveCurrentArtwork();
     }
-    
-    await saveCurrentArtwork();
   }, [currentArtwork, dispatch, saveCurrentArtwork]);
   
   const togglePhysics = () => {
@@ -267,7 +307,18 @@ export default function Editor() {
     dispatch({ type: 'TOGGLE_3D_EFFECT' });
   };
   
-  // Update ambient settings
+  const updateBackgroundColor = useCallback((color: string) => {
+    if (!currentArtwork) return;
+    
+    const updatedArtwork: Artwork = {
+      ...currentArtwork,
+      backgroundColor: color,
+      updatedAt: Date.now(),
+    };
+    
+    dispatch({ type: 'UPDATE_ARTWORK', payload: updatedArtwork });
+  }, [currentArtwork, dispatch]);
+  
   const updateAmbientSettings = useCallback((color: string, intensity: number) => {
     if (!currentArtwork) return;
     
@@ -281,328 +332,169 @@ export default function Editor() {
     dispatch({ type: 'UPDATE_ARTWORK', payload: updatedArtwork });
   }, [currentArtwork, dispatch]);
   
-  // Go back to gallery with save
   const handleGoToGallery = useCallback(async () => {
-    // Save preview image before leaving
     await saveWithPreview();
     goToGallery();
   }, [saveWithPreview, goToGallery]);
-  
-  const handleLanguageChange = (lang: Language) => {
-    dispatch({ type: 'SET_LANGUAGE', payload: lang });
-  };
 
   if (!currentArtwork) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <p className="text-gray-500">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
-      {/* Top Toolbar */}
-      <header className="bg-gray-800 border-b border-gray-700 px-4 py-2">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handleGoToGallery}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              {t(language, 'backToGallery')}
-            </Button>
-            <span className="text-white font-medium truncate max-w-[200px]">
-              {currentArtwork.name}
-            </span>
-          </div>
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Top Bar */}
+      <header className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleGoToGallery} className="text-gray-600 hover:text-gray-900">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            {t(language, 'backToGallery')}
+          </Button>
+          <span className="text-gray-800 font-medium truncate max-w-[200px]">
+            {currentArtwork.name}
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Play/Pause */}
+          <Button
+            variant={physics.isPlaying ? "default" : "outline"}
+            size="sm"
+            onClick={togglePhysics}
+            className={physics.isPlaying 
+              ? "bg-green-500 hover:bg-green-600 text-white" 
+              : "border-gray-300 text-gray-700 hover:bg-gray-100"
+            }
+          >
+            {physics.isPlaying ? (
+              <>
+                <Pause className="w-4 h-4 mr-1" />
+                {t(language, 'pause')}
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 mr-1" />
+                {t(language, 'play')}
+              </>
+            )}
+          </Button>
           
-          <div className="flex items-center gap-2">
-            {/* Play/Pause */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={physics.isPlaying ? "default" : "outline"}
-                    size="sm"
-                    onClick={togglePhysics}
-                    className={physics.isPlaying ? "bg-green-600 hover:bg-green-700" : ""}
-                  >
-                    {physics.isPlaying ? (
-                      <Pause className="w-4 h-4" />
-                    ) : (
-                      <Play className="w-4 h-4" />
-                    )}
-                    {physics.isPlaying ? t(language, 'pause') : t(language, 'play')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {physics.isPlaying ? t(language, 'pause') : t(language, 'play')}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            {/* 3D Effect Toggle */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={is3DEffectEnabled ? "default" : "outline"}
-                    size="sm"
-                    onClick={toggle3DEffect}
-                    className={is3DEffectEnabled ? "bg-purple-600 hover:bg-purple-700" : ""}
-                  >
-                    <Rotate3D className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t(language, 'effect3D')}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            {/* Ambient Settings */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Sun className="w-4 h-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64">
-                <div className="space-y-4">
-                  <h4 className="font-medium text-sm">{t(language, 'ambientColor')}</h4>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="color"
-                      value={currentArtwork.ambientColor}
-                      onChange={(e) => updateAmbientSettings(e.target.value, currentArtwork.ambientIntensity)}
-                      className="w-10 h-8 p-1"
-                    />
-                    <Input
-                      value={currentArtwork.ambientColor}
-                      onChange={(e) => updateAmbientSettings(e.target.value, currentArtwork.ambientIntensity)}
-                      className="flex-1 h-8"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t(language, 'ambientIntensity')}: {currentArtwork.ambientIntensity.toFixed(2)}</Label>
-                    <Slider
-                      value={[currentArtwork.ambientIntensity]}
-                      onValueChange={(v) => updateAmbientSettings(currentArtwork.ambientColor, v[0])}
-                      min={0}
-                      max={1}
-                      step={0.01}
-                    />
-                  </div>
+          {/* 3D Effect Toggle */}
+          <Button
+            variant={is3DEffectEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={toggle3DEffect}
+            className={is3DEffectEnabled 
+              ? "bg-purple-500 hover:bg-purple-600 text-white" 
+              : "border-gray-300 text-gray-700 hover:bg-gray-100"
+            }
+          >
+            <Rotate3D className="w-4 h-4" />
+          </Button>
+          
+          {/* Background Color */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-100">
+                <Palette className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 bg-white" align="end">
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700">{t(language, 'backgroundColor')}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    value={currentArtwork.backgroundColor || '#ffffff'}
+                    onChange={(e) => updateBackgroundColor(e.target.value)}
+                    className="w-10 h-8 p-1 bg-white border-gray-300"
+                  />
+                  <Input
+                    value={currentArtwork.backgroundColor || '#ffffff'}
+                    onChange={(e) => updateBackgroundColor(e.target.value)}
+                    className="flex-1 h-8 text-xs bg-white border-gray-300"
+                  />
                 </div>
-              </PopoverContent>
-            </Popover>
-            
-            {/* Language Select */}
-            <Select value={language} onValueChange={(v) => handleLanguageChange(v as Language)}>
-              <SelectTrigger className="w-[100px] bg-gray-700 border-gray-600">
-                <Globe className="w-4 h-4 mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ja">日本語</SelectItem>
-                <SelectItem value="zh">中文</SelectItem>
-                <SelectItem value="ko">한국어</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          {/* Ambient Settings */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-100">
+                <Sun className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 bg-white" align="end">
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700">{t(language, 'ambientColor')}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    value={currentArtwork.ambientColor}
+                    onChange={(e) => updateAmbientSettings(e.target.value, currentArtwork.ambientIntensity)}
+                    className="w-10 h-8 p-1 bg-white border-gray-300"
+                  />
+                  <Input
+                    value={currentArtwork.ambientColor}
+                    onChange={(e) => updateAmbientSettings(e.target.value, currentArtwork.ambientIntensity)}
+                    className="flex-1 h-8 text-xs bg-white border-gray-300"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-gray-500">
+                    {t(language, 'ambientIntensity')}: {currentArtwork.ambientIntensity.toFixed(2)}
+                  </Label>
+                  <Slider
+                    value={[currentArtwork.ambientIntensity]}
+                    onValueChange={(v) => updateAmbientSettings(currentArtwork.ambientColor, v[0])}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                  />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </header>
       
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Tools */}
-        <aside className="w-16 md:w-64 bg-gray-800 border-r border-gray-700 p-2 md:p-4 flex flex-col gap-4">
-          {/* Layer Mode */}
-          <div className="space-y-2">
-            <Label className="text-gray-300 hidden md:block">{t(language, 'background')}</Label>
-            <ToggleGroup
-              type="single"
-              value={currentLayerMode}
-              onValueChange={(value: LayerMode) => {
-                if (value) dispatch({ type: 'SET_LAYER_MODE', payload: value });
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Sidebar - Size Settings */}
+        <aside className="w-16 bg-gray-50 border-r border-gray-200 p-2 flex flex-col items-center gap-2">
+          <Label className="text-[10px] text-gray-500 uppercase tracking-wide">{t(language, 'size')}</Label>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div 
+              className="w-8 h-8 rounded-full border-2 border-gray-400 flex items-center justify-center"
+              style={{ 
+                width: `${Math.min(32, Math.max(8, brushSettings.size))}px`,
+                height: `${Math.min(32, Math.max(8, brushSettings.size))}px`,
+                backgroundColor: brushSettings.color,
               }}
-              className="flex flex-col md:flex-row gap-1"
-            >
-              {(['background', 'wall', 'object'] as LayerMode[]).map((mode) => (
-                <TooltipProvider key={mode}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <ToggleGroupItem
-                        value={mode}
-                        aria-label={mode}
-                        className="w-full md:w-auto data-[state=on]:bg-blue-600"
-                      >
-                        {LAYER_ICONS[mode]}
-                        <span className="hidden md:inline ml-2">{t(language, mode)}</span>
-                      </ToggleGroupItem>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      {t(language, `${mode}Tooltip` as TranslationKey)}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </ToggleGroup>
+            />
           </div>
-          
-          {/* Brush Type */}
-          <div className="space-y-2">
-            <Label className="text-gray-300 hidden md:block">{t(language, 'pen')}</Label>
-            <ToggleGroup
-              type="single"
-              value={brushSettings.type}
-              onValueChange={(value: BrushType) => {
-                if (value) dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { type: value } });
-              }}
-              className="flex flex-col md:flex-row gap-1"
-            >
-              {(['pen', 'fur', 'glass', 'slime', 'light'] as BrushType[]).map((brush) => (
-                <TooltipProvider key={brush}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <ToggleGroupItem
-                        value={brush}
-                        aria-label={brush}
-                        className="w-full md:w-auto data-[state=on]:bg-orange-600"
-                      >
-                        {BRUSH_ICONS[brush]}
-                        <span className="hidden md:inline ml-2">{t(language, brush)}</span>
-                      </ToggleGroupItem>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      {t(language, `${brush}Tooltip` as TranslationKey)}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </ToggleGroup>
-          </div>
-          
-          {/* Brush Settings */}
-          <div className="space-y-3 flex-1 overflow-y-auto">
-            {/* Color */}
-            <div className="space-y-1">
-              <Label className="text-gray-300 text-xs md:text-sm">{t(language, 'color')}</Label>
-              <div className="flex gap-1">
-                <Input
-                  type="color"
-                  value={brushSettings.color}
-                  onChange={(e) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { color: e.target.value } })}
-                  className="w-10 h-8 p-1 bg-gray-700 border-gray-600"
-                />
-                <Input
-                  value={brushSettings.color}
-                  onChange={(e) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { color: e.target.value } })}
-                  className="flex-1 h-8 bg-gray-700 border-gray-600 text-white text-xs"
-                />
-              </div>
-            </div>
-            
-            {/* Size */}
-            <div className="space-y-1">
-              <Label className="text-gray-300 text-xs md:text-sm">
-                {t(language, 'size')}: {brushSettings.size}
-              </Label>
-              <Slider
-                value={[brushSettings.size]}
-                onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { size: v[0] } })}
-                min={1}
-                max={50}
-                step={1}
-              />
-            </div>
-            
-            {/* Pen-specific: Opacity */}
-            {brushSettings.type === 'pen' && (
-              <div className="space-y-1">
-                <Label className="text-gray-300 text-xs md:text-sm">
-                  {t(language, 'opacity')}: {brushSettings.opacity.toFixed(2)}
-                </Label>
-                <Slider
-                  value={[brushSettings.opacity]}
-                  onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { opacity: v[0] } })}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                />
-              </div>
-            )}
-            
-            {/* Fur-specific */}
-            {brushSettings.type === 'fur' && (
-              <div className="space-y-1">
-                <Label className="text-gray-300 text-xs md:text-sm">
-                  {t(language, 'furLength')}: {brushSettings.furLength}
-                </Label>
-                <Slider
-                  value={[brushSettings.furLength]}
-                  onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { furLength: v[0] } })}
-                  min={5}
-                  max={50}
-                  step={1}
-                />
-              </div>
-            )}
-            
-            {/* Glass-specific */}
-            {brushSettings.type === 'glass' && (
-              <div className="space-y-1">
-                <Label className="text-gray-300 text-xs md:text-sm">
-                  {t(language, 'blurLevel')}: {brushSettings.blurLevel}
-                </Label>
-                <Slider
-                  value={[brushSettings.blurLevel]}
-                  onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { blurLevel: v[0] } })}
-                  min={1}
-                  max={20}
-                  step={1}
-                />
-              </div>
-            )}
-            
-            {/* Slime-specific */}
-            {brushSettings.type === 'slime' && (
-              <div className="space-y-1">
-                <Label className="text-gray-300 text-xs md:text-sm">
-                  {t(language, 'elasticity')}: {brushSettings.elasticity.toFixed(2)}
-                </Label>
-                <Slider
-                  value={[brushSettings.elasticity]}
-                  onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { elasticity: v[0] } })}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                />
-              </div>
-            )}
-            
-            {/* Light-specific */}
-            {brushSettings.type === 'light' && (
-              <div className="space-y-1">
-                <Label className="text-gray-300 text-xs md:text-sm">
-                  {t(language, 'lightIntensity')}: {brushSettings.lightIntensity.toFixed(2)}
-                </Label>
-                <Slider
-                  value={[brushSettings.lightIntensity]}
-                  onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { lightIntensity: v[0] } })}
-                  min={0.1}
-                  max={1}
-                  step={0.01}
-                />
-              </div>
-            )}
-          </div>
+          <Slider
+            orientation="vertical"
+            value={[brushSettings.size]}
+            onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { size: v[0] } })}
+            min={1}
+            max={50}
+            step={1}
+            className="h-32"
+          />
+          <span className="text-xs text-gray-600 font-medium">{brushSettings.size}</span>
         </aside>
         
         {/* Canvas Area */}
         <main 
           ref={containerRef}
-          className="flex-1 flex items-center justify-center p-4 overflow-hidden"
+          className="flex-1 flex items-center justify-center p-4 bg-gray-100 overflow-hidden"
           style={{
             perspective: is3DEffectEnabled ? '1000px' : 'none',
           }}
@@ -620,10 +512,10 @@ export default function Editor() {
               ref={canvasRef}
               width={currentArtwork.width}
               height={currentArtwork.height}
-              className="bg-white shadow-2xl rounded-lg touch-none cursor-crosshair"
+              className="shadow-xl rounded-lg touch-none cursor-crosshair"
               style={{
                 maxWidth: '100%',
-                maxHeight: 'calc(100vh - 200px)',
+                maxHeight: 'calc(100vh - 220px)',
                 width: 'auto',
                 height: 'auto',
                 objectFit: 'contain',
@@ -635,6 +527,166 @@ export default function Editor() {
             />
           </div>
         </main>
+        
+        {/* Right Sidebar - Brush-specific Settings */}
+        <aside className="w-20 bg-gray-50 border-l border-gray-200 p-2 flex flex-col items-center gap-1 overflow-y-auto">
+          <Label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">
+            {brushSettings.type === 'pen' && t(language, 'opacity')}
+            {brushSettings.type === 'fur' && t(language, 'furLength')}
+            {brushSettings.type === 'glass' && t(language, 'blurLevel')}
+            {brushSettings.type === 'slime' && t(language, 'elasticity')}
+            {brushSettings.type === 'light' && t(language, 'lightIntensity')}
+          </Label>
+          
+          {/* Opacity for Pen */}
+          {brushSettings.type === 'pen' && (
+            <>
+              <Slider
+                orientation="vertical"
+                value={[brushSettings.opacity]}
+                onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { opacity: v[0] } })}
+                min={0.1}
+                max={1}
+                step={0.05}
+                className="h-24"
+              />
+              <span className="text-xs text-gray-600">{Math.round(brushSettings.opacity * 100)}%</span>
+            </>
+          )}
+          
+          {/* Fur Length */}
+          {brushSettings.type === 'fur' && (
+            <>
+              <Slider
+                orientation="vertical"
+                value={[brushSettings.furLength]}
+                onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { furLength: v[0] } })}
+                min={5}
+                max={50}
+                step={1}
+                className="h-24"
+              />
+              <span className="text-xs text-gray-600">{brushSettings.furLength}px</span>
+            </>
+          )}
+          
+          {/* Blur Level */}
+          {brushSettings.type === 'glass' && (
+            <>
+              <Slider
+                orientation="vertical"
+                value={[brushSettings.blurLevel]}
+                onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { blurLevel: v[0] } })}
+                min={1}
+                max={20}
+                step={1}
+                className="h-24"
+              />
+              <span className="text-xs text-gray-600">{brushSettings.blurLevel}</span>
+            </>
+          )}
+          
+          {/* Elasticity */}
+          {brushSettings.type === 'slime' && (
+            <>
+              <Slider
+                orientation="vertical"
+                value={[brushSettings.elasticity]}
+                onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { elasticity: v[0] } })}
+                min={0.1}
+                max={1}
+                step={0.05}
+                className="h-24"
+              />
+              <span className="text-xs text-gray-600">{Math.round(brushSettings.elasticity * 100)}%</span>
+            </>
+          )}
+          
+          {/* Light Intensity */}
+          {brushSettings.type === 'light' && (
+            <>
+              <Slider
+                orientation="vertical"
+                value={[brushSettings.lightIntensity]}
+                onValueChange={(v) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { lightIntensity: v[0] } })}
+                min={0.1}
+                max={1}
+                step={0.05}
+                className="h-24"
+              />
+              <span className="text-xs text-gray-600">{Math.round(brushSettings.lightIntensity * 100)}%</span>
+            </>
+          )}
+          
+          <div className="mt-auto pt-2 border-t border-gray-200 w-full">
+            <Label className="text-[10px] text-gray-500 uppercase tracking-wide">{t(language, 'color')}</Label>
+            <Input
+              type="color"
+              value={brushSettings.color}
+              onChange={(e) => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { color: e.target.value } })}
+              className="w-full h-8 p-1 mt-1 bg-white border-gray-300"
+            />
+          </div>
+        </aside>
+        
+        {/* Bottom Toolbar - Floating */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10">
+          {/* Layer Mode Selector */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-1 flex gap-1">
+            {(['background', 'wall', 'object'] as LayerMode[]).map((mode) => (
+              <TooltipProvider key={mode}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => dispatch({ type: 'SET_LAYER_MODE', payload: mode })}
+                      className={`
+                        flex items-center gap-2 px-4 py-2 rounded-lg transition-all
+                        ${currentLayerMode === mode 
+                          ? 'bg-black text-white shadow-md' 
+                          : 'text-gray-600 hover:bg-gray-100'
+                        }
+                      `}
+                    >
+                      {LAYER_CONFIG[mode].icon}
+                      <span className="text-sm font-medium">{t(language, LAYER_CONFIG[mode].label)}</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t(language, `${mode}Tooltip` as TranslationKey)}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+          
+          {/* Brush Type Selector */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-1 flex gap-1">
+            {(['pen', 'fur', 'glass', 'slime', 'light'] as BrushType[]).map((brush) => (
+              <TooltipProvider key={brush}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => dispatch({ type: 'SET_BRUSH_SETTINGS', payload: { type: brush } })}
+                      className={`
+                        flex items-center gap-2 px-4 py-2 rounded-lg transition-all
+                        ${brushSettings.type === brush 
+                          ? 'bg-orange-500 text-white shadow-md' 
+                          : 'text-gray-600 hover:bg-gray-100'
+                        }
+                      `}
+                    >
+                      {BRUSH_CONFIG[brush].icon}
+                      <span className="text-sm font-medium">{t(language, BRUSH_CONFIG[brush].label)}</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t(language, `${brush}Tooltip` as TranslationKey)}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -654,7 +706,7 @@ function renderCanvas(
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
   // Draw background color
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = artwork.backgroundColor || '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
   // Draw ambient light overlay
@@ -664,10 +716,10 @@ function renderCanvas(
   ctx.fillStyle = `rgba(${ambientR}, ${ambientG}, ${ambientB}, ${artwork.ambientIntensity})`;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Draw wall borders (transparent, just for visual reference)
-  ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([5, 5]);
+  // Draw wall borders (dashed line)
+  ctx.strokeStyle = 'rgba(180, 180, 180, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 4]);
   ctx.strokeRect(WALL_THICKNESS, WALL_THICKNESS, 
     canvas.width - WALL_THICKNESS * 2, 
     canvas.height - WALL_THICKNESS * 2);
@@ -684,18 +736,17 @@ function renderCanvas(
   }
   
   // Draw current stroke
-  if (currentStroke.length > 0) {
+  if (currentStroke.length > 1) {
     drawCurrentStroke(ctx, currentStroke, brushSettings, currentLayerMode);
   }
   
-  // Draw light effects (after all other strokes)
+  // Draw light effects
   const lightStrokes = artwork.strokes.filter(s => s.brushType === 'light');
   for (const stroke of lightStrokes) {
     applyLightEffect(ctx, stroke, artwork.strokes);
   }
 }
 
-// Drawing functions
 function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, gravity: { x: number; y: number }) {
   if (stroke.points.length < 2) return;
   
@@ -734,7 +785,6 @@ function drawCurrentStroke(
   ctx.save();
   ctx.globalAlpha = settings.opacity;
   
-  // Simple preview stroke
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
   
@@ -789,34 +839,28 @@ function drawFurStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, gravity: {
   ctx.lineJoin = 'round';
   ctx.stroke();
   
-  // Draw fur strands - affected by gravity
+  // Draw fur strands
   for (let i = 0; i < stroke.points.length; i += 3) {
     const point = stroke.points[i];
     const prevPoint = stroke.points[Math.max(0, i - 1)];
     const nextPoint = stroke.points[Math.min(stroke.points.length - 1, i + 1)];
     
-    // Calculate tangent direction
     const dx = nextPoint.x - prevPoint.x;
     const dy = nextPoint.y - prevPoint.y;
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
     
-    // Normal direction (perpendicular)
     const nx = -dy / len;
     const ny = dx / len;
     
-    // Draw strands on both sides, influenced by gravity
     for (let side = -1; side <= 1; side += 2) {
       const strandLen = furLength * (0.5 + Math.random() * 0.5);
       
-      // Base position at perpendicular direction
       let endX = point.x + nx * strandLen * side;
       let endY = point.y + ny * strandLen * side;
       
-      // Apply gravity influence (fur hangs down based on gravity)
       endX += gravity.x * furLength * 0.5;
       endY += gravity.y * furLength * 0.8;
       
-      // Control point for curve
       const ctrlX = point.x + nx * strandLen * 0.5 * side + gravity.x * furLength * 0.3;
       const ctrlY = point.y + ny * strandLen * 0.5 * side + gravity.y * furLength * 0.5;
       
@@ -835,7 +879,6 @@ function drawFurStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, gravity: {
 function drawGlassStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   const blurLevel = stroke.blurLevel || 5;
   
-  // Draw blurred stroke (refraction effect)
   ctx.save();
   ctx.filter = `blur(${blurLevel}px)`;
   
@@ -856,7 +899,7 @@ function drawGlassStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   ctx.stroke();
   ctx.restore();
   
-  // Add bright highlight on edges (glass reflection)
+  // Highlight
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
@@ -873,7 +916,7 @@ function drawGlassStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   ctx.stroke();
   ctx.restore();
   
-  // Add outer glow
+  // Outer glow
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
@@ -892,13 +935,11 @@ function drawGlassStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 }
 
 function drawSlimeStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
-  // Calculate bounds for gradient
   const bounds = stroke.bounds || calculateStrokeBounds(stroke.points);
   const centerX = (bounds.minX + bounds.maxX) / 2;
   const centerY = (bounds.minY + bounds.maxY) / 2;
   const radius = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) / 2 || stroke.size * 2;
   
-  // Draw main blob with gradient for slimy effect
   ctx.beginPath();
   
   if (stroke.points.length === 2) {
@@ -913,7 +954,6 @@ function drawSlimeStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
     }
   }
   
-  // Fill with gradient
   const gradient = ctx.createRadialGradient(
     centerX - radius * 0.3,
     centerY - radius * 0.3,
@@ -931,13 +971,12 @@ function drawSlimeStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   ctx.fillStyle = gradient;
   ctx.fill();
   
-  // Add glossy highlight
+  // Glossy highlight
   ctx.beginPath();
   ctx.arc(centerX - radius * 0.25, centerY - radius * 0.25, radius * 0.3, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.fill();
   
-  // Add border
   ctx.strokeStyle = darkenColor(stroke.color, 30);
   ctx.lineWidth = 2;
   ctx.stroke();
@@ -946,7 +985,6 @@ function drawSlimeStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 function drawLightStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   const intensity = stroke.lightIntensity || 0.5;
   
-  // Draw glow for each point
   for (const point of stroke.points) {
     const radius = stroke.size * 4;
     const gradient = ctx.createRadialGradient(
@@ -965,7 +1003,6 @@ function drawLightStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
     ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
     ctx.fill();
     
-    // Core bright center
     ctx.beginPath();
     ctx.arc(point.x, point.y, stroke.size * 0.5, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
@@ -977,11 +1014,9 @@ function drawLightStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 function applyLightEffect(ctx: CanvasRenderingContext2D, lightStroke: Stroke, allStrokes: Stroke[]) {
   const intensity = lightStroke.lightIntensity || 0.5;
   
-  // For each light source, illuminate nearby objects
   for (const lightPoint of lightStroke.points) {
     const lightRadius = lightStroke.size * 8;
     
-    // Find strokes near this light
     for (const stroke of allStrokes) {
       if (stroke.id === lightStroke.id) continue;
       if (stroke.brushType === 'light') continue;
@@ -992,7 +1027,6 @@ function applyLightEffect(ctx: CanvasRenderingContext2D, lightStroke: Stroke, al
         const dist = Math.sqrt(dx * dx + dy * dy);
         
         if (dist < lightRadius) {
-          // Add subtle illumination
           const illumination = (1 - dist / lightRadius) * intensity * 0.3;
           
           ctx.beginPath();
@@ -1005,7 +1039,6 @@ function applyLightEffect(ctx: CanvasRenderingContext2D, lightStroke: Stroke, al
   }
 }
 
-// Utility functions
 function calculateStrokeBounds(points: Point[]) {
   let minX = Infinity;
   let maxX = -Infinity;

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>JSON安全置換ツール</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 0 20px; line-height: 1.6; color: #333; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        .result-container { margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid #ddd; }
+        h2 { font-size: 1.1rem; margin-top: 0; color: #555; }
+        #output { 
+            word-break: break-all; 
+            white-space: pre-wrap; 
+            background: #fff; 
+            padding: 10px; 
+            border: 1px solid #eee; 
+            display: block; 
+            cursor: pointer; /* クリック可能であることを示す */
+            transition: background 0.2s;
+        }
+        #output:hover { background: #f0f7ff; }
+        .hint { font-size: 0.85rem; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>JSON安全置換ツール</h1>
+    <p>入力すると自動で更新されます。改行は <code>\n</code> に、JSONで問題となる記号はエスケープされます。</p>
+
+    <textarea id="input" placeholder="ここに文章を入力してください..." oninput="convertText()"></textarea>
+
+    <div class="result-container">
+        <h2>結果 (クリックで全選択):</h2>
+        <code id="output" onclick="selectText()">ここに結果が表示されます</code>
+        <p class="hint">※ダブルクォーテーション、バックスラッシュ、中括弧などをエスケープ済み</p>
+    </div>
+
+    <script>
+        function convertText() {
+            const input = document.getElementById('input').value;
+            
+            if (!input) {
+                document.getElementById('output').innerText = "ここに結果が表示されます";
+                return;
+            }
+
+            let result = input
+                .replace(/\\/g, '\\\\')  // バックスラッシュ自体をエスケープ
+                .replace(/"/g, '\\"')    // ダブルクォーテーション
+                .replace(/\//g, '\\/')    // スラッシュ
+                .replace(/{/g, '\\{')    // 左中括弧
+                .replace(/}/g, '\\}')    // 右中括弧
+                .replace(/\[/g, '\\[')    // 左大括弧
+                .replace(/\]/g, '\\]')    // 右大括弧
+                .replace(/\r?\n/g, '\\n') // 改行
+                .replace(/\r/g, '\\r')   // キャリッジリターン
+                .replace(/\t/g, '\\t');  // タブ
+
+            document.getElementById('output').innerText = result;
+        }
+
+        // クリックで要素内のテキストを全選択する関数
+        function selectText() {
+            const node = document.getElementById('output');
+            if (document.body.createTextRange) {
+                const range = document.body.createTextRange();
+                range.moveToElementText(node);
+                range.select();
+            } else if (window.getSelection) {
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+    </script>
+
+</body>
+</html>
