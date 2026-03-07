@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- 定数とUI要素の定義 ---
     const ZIP_URL = 'https://search3958.github.io/newtab/bgimg/zip/main.zip';
-    
+
     // IndexedDB 定数
     const DB_NAME = 'WallpaperDB';
     const STORE_NAME = 'images';
@@ -20,7 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const dialogImageName = document.getElementById('dialog-image-name');
     const actionList = imageActionDialog.querySelector('div[slot="content"]'); // 複数の md-list を含む div
     const downloadLink = document.getElementById('download-link');
-    
+
+    // 追加のUI要素
+    const uploadButton = document.getElementById('upload-button');
+    const fileInput = document.getElementById('file-input');
+    const showListButton = document.getElementById('show-list-button');
+    const loadingStatus = document.getElementById('loading-status');
+    const currentWallpaperImage = document.getElementById('current-wallpaper-image');
+    const backToHomeButton = document.getElementById('back-to-home');
+
     // ★ 完了ダイアログ要素の取得
     const completionDialog = document.getElementById('completion-dialog');
     const completionTitle = document.getElementById('completion-title');
@@ -59,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function saveToIndexedDB(key, lightBlob, darkBlob = null) {
+    async function saveToIndexedDB(key, lightBlob, darkBlob = null, fileName = null) {
         let db;
         try {
             db = await openDB();
@@ -75,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataToSave = {};
             if (lightBlob) dataToSave.light = lightBlob;
             if (darkBlob) dataToSave.dark = darkBlob;
+            if (fileName) dataToSave.name = fileName;
 
             const request = store.put(dataToSave, key);
 
@@ -117,7 +126,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function getFromIndexedDB(key) {
+        let db;
+        try {
+            db = await openDB();
+        } catch (e) {
+            return null;
+        }
+        return new Promise((resolve) => {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(key);
+            request.onsuccess = (event) => resolve(event.target.result);
+            request.onerror = () => resolve(null);
+        });
+    }
+
     // --- ユーティリティ関数 ---
+
+    async function updateCurrentWallpaperPreview() {
+        if (!currentWallpaperImage) return;
+
+        const nameElement = document.getElementById('current-wallpaper-name');
+        if (!nameElement) return;
+
+        // Priority: newtab > light > dark
+        const keys = ['newtab', 'light', 'dark'];
+        for (const key of keys) {
+            const data = await getFromIndexedDB(key);
+            if (data && (data.light || data.dark)) {
+                const blob = data.light || data.dark;
+                const url = URL.createObjectURL(blob);
+                currentWallpaperImage.style.backgroundImage = `url('${url}')`;
+
+                let name = data.name || (key === 'newtab' ? 'カスタムアップロード' :
+                    key === 'light' ? 'ライトテーマ壁紙' : 'ダークテーマ壁紙');
+
+                nameElement.textContent = name;
+                return;
+            }
+        }
+        currentWallpaperImage.style.backgroundImage = 'none';
+        nameElement.textContent = 'デフォルト';
+    }
 
     // ★ 完了ダイアログを表示する関数
     function showCompletionDialog(title, message) {
@@ -144,24 +195,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const xhr = new XMLHttpRequest();
             xhr.open('GET', ZIP_URL, true);
             xhr.responseType = 'arraybuffer';
-            xhr.onprogress = function(event) {
+            xhr.onprogress = function (event) {
                 if (event.lengthComputable) {
                     let percent = (event.loaded / event.total) * 90;
-                    updateProgress(percent, `${(event.loaded/1024/1024).toFixed(2)} MB ダウンロード済み`);
+                    updateProgress(percent, `${(event.loaded / 1024 / 1024).toFixed(2)} MB ダウンロード済み`);
                 }
             };
-            xhr.onload = function() {
+            xhr.onload = function () {
                 if (xhr.status === 200) {
                     updateProgress(90, '解凍中');
                     const zipFile = xhr.response;
                     const structuredData = {};
                     const zipBlobMap = new Map(); // fullPath -> Blob Promise
 
-                    JSZip.loadAsync(zipFile).then(function(zip) {
+                    JSZip.loadAsync(zipFile).then(function (zip) {
                         const imagePromises = [];
 
                         // Step 1: 全ファイルを走査し、パスとBlob Promiseをマップに格納
-                        zip.forEach(function(relativePath, zipEntry) {
+                        zip.forEach(function (relativePath, zipEntry) {
                             if (zipEntry.dir) return;
 
                             const fileName = relativePath.toLowerCase();
@@ -205,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 structuredData[genre].push(imageObject);
 
                                 // URLとBlobを生成/格納するPromiseを作成
-                                const filePromise = blobPromise.then(function(lightBlob) {
+                                const filePromise = blobPromise.then(function (lightBlob) {
                                     imageObject.url = URL.createObjectURL(lightBlob);
                                     imageObject.size = lightBlob.size;
                                     imageObject.lightBlob = lightBlob; // ★ Blobを格納
@@ -241,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     reject('HTTP_ERROR');
                 }
             };
-            xhr.onerror = function() {
+            xhr.onerror = function () {
                 updateProgress(100, 'ネットワークエラーが発生しました。');
                 console.error('ネットワークエラー');
                 reject('NETWORK_ERROR');
@@ -286,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         nextViewElement.style.zIndex = 40;
         if (prevViewElement) {
-             prevViewElement.style.zIndex = 35;
+            prevViewElement.style.zIndex = 35;
         }
 
         nextViewElement.offsetWidth; // 強制的なリフロー
@@ -378,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 genreView.classList.add('active');
                 currentViewElement = genreView;
                 loadingContainer.style.display = 'none'; // ロード画面を非表示
-            }, TRANSITION_DURATION_MS); // トランジションを考慮して少し待つ
+            }, 600); // トランジションを考慮して少し待つ
 
         } else {
             switchView(genreView, isBack);
@@ -445,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'setNewtab':
                     if (!lightBlob) { return; }
 
-                    await saveToIndexedDB('newtab', lightBlob, darkBlob);
+                    await saveToIndexedDB('newtab', lightBlob, darkBlob, name);
 
                     await deleteFromIndexedDB('light');
                     await deleteFromIndexedDB('dark');
@@ -457,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'setLight':
                     if (!lightBlob) { return; }
 
-                    await saveToIndexedDB('light', lightBlob);
+                    await saveToIndexedDB('light', lightBlob, null, name);
                     await deleteFromIndexedDB('newtab');
                     await deleteFromIndexedDB('dark');
                     dialogTitle = '設定完了！';
@@ -466,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'setDark':
                     if (!darkBlob) { return; }
 
-                    await saveToIndexedDB('dark', darkBlob);
+                    await saveToIndexedDB('dark', darkBlob, null, name);
                     await deleteFromIndexedDB('newtab');
                     await deleteFromIndexedDB('light');
                     dialogTitle = '設定完了！';
@@ -478,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     dialogMessage = 'コピーしました。';
                     break;
                 case 'download':
-                    if(!lightBlob) { return; }
+                    if (!lightBlob) { return; }
 
                     const extension = name.substring(name.lastIndexOf('.'));
                     const baseName = name.substring(0, name.lastIndexOf('.'));
@@ -494,6 +545,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     dialogMessage = `ダウンロード完了しました。<br>使用時にはクレジット表示(@Search3958，またはSentaro)をお願いします`;
                     break;
             }
+
+            // ★ 現在の壁紙プレビューを更新
+            await updateCurrentWallpaperPreview();
 
             // ★ 完了ダイアログを表示
             showCompletionDialog(dialogTitle, dialogMessage);
@@ -573,18 +627,92 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // データロード成功後、すぐにビューを切り替える
+    // --- 初期化処理 ---
+
+    // アップロードボタンのクリック転送
+    uploadButton.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // ファイル選択時の処理
+    fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('画像ファイルを選択してください。');
+            return;
+        }
+
+        try {
+            await saveToIndexedDB('newtab', file, null, file.name);
+            await deleteFromIndexedDB('light');
+            await deleteFromIndexedDB('dark');
+            await updateCurrentWallpaperPreview();
+            showCompletionDialog('アップロード完了', '選択した画像を壁紙に設定しました。');
+        } catch (e) {
+            console.error('アップロードエラー:', e);
+            alert('アップロード中にエラーが発生しました。');
+        }
+    });
+
+    // 一覧表示ボタンのクリック
+    showListButton.addEventListener('click', () => {
+        renderGenreView(true);
+    });
+
+    backToHomeButton.addEventListener('click', () => {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        const prevView = currentViewElement;
+
+        loadingContainer.style.display = 'flex';
+        loadingContainer.classList.remove('offscreen-left', 'offscreen-right', 'active');
+        loadingContainer.classList.add('offscreen-left');
+
+        loadingContainer.offsetHeight; // force reflow
+
+        window.requestAnimationFrame(() => {
+            loadingContainer.classList.remove('offscreen-left');
+            loadingContainer.classList.add('active');
+
+            if (prevView) {
+                prevView.classList.remove('active');
+                prevView.classList.add('offscreen-right');
+            }
+
+            const handler = (event) => {
+                if (event.propertyName !== 'left' && event.propertyName !== 'transform') return;
+                loadingContainer.removeEventListener('transitionend', handler);
+                isAnimating = false;
+                if (prevView) {
+                    prevView.style.zIndex = 10;
+                }
+            };
+            loadingContainer.addEventListener('transitionend', handler);
+        });
+
+        currentViewElement = null;
+    });
+
+    // データロード開始
+    updateCurrentWallpaperPreview();
     loadWallpaperData().then(success => {
         if (success) {
-            renderGenreView(true);
+            // 読み込み完了後にボタンを表示
+            loadingStatus.style.opacity = '0';
+            setTimeout(() => {
+                loadingStatus.style.display = 'none';
+                showListButton.style.display = 'inline-flex';
+            }, 300);
         } else {
             // ロード失敗時の処理
-            loadingContainer.style.display = 'flex';
             const loadingText = document.getElementById('loading-text');
             const loadingBarContainer = document.getElementById('loading-bar-container');
             loadingText.style.color = 'red';
             loadingText.textContent = 'データのロード中に致命的なエラーが発生しました。';
-            if(loadingBarContainer) loadingBarContainer.style.display = 'none';
+            if (loadingBarContainer) loadingBarContainer.style.display = 'none';
         }
     });
 

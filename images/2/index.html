@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <title>壁紙を選択</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link href="light.css" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
     <script type="importmap">
@@ -14,27 +18,60 @@
       }
     }
   </script>
-  <script type="module">
-    import '@material/web/all.js';
-    import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
+    <script type="module">
+        import '@material/web/all.js';
+        import { styles as typescaleStyles } from '@material/web/typography/md-typescale-styles.js';
 
-    document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
-  </script>
+        document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
+
 <body>
 
-    <div class="view-wrapper" id="loading-container">
-        <div id="loading-content">
-            <div id="loading-bar-container">
-                <div id="loading-bar">0%</div>
+    <div class="view-wrapper active" id="loading-container">
+        <div id="home-grid">
+            <div id="current-wallpaper-card" class="grid-card">
+                <div id="current-wallpaper-image"></div>
+                <div id="current-wallpaper-details">
+                    <div class="label">現在の壁紙</div>
+                    <div id="current-wallpaper-name">読み込み中...</div>
+                </div>
             </div>
-            <p id="loading-text">スクリプトとライブラリを読み込み中...</p>
+
+            <div id="upload-panel" class="grid-card">
+                <div class="panel-content">
+                    <span class="material-symbols-outlined panel-icon">upload_file</span>
+                    <h2>ファイルからアップロード</h2>
+                    <md-filled-button id="upload-button">
+                        ファイルを選択
+                        <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    </md-filled-button>
+                </div>
+            </div>
+
+            <div id="list-panel" class="grid-card">
+                <div class="panel-content">
+                    <span class="material-symbols-outlined panel-icon">grid_view</span>
+                    <h2>一覧を表示</h2>
+                    <div id="loading-status">
+                        <div id="loading-bar-container">
+                            <div id="loading-bar">0%</div>
+                        </div>
+                        <p id="loading-text">準備中...</p>
+                    </div>
+                    <md-filled-button id="show-list-button" style="display: none;">
+                        一覧を表示
+                    </md-filled-button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="genre-view" class="view-wrapper offscreen-right">
         <header>
+            <span id="back-to-home" class="material-symbols-outlined"
+                style="display:inline-flex;"><md-ripple></md-ripple>arrow_back</span>
             <h1 id="app-title">壁紙を選択</h1>
         </header>
         <div id="genre-content">
@@ -45,7 +82,8 @@
 
     <div id="gallery-view" class="view-wrapper offscreen-right">
         <header>
-            <span id="back-button" class="material-symbols-outlined" style="display:inline-flex;"><md-ripple></md-ripple>arrow_back</span>
+            <span id="back-button" class="material-symbols-outlined"
+                style="display:inline-flex;"><md-ripple></md-ripple>arrow_back</span>
             <h1 id="gallery-title-header"></h1>
         </header>
         <div id="gallery-content">
@@ -56,49 +94,50 @@
 
 
     <md-dialog id="image-action-dialog" type="alert">
-    <div slot="headline" id="dialog-image-name">壁紙アクション</div>
-    <div slot="content">
-        <md-list id="action-list">
-            <md-list-item data-action="setNewtab">
-                <span slot="headline">Newtabに設定</span>
-                <span slot="start" class="material-symbols-outlined">wallpaper</span>
-            </md-list-item>
-            <md-list-item data-action="setLight">
-                <span slot="headline">ライトを設定</span>
-                <span slot="start" class="material-symbols-outlined">light_mode</span>
-            </md-list-item>
-            <md-list-item data-action="setDark">
-                <span slot="headline">ダークを設定</span>
-                <span slot="start" class="material-symbols-outlined">dark_mode</span>
-            </md-list-item>
-        </md-list>
-        <md-list id="action-list">
-            <md-list-item data-action="copyUrl">
-                <span slot="headline">URLをコピー</span>
-                <span slot="start" class="material-symbols-outlined">link</span>
-            </md-list-item>
-            <md-list-item data-action="download">
-                <span slot="headline">クレジットを表記して保存</span>
-                <span slot="start" class="material-symbols-outlined">download</span>
-            </md-list-item>
-        </md-list>
-    </div>
-</md-dialog>
+        <div slot="headline" id="dialog-image-name">壁紙アクション</div>
+        <div slot="content">
+            <md-list id="action-list">
+                <md-list-item data-action="setNewtab">
+                    <span slot="headline">Newtabに設定</span>
+                    <span slot="start" class="material-symbols-outlined">wallpaper</span>
+                </md-list-item>
+                <md-list-item data-action="setLight">
+                    <span slot="headline">ライトを設定</span>
+                    <span slot="start" class="material-symbols-outlined">light_mode</span>
+                </md-list-item>
+                <md-list-item data-action="setDark">
+                    <span slot="headline">ダークを設定</span>
+                    <span slot="start" class="material-symbols-outlined">dark_mode</span>
+                </md-list-item>
+            </md-list>
+            <md-list id="action-list">
+                <md-list-item data-action="copyUrl">
+                    <span slot="headline">URLをコピー</span>
+                    <span slot="start" class="material-symbols-outlined">link</span>
+                </md-list-item>
+                <md-list-item data-action="download">
+                    <span slot="headline">クレジットを表記して保存</span>
+                    <span slot="start" class="material-symbols-outlined">download</span>
+                </md-list-item>
+            </md-list>
+        </div>
+    </md-dialog>
 
-<md-dialog id="completion-dialog" type="alert">
-    <div slot="headline" id="completion-title"></div>
-    <div slot="content">
-        <p id="completion-message"></p>
-    </div>
-</md-dialog>
+    <md-dialog id="completion-dialog" type="alert">
+        <div slot="headline" id="completion-title"></div>
+        <div slot="content">
+            <p id="completion-message"></p>
+        </div>
+    </md-dialog>
 
-<a id="download-link" style="display: none;"></a>
+    <a id="download-link" style="display: none;"></a>
 
     <script src="script.js"></script>
     <style>
         dialog::backdrop {
-            background:#0004!important;
+            background: #0004 !important;
         }
     </style>
 </body>
+
 </html>
