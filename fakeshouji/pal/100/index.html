@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cheon Pal 100 | 異次元のイノベーション、ここに結実。</title>
+    <style>
+        :root {
+            --bg-main: #ffffff;
+            --bg-sub: #f5f5f7;
+            --bg-card: #ffffff;
+            --text-main: #1d1d1f;
+            --text-sub: #6e6e73;
+            --text-link: #0066cc;
+            --gold-primary: #d4af37;
+            --gold-gradient: linear-gradient(135deg, #f4d068 0%, #aa7c11 100%);
+            --black-gradient: linear-gradient(135deg, #434343 0%, #000000 100%);
+            --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
+            --shadow-lg: 0 20px 40px rgba(0,0,0,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        /* スクロール進行バー */
+        #scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: var(--gold-gradient);
+            width: 0%;
+            z-index: 10000;
+            transition: width 0.1s ease-out;
+        }
+
+        /* グローバルナビゲーション */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 64px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            z-index: 999;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nav-brand {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            color: var(--text-main);
+            text-decoration: none;
+        }
+
+        .nav-brand span {
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        .nav-menu a {
+            color: var(--text-sub);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-menu a:hover {
+            color: var(--text-main);
+        }
+
+        .nav-cta {
+            background: var(--text-main);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: transform 0.2s, background-color 0.3s;
+        }
+
+        .nav-cta:hover {
+            transform: scale(1.03);
+            background: #333;
+        }
+
+        /* アニメーション用基本クラス */
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 1.2s cubic-bezier(0.215, 0.61, 0.355, 1), transform 1.2s cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-left {
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: all 1.2s cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+
+        .reveal-left.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .reveal-right {
+            opacity: 0;
+            transform: translateX(50px);
+            transition: all 1.2s cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+
+        .reveal-right.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* ヒーローセクション */
+        .hero {
+            position: relative;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 80%, #fcfbf9 0%, #f5f5f7 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 120px;
+            overflow: hidden;
+        }
+
+        .hero-text-container {
+            position: relative;
+            text-align: center;
+            max-width: 800px;
+            padding: 0 20px;
+        }
+
+        .hero-tag {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #aa7c11;
+            margin-bottom: 12px;
+        }
+
+        .hero h1 {
+            font-size: clamp(3.5rem, 7vw, 5.5rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
+            line-height: 1.1;
+            margin-bottom: 15px;
+        }
+
+        .hero h2 {
+            font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+            font-weight: 700;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 25px;
+        }
+
+        .hero p {
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            color: var(--text-sub);
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto 35px;
+        }
+
+        .hero-links {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero-links .btn-primary {
+            background: var(--text-main);
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .hero-links .btn-primary:hover {
+            background: #333;
+            transform: translateY(-2px);
+        }
+
+        .hero-links .btn-link {
+            color: var(--text-link);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 16px;
+        }
+
+        .hero-links .btn-link:hover {
+            text-decoration: underline;
+        }
+
+        .hero-image-wrapper {
+            position: absolute;
+            bottom: -50px;
+            width: 100%;
+            max-width: 750px;
+            z-index: 5;
+            display: flex;
+            justify-content: center;
+            filter: drop-shadow(0 -15px 40px rgba(0,0,0,0.06));
+        }
+
+        .hero-img {
+            width: 67%;
+            height: auto;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: float 8s ease-in-out infinite 1.5s;
+        }
+
+        .hero-img.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(0.5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        /* イントロ・ステートメント */
+        .statement {
+            padding: 160px 40px;
+            text-align: center;
+            background: #ffffff;
+        }
+
+        .statement-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .statement h3 {
+            font-size: clamp(2.2rem, 4.5vw, 3.8rem);
+            line-height: 1.25;
+            font-weight: 700;
+            color: #ccc;
+            transition: color 0.5s;
+        }
+
+        .statement h3 span {
+            color: var(--text-main);
+            display: inline-block;
+        }
+
+        .statement p {
+            margin-top: 40px;
+            font-size: 1.2rem;
+            color: var(--text-sub);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* インタラクティブ・カラーバリエーション */
+        .color-selector-section {
+            padding: 140px 40px;
+            background: var(--bg-sub);
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 15px;
+        }
+
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-sub);
+            margin-bottom: 60px;
+        }
+
+        .color-showcase-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 80px;
+            flex-wrap: wrap;
+        }
+
+        .color-display-box {
+            flex: 1;
+            min-width: 300px;
+            max-width: 450px;
+            position: relative;
+            height: 550px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .color-view-img {
+            max-height: 100%;
+            width: auto;
+            object-fit: contain;
+            position: absolute;
+            opacity: 0;
+            transform: scale(0.9) rotate(-2deg);
+            transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            filter: drop-shadow(0 30px 50px rgba(0,0,0,0.12));
+        }
+
+        .color-view-img.active {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+            z-index: 2;
+        }
+
+        .color-controls {
+            flex: 1;
+            min-width: 300px;
+            text-align: left;
+            padding: 40px;
+        }
+
+        .color-btn-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .color-picker-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            outline: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: inset 0 3px 5px rgba(0,0,0,0.2);
+        }
+
+        .color-picker-btn.active {
+            outline-color: var(--text-main);
+            transform: scale(1.1);
+        }
+
+        .btn-pick-gold { background: #eac575; }
+        .btn-pick-black { background: #2c2c2c; }
+
+        .color-description-panel {
+            display: none;
+        }
+
+        .color-description-panel.active {
+            display: block;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .color-description-panel h4 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .color-description-panel .color-tag-gold {
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .color-description-panel p {
+            color: var(--text-sub);
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+
+        /* ディスプレイセクション（グリッド/コンボレイアウト） */
+        .display-section {
+            padding: 160px 40px;
+            background: #ffffff;
+        }
+
+        .display-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .display-text h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gold-primary);
+            letter-spacing: 0.1em;
+            margin-bottom: 15px;
+        }
+
+        .display-text h2 {
+            font-size: clamp(2.2rem, 4vw, 3.5rem);
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 25px;
+            letter-spacing: -0.03em;
+        }
+
+        .display-text p {
+            font-size: 1.15rem;
+            color: var(--text-sub);
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+
+        .display-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .stat-box {
+            border-top: 2px solid #e5e5e7;
+            padding-top: 20px;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .display-visual {
+            position: relative;
+            background: #f5f5f7;
+            border-radius: 34px;
+            padding: 40px;
+            overflow: hidden;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* モックアップ風シミュレーション */
+        .screen-mock {
+            width: 260px;
+            height: 440px;
+            background: radial-gradient(circle at center, #fffbfa 0%, #edd8c4 100%);
+            border-radius: 24px;
+            border: 8px solid #1d1d1f;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen-mock::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            width: 60px;
+            height: 15px;
+            background: #1d1d1f;
+            border-radius: 10px;
+        }
+
+        .screen-mock h5 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* パフォーマンスセクション */
+        .performance-section {
+            padding: 160px 40px;
+            background: #000000;
+            color: #ffffff;
+            text-align: center;
+        }
+
+        .performance-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .chip-graphic {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 40px;
+            background: linear-gradient(135deg, #2c2c2c 0%, #111111 100%);
+            border: 2px solid #e9b64c;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 40px rgba(233, 182, 76, 0.2);
+            font-weight: 800;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            color: #e9b64c;
+            position: relative;
+        }
+
+        .chip-graphic::after {
+            content: '';
+            position: absolute;
+            width: 154px;
+            height: 154px;
+            border: 1px dashed rgba(233, 182, 76, 0.4);
+            border-radius: 30px;
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate { 100% { transform: rotate(360deg); } }
+
+        .performance-section h2 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 30px;
+            letter-spacing: -0.04em;
+        }
+
+        .performance-section p {
+            color: #86868b;
+            font-size: 1.25rem;
+            max-width: 800px;
+            margin: 0 auto 60px;
+            line-height: 1.7;
+        }
+
+        .perf-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .perf-card {
+            background: #121212;
+            border: 1px solid #222;
+            border-radius: 24px;
+            padding: 40px;
+            text-align: left;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .perf-card:hover {
+            transform: translateY(-5px);
+            border-color: #aa7c11;
+        }
+
+        .perf-card h4 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .perf-card p {
+            font-size: 1rem;
+            color: #86868b;
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        /* カメラセクション */
+        .camera-section {
+            padding: 160px 40px;
+            background: var(--bg-sub);
+        }
+
+        .camera-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .camera-header {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 80px;
+        }
+
+        .camera-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .camera-specs-list {
+            list-style: none;
+        }
+
+        .camera-spec-item {
+            padding: 25px 0;
+            border-bottom: 1px solid #e5e5e7;
+        }
+
+        .camera-spec-item:last-child {
+            border-bottom: none;
+        }
+
+        .camera-spec-item h4 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .camera-spec-item h4 span {
+            color: var(--gold-primary);
+            font-size: 0.9rem;
+            background: rgba(212,175,55,0.1);
+            padding: 2px 10px;
+            border-radius: 12px;
+        }
+
+        .camera-spec-item p {
+            color: var(--text-sub);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .camera-images-scroll {
+            background: #fff;
+            border-radius: 30px;
+            padding: 30px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .cam-mock-preview {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.4)), url('https://placehold.co/600x400/333/fff?text=Lumina+Night+Simulation') center/cover;
+            border-radius: 20px;
+            display: flex;
+            align-items: flex-end;
+            padding: 30px;
+            color: #fff;
+        }
+
+        .cam-mock-preview h5 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        /* テクノロジー詳細（4カラムグリッド） */
+        .tech-features {
+            padding: 140px 40px;
+            background: #ffffff;
+        }
+
+        .tech-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+        }
+
+        .tech-box {
+            text-align: left;
+        }
+
+        .tech-box icon {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 20px;
+        }
+
+        .tech-box h4 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.01em;
+        }
+
+        .tech-box p {
+            color: var(--text-sub);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* 詳細な技術仕様表（スペック） */
+        .spec-table-section {
+            padding: 140px 40px;
+            background: var(--bg-sub);
+        }
+
+        .spec-table-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 30px;
+            padding: 50px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .spec-table-container h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .detailed-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .detailed-table tr {
+            border-bottom: 1px solid #edeef0;
+        }
+
+        .detailed-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .detailed-table th, .detailed-table td {
+            padding: 22px 10px;
+            text-align: left;
+            font-size: 15px;
+        }
+
+        .detailed-table th {
+            font-weight: 600;
+            color: var(--text-main);
+            width: 30%;
+            vertical-align: top;
+        }
+
+        .detailed-table td {
+            color: var(--text-sub);
+            width: 70%;
+            line-height: 1.6;
+        }
+
+        /* FAQ（アコーディオン）セクション */
+        .faq-section {
+            padding: 140px 40px;
+            background: #ffffff;
+        }
+
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-container h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 60px;
+        }
+
+        .faq-item {
+            border-bottom: 1px solid #e5e5e7;
+            padding: 24px 0;
+        }
+
+        .faq-question {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .faq-question::after {
+            content: '+';
+            font-size: 1.5rem;
+            font-weight: 400;
+            transition: transform 0.3s;
+            color: var(--text-sub);
+        }
+
+        .faq-item.open .faq-question::after {
+            transform: rotate(45deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, margin-top 0.3s ease;
+            color: var(--text-sub);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .faq-item.open .faq-answer {
+            margin-top: 15px;
+            max-height: 200px; /* 十分な高さを確保 */
+        }
+
+        /* ボトムCTA */
+        .bottom-cta {
+            padding: 160px 40px;
+            background: radial-gradient(circle at center, #fdfbf7 0%, #f5f5f7 100%);
+            text-align: center;
+        }
+
+        .bottom-cta h2 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -0.03em;
+        }
+
+        .bottom-cta p {
+            font-size: 1.3rem;
+            color: var(--text-sub);
+            margin-bottom: 40px;
+        }
+
+        /* フッター */
+        footer {
+            background: #f5f5f7;
+            color: #86868b;
+            padding: 60px 40px;
+            font-size: 12px;
+            border-top: 1px solid #e5e5e7;
+        }
+
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-disclaimer {
+            padding-bottom: 30px;
+            border-bottom: 1px solid #d2d2d7;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .footer-links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-col h5 {
+            color: var(--text-main);
+            margin-bottom: 15px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: 10px;
+        }
+
+        .footer-col ul li a {
+            color: #6e6e73;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-col ul li a:hover {
+            color: var(--text-main);
+            text-decoration: underline;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        /* レスポンシブ対応の微調整 */
+        @media (max-width: 768px) {
+            nav { padding: 0 20px; }
+            .nav-menu { display: none; }
+            .color-showcase-container { gap: 40px; }
+            .display-grid, .camera-layout { grid-template-columns: 1fr; gap: 40px; }
+            .display-visual { height: 400px; }
+            .spec-table-container { padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="scroll-indicator"></div>
+
+    <!-- ナビゲーションバー -->
+    <nav>
+        <a href="#" class="nav-brand">Cheon Pal <span>100</span></a>
+        <ul class="nav-menu">
+            <li><a href="#features">特長</a></li>
+            <li><a href="#design">デザイン</a></li>
+            <li><a href="#display">ディスプレイ</a></li>
+            <li><a href="#performance">性能</a></li>
+            <li><a href="#camera">カメラ</a></li>
+            <li><a href="#specs">仕様</a></li>
+        </ul>
+        <a href="#buy" class="nav-cta">購入・予約</a>
+    </nav>
+
+    <!-- ヒーローセクション -->
+    <section class="hero" id="hero">
+        <div class="hero-text-container">
+            <h2>知性と美学の、完全なる特異点。</h2>
+            <h1>Cheon Pal 100</h1>
+        </div>
+        <div class="hero-image-wrapper">
+            <!-- デフォルトでゴールドを表示（z-index背面配置、テキストが上にかぶるデザイン） -->
+            <img src="shouji1-2.png" alt="Cheon Pal 100 Premium Gold" class="hero-img" id="hero-main-img" onerror="this.src='https://placehold.co/800x1000/f5f5f7/d4af37?text=Cheon+Pal+100+Gold';">
+        </div>
+    </section>
+
+    <!-- ステートメント（壮大なイントロ） -->
+    <section class="statement">
+        <div class="statement-inner reveal">
+            <h3>
+                <span>ただの進化ではない。</span> <span>テクノロジーという芸術の到達点。</span>
+            </h3>
+            <p>
+                「Cheon Pal 100」の開発において、私たちは一切の妥協を排除しました。手にした瞬間に伝わる官能的な質感から、人間の思考を先回りするAIエンジンの駆動まで。これは、あなたの可能性を無限に拡張するための、最も美しいデバイスです。
+            </p>
+        </div>
+    </section>
+
+    <!-- インタラクティブ・カラーデザインセクション -->
+    <section class="color-selector-section" id="design">
+        <div class="reveal">
+            <h2 class="section-title">光と影が織りなす、二つの極致。</h2>
+            <p class="section-subtitle">ボタンを切り替えて、その圧倒的な存在感を確かめてください。</p>
+        </div>
+
+        <div class="color-showcase-container">
+            <!-- 左側：画像表示エリア（JSで切り替え） -->
+            <div class="color-display-box reveal-left">
+                <img src="shouji1-2.png" alt="インペリアルゴールド" class="color-view-img active" id="color-img-gold" onerror="this.src='https://placehold.co/400x700/f3e5ab/aa7c11?text=Imperial+Gold';">
+                <img src="shouji1-3.png" alt="ミッドナイトブラック" class="color-view-img" id="color-img-black" onerror="this.src='https://placehold.co/400x700/333333/000000?text=Midnight+Black';">
+            </div>
+
+            <!-- 右側：コントロール・詳細説明エリア -->
+            <div class="color-controls reveal-right">
+                <div class="color-btn-group">
+                    <button class="color-picker-btn btn-pick-gold active" onclick="switchColor('gold')" title="インペリアルゴールド"></button>
+                    <button class="color-picker-btn btn-pick-black" onclick="switchColor('black')" title="ミッドナイトブラック"></button>
+                </div>
+
+                <!-- ゴールドの説明 -->
+                <div class="color-description-panel active" id="desc-gold">
+                    <h4 class="color-tag-gold">インペリアルゴールド</h4>
+                    <p>古代の気高き輝きと、現代のミニマリズムを融合。数ミクロン単位で施されたサテンゴールドフィニッシュは、指紋を寄せ付けず、光の角度によって真珠のような繊細なグラデーションを描きます。それはまさに、手の中に収まる至高のラグジュアリー。</p>
+                </div>
+
+                <!-- ブラックの説明 -->
+                <div class="color-description-panel" id="desc-black">
+                    <h4 style="color: #1d1d1f;">ミッドナイトブラック</h4>
+                    <p>光さえも吸い込む深淵の黒。カーボン結晶構造を応用した特殊ガラス背面は、完全な漆黒でありながら、光を受けると星雲のような神秘的な奥行きを見せます。静寂の中に絶対的な強さを秘めた、洗練の極みです。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ディスプレイセクション -->
+    <section class="display-section" id="display">
+        <div class="display-grid">
+            <div class="display-text reveal-left">
+                <h3>QUANTUM VISION DISPLAY</h3>
+                <h2>網膜を超える、<br>未知の視覚体験。</h2>
+                <p>新開発の「Quantum Vision OLED 2.0」は、従来のディスプレイの限界を遥かに超越します。ピーク輝度3,500ニトの圧倒的な明暗差、10億色以上の色彩を完璧に再現。直射日光下でも、息をのむほど鮮明な映像を映し出します。</p>
+                
+                <div class="display-stats">
+                    <div class="stat-box">
+                        <div class="stat-number" style="background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">144Hz</div>
+                        <div class="stat-label">可変リフレッシュレート（1Hz〜144Hz可変LTPO）</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">3,500nit</div>
+                        <div class="stat-label">ピーク輝度（業界最高峰の視認性）</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="display-visual reveal-right">
+                <div class="screen-mock">
+                    <h5>Quantum Color</h5>
+                    <p style="font-size: 11px; color: var(--text-sub); margin-top: 5px;">Perfect Clarity Simulation</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- パフォーマンスセクション -->
+    <section class="performance-section" id="performance">
+        <div class="performance-inner">
+            <div class="chip-graphic reveal">NC9</div>
+            <h2 class="reveal">プロセッサの概念を凌駕する、<br>「NeuroCore 9 Max」。</h2>
+            <p class="reveal">世界初、2nmプロセスルールを採用したクアッドクラスタアーキテクチャ。毎秒60兆回に達するAI演算処理能力（NPU）を誇り、重い3Dグラフィックスゲームや、オンデバイスでの複雑な生成AI処理も、熱を全く持たずに、バッテリーを極限まで節約しながらバックグラウンドで瞬時に処理します。</p>
+
+            <div class="perf-grid">
+                <div class="perf-card reveal">
+                    <h4>+45% CPUパワー</h4>
+                    <p>前世代モデルと比較して処理速度が飛躍的に向上。複雑なマルチタスクも一瞬の淀みなくこなします。</p>
+                </div>
+                <div class="perf-card reveal" style="transition-delay: 0.1s;">
+                    <h4>+60% グラフィックス</h4>
+                    <p>ハードウェア・レイトレーシングに完全対応。現実と見紛うほどの光影表現をゲーム画面に再現。</p>
+                </div>
+                <div class="perf-card reveal" style="transition-delay: 0.2s;">
+                    <h4>VaporFreeze Pro</h4>
+                    <p>航空宇宙分野で採用される相変化冷却システム。長時間の高負荷でも、デバイスの温度を常に最適に保ちます。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- カメラセクション -->
+    <section class="camera-section" id="camera">
+        <div class="camera-container">
+            <div class="camera-header reveal">
+                <h2 class="section-title" style="background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Zephyr Optics™ Matrix IV</h2>
+                <p class="section-subtitle">歴史ある光学メーカー「Zephyr社」との共同開発。スマホという枠を超えた、真のクリエイティブ・ギア。</p>
+            </div>
+
+            <div class="camera-layout">
+                <div class="camera-images-scroll reveal-left">
+                    <div class="cam-mock-preview">
+                        <h5>夜を、昼のように切り取る。</h5>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-sub); margin-top: 15px; text-align: center;">Lumina Night 3.0 超低照度撮影シミュレーション</p>
+                </div>
+
+                <div class="camera-specs-list reveal-right">
+                    <li class="camera-spec-item">
+                        <h4>2億4000万画素 メインカメラ <span>1インチ大口径</span></h4>
+                        <p>業界最大の1インチ超高感度センサー。圧倒的な情報量をキャプチャし、トリミングしてもディテールが全く崩れない、圧倒的な解像感を提供します。</p>
+                    </li>
+                    <li class="camera-spec-item">
+                        <h4>6400万画素 ペリスコープ望遠 <span>光学10倍・デジタル150倍</span></h4>
+                        <p>微細な手ブレを完全に打ち消す「OIS Pro」を搭載。数キロメートル先にある建造物のディテールすら、手の届く場所にあるかのようにシャープに記録。</p>
+                    </li>
+                    <li class="camera-spec-item">
+                        <h4>5000万画素 超広角・マクロ <span>歪み補正レンズ</span></h4>
+                        <p>人間の視野角を超える123度のダイナミックな広角撮影から、わずか1.5cmまで被写体に迫るマクロ撮影まで、この1つで完璧に対応。</p>
+                    </li>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- テクノロジー詳細（4カラム） -->
+    <section class="tech-features" id="features">
+        <div class="tech-grid">
+            <div class="tech-box reveal">
+                <span style="font-size: 32px;">🔋</span>
+                <h4>Hyper-Warp 2.0</h4>
+                <p>次世代グラフェンバッテリー技術を採用した8,500mAhの大容量。150Wの超急速充電により、わずか9分で0%から満充電へ。</p>
+            </div>
+            <div class="tech-box reveal" style="transition-delay: 0.1s;">
+                <span style="font-size: 32px;">🛡️</span>
+                <h4>SecurVault チップ</h4>
+                <p>軍用レベルの暗号化を施した独立セキュリティチップ。あなたの生体情報やプライベートデータをあらゆるサイバー脅威から完全に隔離。</p>
+            </div>
+            <div class="tech-box reveal" style="transition-delay: 0.2s;">
+                <span style="font-size: 32px;">🌀</span>
+                <h4>CheonOS 16</h4>
+                <p>滑らかなアニメーションと、高度なプライバシー管理を両立。美しさと機能性が高次元で融合したオリジナルUI。</p>
+            </div>
+            <div class="tech-box reveal" style="transition-delay: 0.3s;">
+                <span style="font-size: 32px;">🛰️</span>
+                <h4>双方向衛星通信 3.0</h4>
+                <p>地球上のあらゆる砂漠、深山、海洋からでも、圏外を気にせず緊急SOSやメッセージ送信が可能なインフラを統合。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 技術仕様表 -->
+    <section class="spec-table-section" id="specs">
+        <div class="spec-table-container reveal">
+            <h3>詳細な技術仕様</h3>
+            <table class="detailed-table">
+                <tr>
+                    <th>カラーバリエーション</th>
+                    <td>インペリアルゴールド / ミッドナイトブラック</td>
+                </tr>
+                <tr>
+                    <th>サイズと重量</th>
+                    <td>高さ: 161.4 mm | 幅: 74.2 mm | 厚さ: 7.8 mm | 重量: 189g</td>
+                </tr>
+                <tr>
+                    <th>ディスプレイ</th>
+                    <td>6.85インチ Quantum Vision OLED 2.0 / LTPO 1Hz-144Hz可変リフレッシュレート / 3200 x 1440ピクセル（515ppi） / Gorilla Glass Armor Pro採用</td>
+                </tr>
+                <tr>
+                    <th>プロセッサ</th>
+                    <td>NeuroCore 9 Max (2nmプロセス) / 12コアCPU / 16コアGPU / 32コア次世代NPU</td>
+                </tr>
+                <tr>
+                    <th>メモリ & ストレージ</th>
+                    <td>RAM: 16GB / 24GB (LPDDR5X)<br>ROM: 512GB / 1TB / 2TB (UFS 4.1)</td>
+                </tr>
+                <tr>
+                    <th>メインカメラシステム</th>
+                    <td>
+                        ・240MP 広角（1インチセンサー, f/1.4, OIS）<br>
+                        ・64MP 望遠（光学10倍、デジタル150倍, f/3.0, OIS Pro）<br>
+                        ・50MP 超広角（123°画角, f/2.2, マクロ対応）
+                    </td>
+                </tr>
+                <tr>
+                    <th>フロントカメラ</th>
+                    <td>5000万画素（アンダーディスプレイカメラ、f/2.0、4Kビデオ対応）</td>
+                </tr>
+                <tr>
+                    <th>バッテリー & 充電</th>
+                    <td>8,500mAh（グラフェンセル） / 150W有線急速充電（Warp-Charge） / 80Wワイヤレス充電 / 15Wリバース充電</td>
+                </tr>
+                <tr>
+                    <th>耐久性・防水防塵</th>
+                    <td>IP69K（最高等級の完全防水・防塵・高圧洗浄耐性） / チタニウムグレード5フレーム</td>
+                </tr>
+                <tr>
+                    <th>同梱物</th>
+                    <td>Cheon Pal 100 本体 / 150WプレミアムWarp充電器 / 特製高耐久USB-Cケーブル / プレミアムチタンピン / クイックスタートガイド</td>
+                </tr>
+            </table>
+        </div>
+    </section>
+
+    <!-- FAQアコーディオンセクション -->
+    <section class="faq-section">
+        <div class="faq-container reveal">
+            <h2>よくあるご質問</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">150Wの超急速充電はバッテリーを劣化させませんか？</div>
+                <div class="faq-answer">
+                    いいえ、ご安心ください。Cheon Pal 100は最先端のグラフェン冷却構造と、AIによる革新的なインテリジェント充電アルゴリズムを導入しています。熱の発生を極限まで抑えるため、従来の急速充電に比べて2倍以上の長寿命化（1500回サイクル後も容量85%以上維持）を達成しています。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">アンダーディスプレイカメラの画質は劣化しませんか？</div>
+                <div class="faq-answer">
+                    新開発の透過型ピクセルアレイ技術と、AIデブラー（鮮明化）エンジンにより、ディスプレイの下にカメラが配置されていることを感じさせない、光量豊富な自撮りや4Kビデオ通話が可能です。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">防水性能の「IP69K」とは何ですか？</div>
+                <div class="faq-answer">
+                    従来のスマートフォンで一般的だった「IP68（水没耐性）」をさらに超え、高温・高圧の噴流水に対する保護規定をクリアした最高等級の防水規格です。日常の雨や水没はもちろん、過酷な環境下でも内部への浸水を完全に防ぎます。
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ボトムCTA -->
+    <section class="bottom-cta" id="buy">
+        <div class="reveal">
+            <h2>この手の中に、未来を。</h2>
+            <p>Cheon Pal 100（512GBモデル）は ¥169,800（税込）より。</p>
+            <div class="hero-links">
+                <a href="#" class="btn-primary" style="padding: 16px 45px; font-size: 18px;">今すぐ予約注文</a>
+            </div>
+            <p style="font-size: 14px; color: var(--text-sub); margin-top: 20px;">日本全国送料無料・最短翌日お届け</p>
+        </div>
+    </section>
+
+    <!-- フッター -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-disclaimer">
+                ※ 本ページに記載されている全ての企業名、製品名、技術名（Cheon Pal、NeuroCore、Zephyr Optics、Quantum Visionなど）、およびそれらに関する仕様、データ、シミュレーション結果、嘘のテクノロジー解説は、演出のために制作された完全に架空の設定です。実在の人物・団体・製品とは一切関係ありません。<br>
+                ※ 画像ファイル（shouji1-2.png、shouji1-3.png）がローカルの同一ディレクトリに存在しない場合は、代替画像（プレースホルダー）が表示される仕様になっています。
+            </div>
+            
+            <div class="footer-links-grid">
+                <div class="footer-col">
+                    <h5>ラインナップ</h5>
+                    <ul>
+                        <li><a href="#">Cheon Pal 100</a></li>
+                        <li><a href="#">Cheon Pal 100 Pro</a></li>
+                        <li><a href="#">Cheon Pal 100 Ultra</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h5>サポート</h5>
+                    <ul>
+                        <li><a href="#">購入ガイド</a></li>
+                        <li><a href="#">修理・保証サービス</a></li>
+                        <li><a href="#">お問い合わせ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h5>公式ストア</h5>
+                    <ul>
+                        <li><a href="#">ストアを探す</a></li>
+                        <li><a href="#">下取りプログラム</a></li>
+                        <li><a href="#">分割払いについて</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div>&copy; 2026 Cheon Technologies Inc. All rights reserved.</div>
+                <div style="display: flex; gap: 20px;">
+                    <a href="#" style="color:#6e6e73; text-decoration:none;">プライバシーポリシー</a>
+                    <a href="#" style="color:#6e6e73; text-decoration:none;">サイト利用規約</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- インタラクション・スクロールアニメーションJavaScript -->
+    <script>
+        // スクロールインジケーター & スクロール連動アニメーション
+        window.addEventListener('scroll', () => {
+            // スクロールバー進行度
+            const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('scroll-indicator').style.width = scrolled + '%';
+
+            // Intersection Observerの代わりとしての簡易トリガー（念のためのフォールバック兼ねる）
+            revealOnScroll();
+        });
+
+        // 読み込み完了時の初期アニメーション
+        document.addEventListener('DOMContentLoaded', () => {
+            // ヒーローイメージをフワッと出す
+            setTimeout(() => {
+                const heroImg = document.getElementById('hero-main-img');
+                if(heroImg) heroImg.classList.add('active');
+            }, 200);
+
+            // FAQのアコーディオン挙動
+            const faqQuestions = document.querySelectorAll('.faq-question');
+            faqQuestions.forEach(q => {
+                q.addEventListener('click', () => {
+                    const item = q.parentElement;
+                    item.classList.toggle('open');
+                });
+            });
+
+            // Intersection Observerのセットアップ
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.12
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, observerOptions);
+
+            const targets = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+            targets.forEach(t => observer.observe(t));
+        });
+
+        function revealOnScroll() {
+            const targets = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+            const triggerBottom = window.innerHeight * 0.9;
+
+            targets.forEach(target => {
+                const targetTop = target.getBoundingClientRect().top;
+                if (targetTop < triggerBottom) {
+                    target.classList.add('active');
+                }
+            });
+        }
+
+        // カラー切り替え用インタラクティブ関数
+        function switchColor(color) {
+            // ボタンのactive切り替え
+            document.querySelectorAll('.color-picker-btn').forEach(btn => btn.classList.remove('active'));
+            // パネルのactive切り替え
+            document.querySelectorAll('.color-description-panel').forEach(p => p.classList.remove('active'));
+            // 画像のactive切り替え
+            document.querySelectorAll('.color-view-img').forEach(img => img.classList.remove('active'));
+
+            if (color === 'gold') {
+                document.querySelector('.btn-pick-gold').classList.add('active');
+                document.getElementById('desc-gold').classList.add('active');
+                document.getElementById('color-img-gold').classList.add('active');
+                // ヒーロー画像も連動して切り替え可能
+                document.getElementById('hero-main-img').src = 'shouji1-2.png';
+            } else if (color === 'black') {
+                document.querySelector('.btn-pick-black').classList.add('active');
+                document.getElementById('desc-black').classList.add('active');
+                document.getElementById('color-img-black').classList.add('active');
+                document.getElementById('hero-main-img').src = 'shouji1-3.png';
+            }
+        }
+    </script>
+</body>
+</html>

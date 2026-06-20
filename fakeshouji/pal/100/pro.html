@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cheon Pal 100 Pro | 究極を、その手に。</title>
+    <style>
+        :root {
+            --bg-black: #000000;
+            --bg-dark: #0a0a0c;
+            --bg-card: #151517;
+            --text-main: #f5f5f7;
+            --text-sub: #86868b;
+            --accent-pro: #0071e3;
+            --gradient-pro: linear-gradient(135deg, #ffffff 0%, #888888 100%);
+            --shadow-pro: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        html { scroll-behavior: smooth; }
+        
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* アニメーションクラス */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ナビゲーション */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            z-index: 9999;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .nav-logo { font-size: 20px; font-weight: 700; letter-spacing: 1px; color: #fff;}
+        .nav-logo span { background: var(--gradient-pro); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .buy-btn { background: #fff; color: #000; padding: 8px 24px; border-radius: 20px; font-weight: 600; text-decoration: none; transition: 0.3s; }
+        .buy-btn:hover { background: #ccc; }
+
+        /* ヒーローセクション */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            text-align: center;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #1a1a24 0%, #000000 70%);
+        }
+        .hero-text {
+            position: relative;
+            z-index: 1;
+            margin-top: -380px;
+        }
+        .hero h1 {
+            font-size: clamp(3.5rem, 8vw, 6.5rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            margin-bottom: 10px;
+        }
+        .hero h2 {
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            color: var(--text-sub);
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .hero-img {
+            position: absolute;
+            bottom: -50px;
+            width: 73%;
+            max-width: 500px;
+            z-index: 5;
+            filter: drop-shadow(0 0 50px rgba(255,255,255,0.1));
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* イントロダクション */
+        .intro {
+            padding: 150px 20px;
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .intro h3 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            line-height: 1.3;
+            color: #fff;
+            margin-bottom: 40px;
+        }
+        .intro p {
+            font-size: 1.2rem;
+            color: var(--text-sub);
+        }
+
+        /* カラーラインナップセクション */
+        .colors-section {
+            padding: 100px 20px 150px;
+            background-color: var(--bg-dark);
+        }
+        .section-title {
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 80px;
+            font-weight: 700;
+        }
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .color-card {
+            background: var(--bg-card);
+            border-radius: 30px;
+            padding: 50px 30px;
+            text-align: center;
+            transition: transform 0.4s ease;
+            border: 1px solid rgba(255,255,255,0.02);
+        }
+        .color-card:hover {
+            transform: translateY(-10px);
+            background: #1c1c1f;
+        }
+        .color-img-wrapper {
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .color-img-wrapper img {
+            max-height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.8));
+        }
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .color-name { font-size: 1.5rem; font-weight: 700; margin-bottom: 10px; color: #fff; }
+        .color-catch { font-size: 0.95rem; font-weight: 600; color: #aaa; margin-bottom: 15px; }
+        .color-desc { font-size: 0.95rem; color: var(--text-sub); line-height: 1.6; }
+
+        /* 特長（パフォーマンス・カメラ等） */
+        .features {
+            padding: 150px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .feature-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            margin-bottom: 150px;
+        }
+        .feature-row.reverse { direction: rtl; }
+        .feature-row.reverse .feature-text { direction: ltr; }
+        
+        .feature-text h4 {
+            font-size: 1.2rem;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+        }
+        .feature-text h2 {
+            font-size: 3rem;
+            margin-bottom: 25px;
+            line-height: 1.1;
+        }
+        .feature-text p {
+            font-size: 1.15rem;
+            color: var(--text-sub);
+        }
+        .feature-box {
+            background: var(--bg-card);
+            border-radius: 40px;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #333;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.05);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* スペック表 */
+        .specs {
+            padding: 100px 20px;
+            background: var(--bg-dark);
+        }
+        .specs-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .specs h2 { text-align: center; font-size: 2.5rem; margin-bottom: 50px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 25px 0; border-bottom: 1px solid #333; text-align: left; }
+        th { width: 35%; color: #fff; font-weight: 600; vertical-align: top; }
+        td { color: var(--text-sub); line-height: 1.6; }
+
+        footer {
+            text-align: center;
+            padding: 60px 20px;
+            background: #000;
+            color: #555;
+            font-size: 0.9rem;
+            border-top: 1px solid #111;
+        }
+
+        @media (max-width: 768px) {
+            .feature-row { grid-template-columns: 1fr; gap: 30px; text-align: center; }
+            .feature-row.reverse { direction: ltr; }
+            .feature-box { height: 300px; }
+            .hero-img { max-width: 80%; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-logo">Cheon Pal <span>100 Pro</span></div>
+        <a href="#" class="buy-btn">予約注文</a>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-text reveal">
+            <h2>Pro。その圧倒的な頂きへ。</h2>
+            <h1>Cheon Pal 100 Pro</h1>
+        </div>
+        <img src="shouji1.png" alt="Cheon Pal 100 Pro" class="hero-img reveal" style="transition-delay: 0.2s;" onerror="this.src='https://placehold.co/500x800/111/fff?text=Cheon+Pal+Pro';">
+    </section>
+
+    <section class="intro reveal">
+        <h3>常識を凌駕する頭脳。<br>プロフェッショナルのための、完全なる道具。</h3>
+        <p>航空宇宙産業で用いられる超高純度チタニウムのボディに、デスクトップPCを越える演算能力を凝縮。Cheon Pal 100 Proは、スマートフォンという概念を破壊し、あなたの創造力を限界の先へと導く究極のデバイスです。</p>
+    </section>
+
+    <section class="colors-section">
+        <h2 class="section-title reveal">研ぎ澄まされた、5つの美学。</h2>
+        <div class="color-grid">
+            
+            <div class="color-card reveal">
+                <div class="color-img-wrapper"><img src="shouji1-6.png" alt="インク" onerror="this.src='https://placehold.co/300x500/111/fff?text=Ink';"></div>
+                <div class="color-swatch" style="background: linear-gradient(135deg, #3A3A3D, #151516);"></div>
+                <div class="color-name">インク</div>
+                <div class="color-catch">すべてを飲み込む、究極の純黒。</div>
+                <div class="color-desc">余計な反射を極限まで抑え込んだ、深みのある漆黒。ツールとしてのストイックさを体現した、最も無骨で、最も美しいベーシックカラーです。</div>
+            </div>
+
+            <div class="color-card reveal" style="transition-delay: 0.1s;">
+                <div class="color-img-wrapper"><img src="shouji1-4.png" alt="バナナ" onerror="this.src='https://placehold.co/300x500/FFE135/000?text=Banana';"></div>
+                <div class="color-swatch" style="background: linear-gradient(135deg, #FFE135, #D4B91E);"></div>
+                <div class="color-name">バナナ</div>
+                <div class="color-catch">遊び心と、妥協のない品格。</div>
+                <div class="color-desc">単なるイエローではない、マットな質感に仕上げた大人のためのカラー。手元を鮮やかに彩りながらも、Proモデルとしての洗練された佇まいを崩しません。</div>
+            </div>
+
+            <div class="color-card reveal" style="transition-delay: 0.2s;">
+                <div class="color-img-wrapper"><img src="shouji1-7.png" alt="スカイ" onerror="this.src='https://placehold.co/300x500/87CEEB/000?text=Sky';"></div>
+                <div class="color-swatch" style="background: linear-gradient(135deg, #87CEEB, #4DA5CA);"></div>
+                <div class="color-name">スカイ</div>
+                <div class="color-catch">澄み渡る空の解放感を、その手に。</div>
+                <div class="color-desc">どこまでも広がる空を切り取ったかのような、透明感あふれるライトブルー。重厚なProモデルの性能を、軽やかな気分で持ち歩けるギャップが魅力です。</div>
+            </div>
+
+            <div class="color-card reveal" style="transition-delay: 0.3s;">
+                <div class="color-img-wrapper"><img src="shouji1-5.png" alt="ブルーベリー" onerror="this.src='https://placehold.co/300x500/3A53A4/fff?text=Blueberry';"></div>
+                <div class="color-swatch" style="background: linear-gradient(135deg, #5369BE, #2C3E8C);"></div>
+                <div class="color-name">ブルーベリー</div>
+                <div class="color-catch">深淵をのぞく、静寂のダークブルー。</div>
+                <div class="color-desc">光の当たり方によって見え隠れする深い青は、夜明け前の空を思わせます。知性と落ち着きを求めるプロフェッショナルのための特別な仕上げです。</div>
+            </div>
+
+            <div class="color-card reveal" style="transition-delay: 0.4s;">
+                <div class="color-img-wrapper"><img src="shouji1.png" alt="中華紅" onerror="this.src='https://placehold.co/300x500/E20613/fff?text=Chuka+Kurenai';"></div>
+                <div class="color-swatch" style="background: linear-gradient(135deg, #F01824, #A30510);"></div>
+                <div class="color-name">中華紅</div>
+                <div class="color-catch">伝統と情熱が交差する、圧倒的存感。</div>
+                <div class="color-desc">深みと鮮やかさを限界まで引き出したプレミアムレッド。見る者の目を奪う力強さと、格式高さを兼ね備えた、特別なシグネチャーカラーです。</div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="features">
+        
+        <div class="feature-row reveal">
+            <div class="feature-text">
+                <h4>NeuroCore Pro Chip</h4>
+                <h2>頭脳は、<br>異次元の領域へ。</h2>
+                <p>新開発の「NeuroCore 9 Pro」チップは、毎秒80兆回の演算を処理する巨大なNPUを搭載。オンデバイスでの高度な生成AI処理から、負荷の高い8Kビデオ編集まで、息をのむほどのスピードで完遂します。一切の遅延は、もはや過去のものです。</p>
+            </div>
+            <div class="feature-box" style="background: radial-gradient(circle, #222 0%, #000 100%);">
+                <span style="color: #fff; font-weight: 800; font-size: 3rem; text-shadow: 0 0 20px rgba(255,255,255,0.3);">NC9 PRO</span>
+            </div>
+        </div>
+
+        <div class="feature-row reverse reveal">
+            <div class="feature-text">
+                <h4>Pro Matrix Camera System</h4>
+                <h2>光を支配する、<br>プロフェッショナルレンズ。</h2>
+                <p>3つの独立した1インチ級センサーを搭載。メインの3億画素カメラは、暗闇の中に潜む微細な色彩さえも映画のようなクオリティで描き出します。光学15倍ズーム対応のペリスコープ望遠レンズを使えば、どんな遠くのドラマも、あなたの目の前へ。</p>
+            </div>
+            <div class="feature-box" style="background: url('https://placehold.co/600x500/0a0a0c/444?text=Camera+Lens+Macro') center/cover;">
+            </div>
+        </div>
+
+        <div class="feature-row reveal">
+            <div class="feature-text">
+                <h4>Quantum Display X</h4>
+                <h2>現実を上回る、<br>鮮烈な視覚体験。</h2>
+                <p>ピーク輝度4,500ニトを誇る「Quantum Display X」。直射日光の下でも驚くべき視認性を保ち、1Hz〜144Hzの可変リフレッシュレートが、指に吸い付くような究極の滑らかさと省電力を両立させます。</p>
+            </div>
+            <div class="feature-box" style="background: linear-gradient(45deg, #0f0c29, #302b63, #24243e);">
+                <span style="color: #fff; letter-spacing: 5px;">144Hz</span>
+            </div>
+        </div>
+
+    </section>
+
+    <section class="specs reveal">
+        <div class="specs-container">
+            <h2>Proの技術仕様</h2>
+            <table>
+                <tr>
+                    <th>仕上げ（カラー）</th>
+                    <td>インク / バナナ / スカイ / ブルーベリー / 中華紅（マットガラス＆チタニウムフレーム）</td>
+                </tr>
+                <tr>
+                    <th>プロセッサ</th>
+                    <td>NeuroCore 9 Pro (次世代2nmプロセス) <br>16コアCPU / 20コアGPU / 48コアNPU</td>
+                </tr>
+                <tr>
+                    <th>ディスプレイ</th>
+                    <td>6.9インチ Quantum Display X (OLED)<br>可変リフレッシュレート 1-144Hz / ピーク輝度 4,500nit</td>
+                </tr>
+                <tr>
+                    <th>Proカメラシステム</th>
+                    <td>・300MP メイン（1インチセンサー, f/1.2）<br>・100MP 超広角（130°視野角, マクロ対応）<br>・100MP ペリスコープ望遠（光学15倍, デジタル200倍）</td>
+                </tr>
+                <tr>
+                    <th>ストレージ & メモリ</th>
+                    <td>RAM: 24GB<br>ROM: 1TB / 2TB / 4TB</td>
+                </tr>
+                <tr>
+                    <th>バッテリー & 充電</th>
+                    <td>10,000mAh グラフェンバッテリー<br>200W 有線超急速充電（0%→100% 約8分）</td>
+                </tr>
+                <tr>
+                    <th>耐久性</th>
+                    <td>IP69K (完全防水防塵) / 航空宇宙グレード・チタニウム合金フレーム</td>
+                </tr>
+            </table>
+        </div>
+    </section>
+
+    <footer>
+        <p>※本ページの内容は架空の製品「Cheon Pal 100 Pro」のコンセプトデザインです。</p>
+        <p style="margin-top: 10px;">&copy; 2026 Cheon Technologies. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // スクロール時にフワッと表示させるアニメーション
+        document.addEventListener('DOMContentLoaded', () => {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.reveal').forEach(el => {
+                observer.observe(el);
+            });
+
+            // ヒーローセクションは読み込み直後に発火
+            setTimeout(() => {
+                document.querySelectorAll('.hero .reveal').forEach(el => {
+                    el.classList.add('active');
+                });
+            }, 100);
+        });
+    </script>
+</body>
+</html>
