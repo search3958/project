@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>HarmonyOS Custom Canvas Engine v4 (Squircle Smooth Corner)</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background-color: #f5f5f7;
+      user-select: none;
+    }
+    canvas { display: block; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+
+<source-code style="display:none">
+html {
+  .padding:30px
+  
+  h1 { "HarmonyOS UI Engine v4" }
+  p { "Figma風のスムースな角丸（Squircle）をエンジン全体に適用しました。" }
+  br { "" }
+
+  h3 { "独自ダイアログのテスト" }
+  .click:alert("ウェルカム","これはSquircle角丸を適用した独自ダイアログです！")
+  button { "ダイアログを開く (Alert)" }
+  .radius:1px
+
+  br { "" }
+  h3 { "インタラクティブ要素" }
+  .flex
+  .gap:10px
+  div {
+    option { "オプション A" }
+    option { "オプション B" }
+    option { "オプション C" }
+  }
+
+  br { "" }
+  h3 { "新規追加されたHTML主要要素" }
+  
+  a { "🔗 これはカスタムアンカーリンク（a要素）です" }
+  br { "" }
+  
+  p { "以下はテキスト入力欄（input要素）。クリックで文字編集が可能です：" }
+  input { "ここをクリックして入力..." }
+  br { "" }
+  
+  p { "以下はリスト要素（ul / li）のレンダリングデモです：" }
+  ul {
+    li { "先進的なUI/UXの探求" }
+    li { "Canvasによる軽量高速な描画基盤" }
+    li { "独自パーサーによる柔軟な構造化" }
+  }
+  br { "" }
+  
+  p { "以下は画像要素（img要素）のプレースホルダーです：" }
+  img { "プロダクトバナーのモックプレースホルダー" }
+
+  br { "" }
+  h3 { "スクロール検証用の大量ボタンデモ" }
+  p { "ここから下にスクロール（ホイール・トラックパッド）できます。" }
+  
+  button { "デモボタン 1" }
+  button { "デモボタン 2" }
+  button { "デモボタン 3" }
+  .click:alert("シークレット","隠しボタンが押されました")
+  button { "デモボタン 4 (アラート付き)" }
+  button { "デモボタン 5" }
+  button { "デモボタン 6" }
+  button { "デモボタン 7" }
+  button { "デモボタン 8" }
+  button { "デモボタン 9" }
+  button { "デモボタン 10" }
+  button { "デモボタン 11" }
+  button { "デモボタン 12" }
+  button { "最下部のボタン" }
+}
+</source-code>
+
+<script>
+// --- 1. 独自形状の角丸（Figma風Squircleシェイプ）の移植 ---
+function drawSmoothRect(ctx, x, y, w, h, cornerRadius) {
+  if (!cornerRadius || cornerRadius <= 0) {
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    return;
+  }
+
+  // 1. 半径と消費距離の計算
+  const r = Math.min(cornerRadius, w / 2, h / 2);
+  const lx = Math.min(w / 2, 1.528665 * r);
+  const ly = Math.min(h / 2, 1.528665 * r);
+
+  // 2. ベジェ曲線の固定定数
+  const cx3 = 0.63148 * r;
+  const cx4 = 0.37282 * r;
+  const cx5 = 0.16905 * r;
+  const cx6 = 0.07491 * r;
+  const cy3 = cx3;
+  const cy4 = cx4;
+  const cy5 = cx5;
+  const cy6 = cx6;
+
+  // 3. 動的制御点（キャップ時のスケーリング方程式）
+  const d1x = 0.04 * r + 0.75697 * (lx - r);
+  const d2x = 0.18 * r + 0.90847 * (lx - r);
+  const d1y = 0.04 * r + 0.75697 * (ly - r);
+  const d2y = 0.18 * r + 0.90847 * (ly - r);
+
+  // 4. パスの構築（時計回り、かつ引数の座標 (x, y) からの相対オフセットを適用）
+  ctx.beginPath();
+  ctx.moveTo(x + w, y + h / 2); 
+  ctx.lineTo(x + w, y + h - ly); 
+  ctx.bezierCurveTo(x + w, y + h - ly + d1y, x + w, y + h - ly + d2y, x + w - cx6, y + h - cy3); 
+  ctx.bezierCurveTo(x + w - cx5, y + h - cy4, x + w - cx4, y + h - cy5, x + w - cx3, y + h - cy6); 
+  ctx.bezierCurveTo(x + w - lx + d2x, y + h, x + w - lx + d1x, y + h, x + w - lx, y + h); 
+
+  ctx.lineTo(x + lx, y + h); 
+  ctx.bezierCurveTo(x + lx - d1x, y + h, x + lx - d2x, y + h, x + cx3, y + h - cy6); 
+  ctx.bezierCurveTo(x + cx4, y + h - cy5, x + cx5, y + h - cy4, x + cx6, y + h - cy3); 
+  ctx.bezierCurveTo(x, y + h - ly + d2y, x, y + h - ly + d1y, x, y + h - ly); 
+
+  ctx.lineTo(x, y + ly); 
+  ctx.bezierCurveTo(x, y + ly - d1y, x, y + ly - d2y, x + cx6, y + cy3); 
+  ctx.bezierCurveTo(x + cx5, y + cy4, x + cx4, y + cy5, x + cx3, y + cy6); 
+  ctx.bezierCurveTo(x + lx - d2x, y, x + lx - d1x, y, x + lx, y); 
+
+  ctx.lineTo(x + w - lx, y); 
+  ctx.bezierCurveTo(x + w - lx + d1x, y, x + w - lx + d2x, y, x + w - cx3, y + cy6); 
+  ctx.bezierCurveTo(x + w - cx4, y + cy5, x + w - cx5, y + cy4, x + w - cx6, y + cy3); 
+  ctx.bezierCurveTo(x + w, y + ly - d2y, x + w, y + ly - d1y, x + w, y + ly); 
+
+  ctx.closePath();
+}
+
+// --- 2. 構文パーサー（AST生成） ---
+function parseCustomSyntax(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const root = { type: 'root', children: [], style: { display: 'block' } };
+  const stack = [root];
+  let currentStyles = {};
+  let nextClickAction = null;
+
+  lines.forEach(line => {
+    if (line === '}') {
+      if (stack.length > 1) stack.pop();
+      return;
+    }
+
+    if (line.startsWith('.click:alert')) {
+      const match = line.match(/\.click:alert\(\"([^\"]+)\"\s*,\s*\"([^\"]+)\"\)/);
+      if (match) {
+        nextClickAction = { type: 'alert', title: match[1], message: match[2] };
+      }
+      return;
+    }
+
+    if (line.startsWith('.')) {
+      const clean = line.substring(1);
+      if (clean === 'flex') { currentStyles.display = 'flex'; }
+      else if (clean === 'block') { currentStyles.display = 'block'; }
+      else if (clean.includes(':')) {
+        const [prop, val] = clean.split(':');
+        const numVal = parseInt(val);
+        if (prop === 'gap') currentStyles.gap = numVal;
+        if (prop === 'radius') currentStyles.radius = numVal;
+        if (prop === 'padding') currentStyles.padding = numVal;
+        if (prop === 'margin') currentStyles.margin = numVal;
+      }
+      return;
+    }
+
+    const blockMatch = line.match(/^([a-zA-Z0-9]+)\s*\{$/);
+    const inlineMatch = line.match(/^([a-zA-Z0-9]+)\s*\{\s*\"(.*)\"\s*\}/);
+
+    if (inlineMatch) {
+      const [_, tag, content] = inlineMatch;
+      const node = { 
+        type: tag, 
+        text: content, 
+        children: [], 
+        style: { ...currentStyles }, 
+        hovered: false,
+        clickAction: nextClickAction 
+      };
+      stack[stack.length - 1].children.push(node);
+      currentStyles = {}; 
+      nextClickAction = null;
+    } else if (blockMatch) {
+      const tag = blockMatch[1];
+      const node = { 
+        type: tag, 
+        children: [], 
+        style: { display: 'block', ...currentStyles }, 
+        hovered: false,
+        clickAction: nextClickAction
+      };
+      stack[stack.length - 1].children.push(node);
+      stack.push(node); 
+      currentStyles = {}; 
+      nextClickAction = null;
+    }
+  });
+
+  return root.children[0];
+}
+
+// --- 3. レイアウト & レンダリングエンジン ---
+function initCanvasEngine(ast) {
+  const canvas = document.createElement('canvas');
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  let scrollY = 0;
+  let maxScroll = 0;
+  let activeDialog = null;
+
+  // 主要なHTML要素に対応したテーマ拡張
+  const DEFAULT_THEME = {
+    h1: { fontSize: 30, bold: true, margin: 12 },
+    h3: { fontSize: 22, bold: true, margin: 12 },
+    p: { fontSize: 16, bold: false, margin: 6, color: '#666666' },
+    br: { fontSize: 16, height: 15 },
+    button: { padding: 14, radius: 16, bg: '#007DFF', fg: '#FFFFFF', margin: 8 },
+    option: { padding: 12, radius: 12, bg: '#E5E5E5', margin: 4 },
+    html: { bg: '#F5F5F7' },
+    // 追加したHTML要素のデフォルトスタイル
+    a: { fontSize: 16, bold: false, margin: 6, color: '#007DFF' },
+    input: { padding: 12, radius: 12, bg: '#FFFFFF', border: '#D2D2D7', fg: '#1D1D1F', margin: 8 },
+    ul: { margin: 8, padding: 0 },
+    li: { fontSize: 16, bold: false, margin: 4, padding: 4 },
+    img: { radius: 20, bg: '#E2E2E7', margin: 10 }
+  };
+
+  // --- パス1: サイズ計測 (Measure) ---
+  function measureNode(node, parentWidth) {
+    const theme = DEFAULT_THEME[node.type] || {};
+    const padding = node.style.padding !== undefined ? node.style.padding : (theme.padding || 0);
+    const margin = node.style.margin !== undefined ? node.style.margin : (theme.margin || 0);
+    const gap = node.style.gap || 0;
+
+    if (theme.fontSize) ctx.font = `${theme.bold ? 'bold' : ''} ${theme.fontSize}px sans-serif`;
+
+    // 画像（img）はテキストをタイトルとして扱い、サイズは固定
+    if (node.type === 'img') {
+      node.width = parentWidth - margin * 2;
+      node.height = 160; 
+    } else if (node.text !== undefined) {
+      const metrics = ctx.measureText(node.text);
+      // リスト子要素(li)の場合は、インデント・中黒分の余白を拡張
+      const extraWidth = (node.type === 'li') ? 24 : 0;
+      
+      node.width = (node.type === 'button' || node.type === 'input') ? (parentWidth - margin * 2) : (metrics.width + padding * 2 + extraWidth);
+      node.height = (theme.fontSize || 16) + padding * 2;
+    } else {
+      let contentWidth = 0;
+      let contentHeight = 0;
+
+      node.children.forEach((child, index) => {
+        measureNode(child, parentWidth - padding * 2);
+        
+        if (node.style.display === 'flex') {
+          contentWidth += child.totalWidth + (index > 0 ? gap : 0);
+          contentHeight = Math.max(contentHeight, child.totalHeight);
+        } else {
+          contentWidth = Math.max(contentWidth, child.totalWidth);
+          contentHeight += child.totalHeight + (index > 0 ? gap : 0);
+        }
+      });
+
+      node.width = (node.style.display === 'flex') ? contentWidth : (parentWidth - padding * 2);
+      node.height = contentHeight;
+    }
+
+    node.totalWidth = node.width + margin * 2;
+    node.totalHeight = node.height + margin * 2;
+  }
+
+  // --- パス2: 配置確定 (Layout) ---
+  function layoutNode(node, x, y) {
+    const theme = DEFAULT_THEME[node.type] || {};
+    const padding = node.style.padding !== undefined ? node.style.padding : (theme.padding || 0);
+    const margin = node.style.margin !== undefined ? node.style.margin : (theme.margin || 0);
+    const gap = node.style.gap || 0;
+
+    node.x = x + margin;
+    node.y = y + margin;
+
+    let childX = node.x + padding;
+    let childY = node.y + padding;
+
+    node.children.forEach((child) => {
+      layoutNode(child, childX, childY);
+      if (node.style.display === 'flex') {
+        childX += child.totalWidth + gap;
+      } else {
+        childY += child.totalHeight + gap;
+      }
+    });
+  }
+
+  // --- パス3: 描画 (Render) ---
+  function drawNode(node) {
+    const theme = DEFAULT_THEME[node.type] || {};
+    const padding = node.style.padding !== undefined ? node.style.padding : (theme.padding || 0);
+    const radius = node.style.radius !== undefined ? node.style.radius : (theme.radius || 0);
+
+    ctx.save();
+
+    // コンテナ背景 (div)
+    if (node.type === 'div' && (node.style.padding || radius)) {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
+      ctx.fill();
+    }
+    
+    // ボタン背景
+    if (node.type === 'button') {
+      ctx.fillStyle = node.hovered ? '#0066CC' : (theme.bg || '#007DFF');
+      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || theme.radius);
+      ctx.fill();
+    }
+
+    // オプション背景
+    if (node.type === 'option') {
+      ctx.fillStyle = node.selected ? '#007DFF' : (node.hovered ? '#D0D0D0' : (theme.bg || '#E5E5E5'));
+      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || theme.radius);
+      ctx.fill();
+    }
+
+    // 入力欄 (input) 背景・枠線
+    if (node.type === 'input') {
+      ctx.fillStyle = theme.bg || '#FFFFFF';
+      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || theme.radius);
+      ctx.fill();
+      ctx.strokeStyle = node.hovered ? '#007DFF' : (theme.border || '#D2D2D7');
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // 画像 (img) プレースホルダー（クリッピング付き）
+    if (node.type === 'img') {
+      ctx.save();
+      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || theme.radius);
+      ctx.fillStyle = theme.bg || '#E2E2E7';
+      ctx.fill();
+      ctx.clip(); // スムース角丸の形状で内部をクリップ
+
+      // プレースホルダー用の対角線
+      ctx.strokeStyle = '#C7C7CC';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y); ctx.lineTo(node.x + node.width, node.y + node.height);
+      ctx.moveTo(node.x + node.width, node.y); ctx.lineTo(node.x, node.y + node.height);
+      ctx.stroke();
+
+      // 画像タイトルテキスト
+      ctx.fillStyle = '#8E8E93';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.text || 'Image', node.x + node.width / 2, node.y + node.height / 2);
+      ctx.restore();
+    }
+
+    // テキスト及びインライン要素のレンダリング
+    if (node.text !== undefined && node.type !== 'img') {
+      const fontSize = theme.fontSize || 16;
+      ctx.font = `${theme.bold ? 'bold' : ''} ${fontSize}px sans-serif`;
+      
+      if (node.type === 'button' || (node.type === 'option' && node.selected)) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(node.text, node.x + node.width / 2, node.y + node.height / 2);
+      } else if (node.type === 'input') {
+        ctx.fillStyle = theme.fg || '#1D1D1F';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        ctx.fillText(node.text, node.x + padding, node.y + node.height / 2);
+      } else if (node.type === 'a') {
+        ctx.fillStyle = node.hovered ? '#0056B3' : (theme.color || '#007DFF');
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        ctx.fillText(node.text, node.x + padding, node.y + padding);
+        
+        // アンカー下線の描画
+        const metrics = ctx.measureText(node.text);
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(node.x + padding, node.y + padding + fontSize + 2);
+        ctx.lineTo(node.x + padding + metrics.width, node.y + padding + fontSize + 2);
+        ctx.stroke();
+      } else if (node.type === 'li') {
+        ctx.fillStyle = theme.color || '#1D1D1F';
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        
+        // リストの行頭中黒「•」の描画
+        ctx.beginPath();
+        ctx.arc(node.x + padding + 6, node.y + padding + fontSize / 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillText(node.text, node.x + padding + 22, node.y + padding);
+      } else {
+        ctx.fillStyle = theme.color || '#000000';
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        ctx.fillText(node.text, node.x + padding, node.y + padding);
+      }
+    }
+
+    node.children.forEach(drawNode);
+    ctx.restore();
+  }
+
+  // --- 🌟 独自ダイアログの描画（ここにもSquircleを適用） ---
+  function drawDialog() {
+    if (!activeDialog) return;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const dw = Math.min(340, canvas.width - 40);
+    const dh = 180;
+    const dx = (canvas.width - dw) / 2;
+    const dy = (canvas.height - dh) / 2;
+
+    // 大きなSquircleカード
+    ctx.fillStyle = '#FFFFFF';
+    drawSmoothRect(ctx, dx, dy, dw, dh, 28);
+    ctx.fill();
+
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(activeDialog.title, dx + dw / 2, dy + 30);
+
+    ctx.fillStyle = '#666666';
+    ctx.font = '15px sans-serif';
+    ctx.fillText(activeDialog.message, dx + dw / 2, dy + 70);
+
+    const bw = dw - 40;
+    const bh = 44;
+    const bx = dx + 20;
+    const by = dy + dh - 64;
+
+    activeDialog.buttonLayout = { x: bx, y: by, w: bw, h: bh };
+
+    ctx.fillStyle = activeDialog.buttonHovered ? '#0066CC' : '#007DFF';
+    drawSmoothRect(ctx, bx, by, bw, bh, 14);
+    ctx.fill();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('OK', bx + bw / 2, by + bh / 2);
+    ctx.textBaseline = 'top';
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = DEFAULT_THEME.html.bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    measureNode(ast, canvas.width);
+    layoutNode(ast, 0, 0);
+
+    maxScroll = Math.max(0, ast.totalHeight - canvas.height + 40);
+
+    ctx.save();
+    ctx.translate(0, -scrollY);
+    drawNode(ast);
+    ctx.restore();
+
+    if (activeDialog) {
+      drawDialog();
+    }
+  }
+
+  function findNodeAt(node, mx, my) {
+    if (mx >= node.x && mx <= node.x + node.width && my >= node.y && my <= node.y + node.height) {
+      for (let i = node.children.length - 1; i >= 0; i--) {
+        const hit = findNodeAt(node.children[i], mx, my);
+        if (hit) return hit;
+      }
+      return node;
+    }
+    return null;
+  }
+
+  // マウスイベント
+  canvas.addEventListener('mousemove', (e) => {
+    const mx = e.clientX;
+    const my = e.clientY;
+
+    if (activeDialog && activeDialog.buttonLayout) {
+      const b = activeDialog.buttonLayout;
+      const isOver = (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+      if (activeDialog.buttonHovered !== isOver) {
+        activeDialog.buttonHovered = isOver;
+        render();
+      }
+      canvas.style.cursor = isOver ? 'pointer' : 'default';
+      return;
+    }
+
+    const worldX = mx;
+    const worldY = my + scrollY;
+
+    let needUpdate = false;
+    function resetHover(n) {
+      if (n.hovered) { n.hovered = false; needUpdate = true; }
+      n.children.forEach(resetHover);
+    }
+    resetHover(ast);
+
+    const hit = findNodeAt(ast, worldX, worldY);
+    // インタラクティブ判定対象に a と input を追加
+    if (hit && ['button', 'option', 'a', 'input'].includes(hit.type)) {
+      hit.hovered = true;
+      canvas.style.cursor = (hit.type === 'input') ? 'text' : 'pointer';
+      needUpdate = true;
+    } else {
+      canvas.style.cursor = 'default';
+    }
+
+    if (needUpdate) render();
+  });
+
+  // クリックイベント
+  canvas.addEventListener('click', (e) => {
+    const mx = e.clientX;
+    const my = e.clientY;
+
+    if (activeDialog && activeDialog.buttonLayout) {
+      const b = activeDialog.buttonLayout;
+      if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
+        activeDialog = null;
+        render();
+      }
+      return;
+    }
+
+    const worldX = mx;
+    const worldY = my + scrollY;
+    const hit = findNodeAt(ast, worldX, worldY);
+
+    if (hit) {
+      if (hit.type === 'option') {
+        hit.selected = !hit.selected;
+      }
+      // input をクリックした際のモックテキスト変更
+      if (hit.type === 'input') {
+        const inputVal = prompt("テキストを入力してください：", hit.text);
+        if (inputVal !== null) hit.text = inputVal;
+      }
+      if (hit.clickAction && hit.clickAction.type === 'alert') {
+        activeDialog = {
+          title: hit.clickAction.title,
+          message: hit.clickAction.message,
+          buttonHovered: false
+        };
+      }
+    }
+    render();
+  });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (activeDialog) return; 
+
+    scrollY += e.deltaY * 0.7;
+    scrollY = Math.max(0, Math.min(scrollY, maxScroll));
+    render();
+  }, { passive: false });
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    render();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+}
+
+// --- 4. カスタム要素登録 ---
+class SourceCodeElement extends HTMLElement {
+  connectedCallback() {
+    const ast = parseCustomSyntax(this.textContent);
+    initCanvasEngine(ast);
+  }
+}
+customElements.define('source-code', SourceCodeElement);
+</script>
+
+</body>
+</html>
