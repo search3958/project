@@ -131,70 +131,90 @@ function initCanvasEngine(ast) {
   let activeDialog = null;
 
   const THEME = {
-    html: { bg: '#F5F5F7', padding: 0 },
+    html: { bg: '#F5F5F7' },
     h1: { fontSize: 32, bold: true, marginBottom: 16 },
     h3: { fontSize: 20, bold: true, marginTop: 28, marginBottom: 12 },
     p: { fontSize: 15, marginTop: 8, marginBottom: 8, color: '#555555' },
     br: { height: 20 },
-    button: { fontSize: 15, paddingV: 12, paddingH: 20, radius: 9999, bg: '#007DFF', fg: '#FFFFFF', marginTop: 6, marginBottom: 6 },
-    option: { fontSize: 15, paddingV: 12, paddingH: 16, radius: 9999, bg: '#E5E5E5', marginTop: 4, marginBottom: 4 },
+    button: { fontSize: 15, padding: 12, radius: 9999, bg: '#007DFF', fg: '#FFFFFF', marginTop: 6, marginBottom: 6 },
+    option: { fontSize: 15, padding: 12, radius: 9999, bg: '#E5E5E5', marginTop: 4, marginBottom: 4 },
     a: { fontSize: 15, marginTop: 8, marginBottom: 8, color: '#007DFF' },
-    input: { fontSize: 15, paddingV: 12, paddingH: 14, radius: 12, bg: '#FFFFFF', border: '#D2D2D7', fg: '#1D1D1F', marginTop: 8, marginBottom: 8 },
+    input: { fontSize: 15, padding: 12, radius: 12, bg: '#FFFFFF', border: '#D2D2D7', fg: '#1D1D1F', marginTop: 8, marginBottom: 8 },
     ul: { marginTop: 8, marginBottom: 8 },
-    li: { fontSize: 15, marginTop: 4, marginBottom: 4, paddingH: 28 },
+    li: { fontSize: 15, marginTop: 4, marginBottom: 4, padding: 6 },
     img: { radius: 16, bg: '#E2E2E7', marginTop: 12, marginBottom: 12, height: 160 }
   };
 
-  function getVal(node, key, def) {
-    if (node.style[key] !== undefined) return node.style[key];
+  function getPadding(node) {
     const t = THEME[node.type] || {};
-    if (t[key] !== undefined) return t[key];
-    return def;
+    return node.style.padding !== undefined ? node.style.padding : (t.padding || 0);
+  }
+
+  function getMarginTop(node) {
+    const t = THEME[node.type] || {};
+    if (node.style.marginTop !== undefined) return node.style.marginTop;
+    if (node.style.margin !== undefined) return node.style.margin;
+    if (t.marginTop !== undefined) return t.marginTop;
+    if (t.margin !== undefined) return t.margin;
+    return 0;
+  }
+
+  function getMarginBottom(node) {
+    const t = THEME[node.type] || {};
+    if (node.style.marginBottom !== undefined) return node.style.marginBottom;
+    if (node.style.margin !== undefined) return node.style.margin;
+    if (t.marginBottom !== undefined) return t.marginBottom;
+    if (t.margin !== undefined) return t.margin;
+    return 0;
+  }
+
+  function getGap(node) {
+    const t = THEME[node.type] || {};
+    return node.style.gap !== undefined ? node.style.gap : (t.gap || 0);
+  }
+
+  function getRadius(node) {
+    const t = THEME[node.type] || {};
+    return node.style.radius !== undefined ? node.style.radius : (t.radius || 0);
+  }
+
+  function setFont(node) {
+    const t = THEME[node.type] || {};
+    const fs = t.fontSize || 15;
+    ctx.font = `${t.bold ? 'bold ' : ''}${fs}px ${FONT_FAMILY}`;
   }
 
   function measureNode(node, availWidth) {
-    const theme = THEME[node.type] || {};
-    const padH = getVal(node, 'paddingH', 0);
-    const padV = getVal(node, 'paddingV', 0);
-    const mt = getVal(node, 'marginTop', 0);
-    const mb = getVal(node, 'marginBottom', 0);
-
-    if (theme.fontSize) {
-      ctx.font = `${theme.bold ? 'bold ' : ''}${theme.fontSize}px ${FONT_FAMILY}`;
-    }
+    const pad = getPadding(node);
+    const mt = getMarginTop(node);
+    const mb = getMarginBottom(node);
 
     if (node.type === 'br') {
       node.width = 0;
-      node.height = theme.height || 20;
+      node.height = THEME.br.height || 20;
     } else if (node.type === 'img') {
       node.width = availWidth;
-      node.height = theme.height || 160;
-    } else if (node.type === 'button') {
-      const fs = theme.fontSize || 15;
-      ctx.font = `${theme.bold ? 'bold ' : ''}${fs}px ${FONT_FAMILY}`;
+      node.height = THEME.img.height || 160;
+    } else if (node.type === 'button' || node.type === 'input') {
+      setFont(node);
       node.width = availWidth;
-      node.height = fs + padV * 2;
-    } else if (node.type === 'input') {
-      const fs = theme.fontSize || 15;
-      ctx.font = `${fs}px ${FONT_FAMILY}`;
-      node.width = availWidth;
-      node.height = fs + padV * 2;
+      const fs = (THEME[node.type] || {}).fontSize || 15;
+      node.height = fs + pad * 2;
     } else if (node.text !== undefined) {
-      const fs = theme.fontSize || 15;
-      ctx.font = `${theme.bold ? 'bold ' : ''}${fs}px ${FONT_FAMILY}`;
+      setFont(node);
       const metrics = ctx.measureText(node.text);
       const extraW = (node.type === 'li') ? 24 : 0;
-      node.width = metrics.width + padH * 2 + extraW;
-      node.height = fs + padV * 2;
+      const fs = (THEME[node.type] || {}).fontSize || 15;
+      node.width = metrics.width + pad * 2 + extraW;
+      node.height = fs + pad * 2;
     } else {
       let cw = 0;
       let ch = 0;
-      const gap = getVal(node, 'gap', 0);
+      const gap = getGap(node);
       const display = node.style.display || 'block';
 
       node.children.forEach((child, i) => {
-        const childAvail = availWidth - padH * 2;
-        measureNode(child, childAvail);
+        measureNode(child, availWidth - pad * 2);
         if (display === 'flex') {
           cw += child.totalWidth + (i > 0 ? gap : 0);
           ch = Math.max(ch, child.totalHeight);
@@ -204,34 +224,26 @@ function initCanvasEngine(ast) {
         }
       });
 
-      if (display === 'flex') {
-        node.width = cw + padH * 2;
-      } else {
-        node.width = availWidth;
-      }
-      node.height = ch + padV * 2;
+      node.width = display === 'flex' ? cw + pad * 2 : availWidth;
+      node.height = ch + pad * 2;
     }
 
-    node.marginTop = mt;
-    node.marginBottom = mb;
-    node.padH = padH;
-    node.padV = padV;
+    node.pad = pad;
+    node.marginTopVal = mt;
+    node.marginBottomVal = mb;
     node.totalWidth = node.width;
     node.totalHeight = node.height + mt + mb;
   }
 
   function layoutNode(node, x, y) {
-    const mt = node.marginTop || 0;
-    const padH = node.padH || 0;
-    const padV = node.padV || 0;
-
     node.x = x;
-    node.y = y + mt;
+    node.y = y + (node.marginTopVal || 0);
 
-    let childX = node.x + padH;
-    let childY = node.y + padV;
-    const gap = getVal(node, 'gap', 0);
+    const pad = node.pad || 0;
+    const gap = getGap(node);
     const display = node.style.display || 'block';
+    let childX = node.x + pad;
+    let childY = node.y + pad;
 
     node.children.forEach((child) => {
       layoutNode(child, childX, childY);
@@ -245,13 +257,12 @@ function initCanvasEngine(ast) {
 
   function drawNode(node) {
     const theme = THEME[node.type] || {};
-    const padH = node.padH || 0;
-    const padV = node.padV || 0;
-    const radius = getVal(node, 'radius', 0);
+    const pad = node.pad || 0;
+    const radius = getRadius(node);
 
     ctx.save();
 
-    if (node.type === 'div' && (padH || padV || radius)) {
+    if (node.type === 'div' && (pad || radius)) {
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
       ctx.fill();
@@ -301,8 +312,8 @@ function initCanvasEngine(ast) {
     }
 
     if (node.text !== undefined && node.type !== 'img') {
+      setFont(node);
       const fs = theme.fontSize || 15;
-      ctx.font = `${theme.bold ? 'bold ' : ''}${fs}px ${FONT_FAMILY}`;
 
       if (node.type === 'button') {
         ctx.fillStyle = '#FFFFFF';
@@ -318,19 +329,19 @@ function initCanvasEngine(ast) {
         ctx.fillStyle = theme.fg || '#1D1D1F';
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'left';
-        ctx.fillText(node.text, node.x + padH, node.y + node.height / 2);
+        ctx.fillText(node.text, node.x + pad, node.y + node.height / 2);
       } else if (node.type === 'a') {
         ctx.fillStyle = node.hovered ? '#0056B3' : (theme.color || '#007DFF');
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
-        ctx.fillText(node.text, node.x + padH, node.y + padV);
+        ctx.fillText(node.text, node.x + pad, node.y + pad);
 
         const metrics = ctx.measureText(node.text);
         ctx.strokeStyle = ctx.fillStyle;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(node.x + padH, node.y + padV + fs + 2);
-        ctx.lineTo(node.x + padH + metrics.width, node.y + padV + fs + 2);
+        ctx.moveTo(node.x + pad, node.y + pad + fs + 2);
+        ctx.lineTo(node.x + pad + metrics.width, node.y + pad + fs + 2);
         ctx.stroke();
       } else if (node.type === 'li') {
         ctx.fillStyle = theme.color || '#1D1D1F';
@@ -338,15 +349,15 @@ function initCanvasEngine(ast) {
         ctx.textAlign = 'left';
 
         ctx.beginPath();
-        ctx.arc(node.x + padH - 14, node.y + padV + fs / 2, 3, 0, Math.PI * 2);
+        ctx.arc(node.x + pad - 14, node.y + pad + fs / 2, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillText(node.text, node.x + padH, node.y + padV);
+        ctx.fillText(node.text, node.x + pad, node.y + pad);
       } else {
         ctx.fillStyle = theme.color || '#000000';
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
-        ctx.fillText(node.text, node.x + padH, node.y + padV);
+        ctx.fillText(node.text, node.x + pad, node.y + pad);
       }
     }
 
