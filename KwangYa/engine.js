@@ -180,6 +180,8 @@ function initCanvasEngine(ast) {
   let maxScroll = 0;
   let activeDialog = null;
   const dialogAnim = { value: 0, from: 0, to: 0, elapsed: 0 };
+  const offscreen = document.createElement('canvas');
+  const offCtx = offscreen.getContext('2d');
 
   const THEME = {
     body: { bg: '#F5F5F7' },
@@ -195,7 +197,7 @@ function initCanvasEngine(ast) {
     ul: { marginTop: 8, marginBottom: 8 },
     li: { fontSize: 15, marginTop: 4, marginBottom: 4, padding: 6 },
     img: { radius: 16, bg: '#E2E2E7', marginTop: 12, marginBottom: 12, height: 160 },
-    header: { height: 56, padding: 16, gap: 12 }
+    header: { height: 56, padding: 16, gap: 12, blur: 20, gradTop: 'rgba(245,245,247,0.95)', gradBottom: 'rgba(245,245,247,0.0)' }
   };
 
   function getPadding(node) {
@@ -399,17 +401,6 @@ function initCanvasEngine(ast) {
     const radius = getRadius(node);
 
     ctx.save();
-
-    if (node.type === 'header') {
-      ctx.fillStyle = node.style.bgColor || 'rgba(245,245,247,0.85)';
-      ctx.fillRect(node.x, node.y, node.width, node.height);
-      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(node.x, node.y + node.height);
-      ctx.lineTo(node.x + node.width, node.y + node.height);
-      ctx.stroke();
-    }
 
     if (node.type === 'div' && (pad || radius)) {
       ctx.fillStyle = node.style.bgColor || 'rgba(255,255,255,0.9)';
@@ -688,11 +679,12 @@ function initCanvasEngine(ast) {
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = THEME.body.bg;
-    ctx.fillRect(0, 0, canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight);
-
     const viewW = canvas.clientWidth || window.innerWidth;
     const viewH = canvas.clientHeight || window.innerHeight;
+    const pr = Math.max(1, window.devicePixelRatio || 1);
+
+    ctx.fillStyle = THEME.body.bg;
+    ctx.fillRect(0, 0, viewW, viewH);
 
     const headerNode = ast.children.find(c => c.type === 'header');
     const contentChildren = ast.children.filter(c => c.type !== 'header');
@@ -716,7 +708,52 @@ function initCanvasEngine(ast) {
     contentChildren.forEach(drawNode);
     ctx.restore();
 
-    if (headerNode) {
+    if (headerNode && headerHeight > 0) {
+      const capW = Math.ceil(viewW * pr);
+      const capH = Math.ceil(headerHeight * pr);
+
+      offscreen.width = capW;
+      offscreen.height = capH;
+      offCtx.clearRect(0, 0, capW, capH);
+      offCtx.drawImage(canvas, 0, 0, capW, capH, 0, 0, capW, capH);
+
+      const maxBlur = THEME.header.blur || 20;
+      const steps = 6;
+
+      for (let i = 0; i < steps; i++) {
+        const t = i / steps;
+        const blurAmount = maxBlur * (1 - t);
+        const sliceY = Math.floor(headerHeight * t);
+        const sliceH = Math.ceil(headerHeight / steps) + 1;
+
+        const tmp = document.createElement('canvas');
+        tmp.width = capW;
+        tmp.height = capH;
+        const tmpCtx = tmp.getContext('2d');
+        tmpCtx.filter = `blur(${blurAmount}px)`;
+        tmpCtx.drawImage(offscreen, 0, 0);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, sliceY, viewW, sliceH);
+        ctx.clip();
+        ctx.drawImage(tmp, 0, 0, capW, capH, 0, 0, viewW, headerHeight);
+        ctx.restore();
+      }
+
+      const grad = ctx.createLinearGradient(0, 0, 0, headerHeight);
+      grad.addColorStop(0, THEME.header.gradTop);
+      grad.addColorStop(1, THEME.header.gradBottom);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, viewW, headerHeight);
+
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, headerHeight);
+      ctx.lineTo(viewW, headerHeight);
+      ctx.stroke();
+
       drawNode(headerNode);
     }
 
