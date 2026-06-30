@@ -16,7 +16,6 @@
 
 <source-code style="display:none">
 html {
-  .padding:30px
 
   h1 { "Canvas UI Engine" }
   p { "角丸、ホバー、入力、ラジオ、ダイアログをまとめて試せるデモです。" }
@@ -26,6 +25,8 @@ html {
   .click:alert("ウェルカム","これはダイアログの表示テストです。")
   button { "ダイアログを開く (Alert)" }
   .radius:800px
+  .bgColor:#ff0000
+  .fgColor:#ffff00
   .padding:24px
 
   br { "" }
@@ -41,13 +42,15 @@ html {
 
   br { "" }
   h3 { "追加された要素" }
-
-  a { "これはカスタムアンカーリンク（a要素）です" }
-  br { "" }
-
-  p { "以下はテキスト入力欄（input要素）。クリックで文字編集が可能です：" }
-  input { "ここをクリックして入力..." }
-  br { "" }
+  div{
+    a { "これはカスタムアンカーリンク（a要素）です" }
+    p { "以下はテキスト入力欄（input要素）。クリックで文字編集が可能です：" }
+    input { "ここをクリックして入力..." }
+    }
+  .bgColor:#ffffff
+  .padding:16px
+  .radius:32px
+  .align:center
 
   p { "以下はラジオボタン（radio要素）のデモです：" }
   div {
@@ -90,9 +93,10 @@ html {
   button { "デモボタン 12" }
   button { "最下部のボタン" }
 }
+.padding:24px
 </source-code>
 
-<script src="engine.js?v=4"></script>
+<script src="engine.js"></script>
 
 </body>
 </html>
