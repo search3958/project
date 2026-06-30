@@ -1,4 +1,4 @@
-const FONT_FAMILY = '"Meiryo UI","Yu Gothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Meiryo","Noto Sans JP",sans-serif';
+const FONT_FAMILY = 'LINE Seed JP';
 const PRIMARY_HEX = '#0066ff';
 const PRIMARY = PRIMARY_HEX;
 const HOVER_MS = 150;
@@ -954,7 +954,11 @@ function initCanvasEngine(ast) {
 class SourceCodeElement extends HTMLElement {
   connectedCallback() {
     const ast = parseCustomSyntax(this.textContent);
-    initCanvasEngine(ast);
+    const fontCheck = document.fonts.load('16px "' + FONT_FAMILY + '"');
+    const fallback = new Promise(r => setTimeout(r, 2000));
+    Promise.race([fontCheck, fallback]).then(() => {
+      initCanvasEngine(ast);
+    });
   }
 }
 customElements.define('source-code', SourceCodeElement);
