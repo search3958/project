@@ -718,27 +718,52 @@ function initCanvasEngine(ast) {
       offCtx.drawImage(canvas, 0, 0, capW, capH, 0, 0, capW, capH);
 
       const maxBlur = THEME.header.blur || 20;
-      const steps = 6;
+      const steps = 16;
+      const blend = 2;
 
+      const slices = [];
       for (let i = 0; i < steps; i++) {
         const t = i / steps;
         const blurAmount = maxBlur * (1 - t);
-        const sliceY = Math.floor(headerHeight * t);
-        const sliceH = Math.ceil(headerHeight / steps) + 1;
-
         const tmp = document.createElement('canvas');
         tmp.width = capW;
         tmp.height = capH;
         const tmpCtx = tmp.getContext('2d');
         tmpCtx.filter = `blur(${blurAmount}px)`;
         tmpCtx.drawImage(offscreen, 0, 0);
+        slices.push(tmp);
+      }
+
+      for (let i = 0; i < steps; i++) {
+        const y0 = Math.floor(headerHeight * i / steps);
+        const y1 = Math.floor(headerHeight * (i + 1) / steps);
 
         ctx.save();
         ctx.beginPath();
-        ctx.rect(0, sliceY, viewW, sliceH);
+        ctx.rect(0, y0, viewW, y1 - y0);
         ctx.clip();
-        ctx.drawImage(tmp, 0, 0, capW, capH, 0, 0, viewW, headerHeight);
+        ctx.drawImage(slices[i], 0, 0, capW, capH, 0, 0, viewW, headerHeight);
         ctx.restore();
+
+        if (i < steps - 1) {
+          for (let p = 0; p < blend; p++) {
+            const alpha = (p + 1) / (blend + 1);
+            ctx.save();
+            ctx.globalAlpha = 1 - alpha;
+            ctx.beginPath();
+            ctx.rect(0, y1 - blend + p, viewW, 1);
+            ctx.clip();
+            ctx.drawImage(slices[i], 0, 0, capW, capH, 0, 0, viewW, headerHeight);
+            ctx.restore();
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.beginPath();
+            ctx.rect(0, y1 - blend + p, viewW, 1);
+            ctx.clip();
+            ctx.drawImage(slices[i + 1], 0, 0, capW, capH, 0, 0, viewW, headerHeight);
+            ctx.restore();
+          }
+        }
       }
 
       const grad = ctx.createLinearGradient(0, 0, 0, headerHeight);
@@ -747,12 +772,6 @@ function initCanvasEngine(ast) {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, viewW, headerHeight);
 
-      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(0, headerHeight);
-      ctx.lineTo(viewW, headerHeight);
-      ctx.stroke();
 
       drawNode(headerNode);
     }
