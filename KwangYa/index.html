@@ -16,15 +16,20 @@
 <body>
 
 <source-code style="display:none">
-html {
+body {
+  header {
+    p {"UI Script"}
+    .click:alert("Menu","メニューが押されました")
+  }
 
-  h1 { "UI Script v2" }
+    h1 { "こんにちはv2" }
+
   p { "角丸、ホバー、入力、ラジオ、ダイアログをまとめて試せるデモです。" }
   br { "" }
 
   h3 { "ダイアログのテスト" }
-  .click:alert("Hi","これはダイアログの表示テストです。")
   button { "ダイアログを開く (Alert)" }
+  .click:alert("Hi","これはダイアログの表示テストです。")
   .radius:800px
   .bgColor:#ff0000
   .fgColor:#ffff00
@@ -82,8 +87,8 @@ html {
   button { "デモボタン 1" }
   button { "デモボタン 2" }
   button { "デモボタン 3" }
-  .click:alert("シークレット","隠しボタンが押されました")
   button { "デモボタン 4 (アラート付き)" }
+  .click:alert("シークレット","隠しボタンが押されました")
   button { "デモボタン 5" }
   button { "デモボタン 6" }
   button { "デモボタン 7" }

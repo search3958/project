@@ -83,7 +83,6 @@ function parseCustomSyntax(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   const root = { type: 'root', children: [], style: { display: 'block' } };
   const stack = [{ node: root, lastChild: null }];
-  let nextClickAction = null;
 
   function currentFrame() {
     return stack[stack.length - 1];
@@ -106,7 +105,8 @@ function parseCustomSyntax(text) {
     if (line.startsWith('.click:alert')) {
       const match = line.match(/\.click:alert\(\"([^\"]+)\"\s*,\s*\"([^\"]+)\"\)/);
       if (match) {
-        nextClickAction = { type: 'alert', title: match[1], message: match[2] };
+        const target = currentStyleTarget();
+        target.clickAction = { type: 'alert', title: match[1], message: match[2] };
       }
       return;
     }
@@ -148,28 +148,24 @@ function parseCustomSyntax(text) {
         hovered: false,
         hoverAmount: 0,
         hoverTarget: 0,
-        hoverAnim: { value: 0, from: 0, to: 0, elapsed: 0 },
-        clickAction: nextClickAction
+        hoverAnim: { value: 0, from: 0, to: 0, elapsed: 0 }
       };
       currentFrame().node.children.push(node);
       currentFrame().lastChild = node;
-      nextClickAction = null;
     } else if (blockMatch) {
       const tag = blockMatch[1];
       const node = {
         type: tag,
         children: [],
-        style: { display: 'block' },
+        style: { display: tag === 'header' ? 'flex' : 'block' },
         hovered: false,
         hoverAmount: 0,
         hoverTarget: 0,
-        hoverAnim: { value: 0, from: 0, to: 0, elapsed: 0 },
-        clickAction: nextClickAction
+        hoverAnim: { value: 0, from: 0, to: 0, elapsed: 0 }
       };
       currentFrame().node.children.push(node);
       currentFrame().lastChild = node;
       stack.push({ node, lastChild: null });
-      nextClickAction = null;
     }
   });
 
@@ -186,7 +182,7 @@ function initCanvasEngine(ast) {
   const dialogAnim = { value: 0, from: 0, to: 0, elapsed: 0 };
 
   const THEME = {
-    html: { bg: '#F5F5F7' },
+    body: { bg: '#F5F5F7' },
     h1: { fontSize: 32, bold: true, marginBottom: 16 },
     h3: { fontSize: 20, bold: true, marginTop: 28, marginBottom: 12 },
     p: { fontSize: 15, marginTop: 8, marginBottom: 8, color: '#555555' },
@@ -198,7 +194,8 @@ function initCanvasEngine(ast) {
     radio: { fontSize: 15, padding: 12, radius: 16, bg: '#FFFFFF', border: '#D2D2D7', marginTop: 6, marginBottom: 6 },
     ul: { marginTop: 8, marginBottom: 8 },
     li: { fontSize: 15, marginTop: 4, marginBottom: 4, padding: 6 },
-    img: { radius: 16, bg: '#E2E2E7', marginTop: 12, marginBottom: 12, height: 160 }
+    img: { radius: 16, bg: '#E2E2E7', marginTop: 12, marginBottom: 12, height: 160 },
+    header: { height: 56, padding: 16, gap: 12 }
   };
 
   function getPadding(node) {
@@ -291,6 +288,18 @@ function initCanvasEngine(ast) {
     if (node.type === 'br') {
       node.width = 0;
       node.height = THEME.br.height || 20;
+    } else if (node.type === 'header') {
+      node.width = availWidth;
+      const pad = getPadding(node);
+      let cw = 0;
+      let ch = 0;
+      const gap = getGap(node);
+      node.children.forEach((child, i) => {
+        measureNode(child, availWidth - pad * 2);
+        cw += child.totalWidth + (i > 0 ? gap : 0);
+        ch = Math.max(ch, child.totalHeight);
+      });
+      node.height = Math.max(THEME.header.height || 56, ch + pad * 2);
     } else if (node.type === 'img') {
       node.width = availWidth;
       node.height = THEME.img.height || 160;
@@ -390,6 +399,17 @@ function initCanvasEngine(ast) {
     const radius = getRadius(node);
 
     ctx.save();
+
+    if (node.type === 'header') {
+      ctx.fillStyle = node.style.bgColor || 'rgba(245,245,247,0.85)';
+      ctx.fillRect(node.x, node.y, node.width, node.height);
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y + node.height);
+      ctx.lineTo(node.x + node.width, node.y + node.height);
+      ctx.stroke();
+    }
 
     if (node.type === 'div' && (pad || radius)) {
       ctx.fillStyle = node.style.bgColor || 'rgba(255,255,255,0.9)';
@@ -668,20 +688,37 @@ function initCanvasEngine(ast) {
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = THEME.html.bg;
+    ctx.fillStyle = THEME.body.bg;
     ctx.fillRect(0, 0, canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight);
 
     const viewW = canvas.clientWidth || window.innerWidth;
     const viewH = canvas.clientHeight || window.innerHeight;
-    measureNode(ast, viewW);
-    layoutNode(ast, 0, 0);
 
-    maxScroll = Math.max(0, ast.totalHeight - viewH + 40);
+    const headerNode = ast.children.find(c => c.type === 'header');
+    const contentChildren = ast.children.filter(c => c.type !== 'header');
+    const headerHeight = headerNode ? (THEME.header.height || 56) : 0;
+
+    if (headerNode) {
+      measureNode(headerNode, viewW);
+      headerNode.x = 0;
+      headerNode.y = 0;
+      layoutNode(headerNode, 0, 0);
+    }
+
+    const contentRoot = { type: 'root', children: contentChildren, style: { ...ast.style } };
+    measureNode(contentRoot, viewW);
+    layoutNode(contentRoot, 0, headerHeight);
+
+    maxScroll = Math.max(0, contentRoot.totalHeight - viewH + 40);
 
     ctx.save();
     ctx.translate(0, -scrollY);
-    drawNode(ast);
+    contentChildren.forEach(drawNode);
     ctx.restore();
+
+    if (headerNode) {
+      drawNode(headerNode);
+    }
 
     if (activeDialog) {
       drawDialog();
@@ -741,7 +778,18 @@ function initCanvasEngine(ast) {
     }
     resetHover(ast);
 
-    const hit = findNodeAt(ast, worldX, worldY);
+    const headerNode = ast.children.find(c => c.type === 'header');
+    let hit = null;
+    if (headerNode) {
+      hit = findNodeAt(headerNode, mx, my);
+    }
+    if (!hit) {
+      const contentChildren = ast.children.filter(c => c.type !== 'header');
+      for (let i = contentChildren.length - 1; i >= 0; i--) {
+        hit = findNodeAt(contentChildren[i], worldX, worldY);
+        if (hit) break;
+      }
+    }
     if (hit && ['button', 'option', 'a', 'input'].includes(hit.type)) {
       hit.hovered = true;
       hit.hoverTarget = 1;
@@ -780,7 +828,19 @@ function initCanvasEngine(ast) {
 
     const worldX = mx;
     const worldY = my + scrollY;
-    const hit = findNodeAt(ast, worldX, worldY);
+
+    const headerNode = ast.children.find(c => c.type === 'header');
+    let hit = null;
+    if (headerNode) {
+      hit = findNodeAt(headerNode, mx, my);
+    }
+    if (!hit) {
+      const contentChildren = ast.children.filter(c => c.type !== 'header');
+      for (let i = contentChildren.length - 1; i >= 0; i--) {
+        hit = findNodeAt(contentChildren[i], worldX, worldY);
+        if (hit) break;
+      }
+    }
 
     if (hit) {
       if (hit.type !== 'input') {
