@@ -22,8 +22,8 @@
         <div class="editor-panel">
             <div class="tabs">
                 <button class="tab-btn active" onclick="switchTab('blocks')">ブロック</button>
-                <button class="tab-btn" onclick="switchTab('code')">JavaScriptコード</button>
-                <button class="tab-btn" onclick="switchTab('uiscript')">UIScriptコード</button>
+                <button class="tab-btn" onclick="switchTab('code')">コード</button>
+                <button class="tab-btn" onclick="switchTab('uiscript')">UIScript</button>
             </div>
             
             <div id="blocklyDiv"></div>
@@ -44,20 +44,46 @@
     </div>
 
     <xml id="toolbox" style="display: none">
-        <category name="UIScript要素" colour="#4C97FF">
-            <block type="uiscript_button"></block>
-            <block type="uiscript_text"></block>
-            <block type="uiscript_heading"></block>
-            <block type="uiscript_input"></block>
+        <category name="レイアウト" colour="#3498db">
+            <block type="layout_set"></block>
+            <block type="layout_mode"></block>
         </category>
-        <category name="JS連携" colour="#FF6B6B">
-            <block type="uiscript_on_click"></block>
-            <block type="uiscript_set_text"></block>
-            <block type="uiscript_get_text"></block>
-            <block type="uiscript_alert"></block>
+        <category name="見た目" colour="#9b59b6">
+            <block type="effect_set"></block>
+            <block type="effect_filter"></block>
         </category>
-        <category name="テキスト" colour="%{BKY_TEXTS_HUE}">
-            <block type="text"></block>
+        <category name="イベント" colour="#FFBF00">
+            <block type="event_loaded"></block>
+            <block type="event_clicked"></block>
+            <block type="event_click"></block>
+            <block type="event_key"></block>
+            <block type="event_getMessage"></block>
+            <block type="event_sendMessage"></block>
+        </category>
+        <category name="制御" colour="#FF6B6B">
+            <block type="control_wait"></block>
+            <block type="control_for"></block>
+            <block type="control_forever"></block>
+            <block type="control_if"></block>
+            <block type="control_waitFor"></block>
+            <block type="control_role"></block>
+        </category>
+        <category name="変数" colour="#9b59b6">
+            <block type="var_set"></block>
+            <block type="var_get"></block>
+            <block type="var_number"></block>
+            <block type="var_string"></block>
+            <block type="var_builtin"></block>
+        </category>
+        <category name="演算" colour="#9b59b6">
+            <block type="math_binop"></block>
+            <block type="math_long"></block>
+            <block type="math_include"></block>
+        </category>
+        <category name="論理" colour="#FF6B6B">
+            <block type="logic_compare"></block>
+            <block type="logic_operation"></block>
+            <block type="logic_not"></block>
         </category>
     </xml>
 
