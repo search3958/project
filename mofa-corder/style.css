@@ -55,7 +55,7 @@ header {
 
 #blocklyDiv { flex: 1; position: relative; }
 #codeDiv { flex: 1; display: none; padding: 20px; background: #f8fafc; overflow-y: auto; }
-#codeOutput { width: 100%; height: 100%; border: none; background: transparent; font-family: monospace; resize: none; font-size: 14px;}
+#codeOutput { width: 100%; height: 100%; border: none; background: #1e1e1e; color: #d4d4d4; font-family: monospace; resize: none; font-size: 14px; padding: 10px; tab-size: 2; box-sizing: border-box; }
 
 .stage-panel {
     width: 400px;

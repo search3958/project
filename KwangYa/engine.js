@@ -175,7 +175,7 @@ function parseCustomSyntax(text) {
 function initCanvasEngine(ast) {
   const canvas = document.createElement('canvas');
   document.body.appendChild(canvas);
-  const ctx = canvas.getContext('2d');
+  let ctx = canvas.getContext('2d');
   let scrollY = 0;
   let maxScroll = 0;
   let activeDialog = null;
@@ -186,6 +186,11 @@ function initCanvasEngine(ast) {
   const _backdropCache = new Map();
   let _headerBlurCache = null;
   let _headerScrollY = -1;
+  let _contentLayer = null;
+  let _contentLayerDirty = true;
+  let _contentLayerScrollY = -1;
+  let _contentLayerW = 0;
+  let _contentLayerH = 0;
 
   const THEME = {
     body: { bg: '#F5F5F7' },
@@ -435,6 +440,39 @@ function initCanvasEngine(ast) {
   }
 
   function drawNodeBody(node, theme, pad, radius) {
+    const isStatic = !node.hovered && !node.focused && !node.selected
+      && !node.style.bgFilter && !node.style.fgFilter && !node.clickAction;
+
+    if (isStatic && node.width > 0 && node.height > 0) {
+      const childSig = node.children.length > 0
+        ? node.children.map(c => `${c.type}${c.text || ''}`).join('')
+        : '';
+      const key = `${node.type}_${node.text || ''}_${childSig}_${node.style.bgColor || ''}_${node.style.fgColor || ''}_${Math.round(node.width)}_${Math.round(node.height)}_${node.style.size || ''}`;
+      if (node._layerKey === key && node._layerCanvas) {
+        ctx.drawImage(node._layerCanvas, node.x, node.y);
+        return;
+      }
+      const lw = Math.ceil(node.width);
+      const lh = Math.ceil(node.height);
+      const lc = document.createElement('canvas');
+      lc.width = lw;
+      lc.height = lh;
+      const lctx = lc.getContext('2d');
+      const savedCtx = ctx;
+      ctx = lctx;
+      ctx.translate(-node.x, -node.y);
+      drawNodeBodyInner(node, theme, pad, radius);
+      ctx = savedCtx;
+      node._layerKey = key;
+      node._layerCanvas = lc;
+      ctx.drawImage(lc, node.x, node.y);
+      return;
+    }
+
+    drawNodeBodyInner(node, theme, pad, radius);
+  }
+
+  function drawNodeBodyInner(node, theme, pad, radius) {
 
     if (node.type === 'div' && (pad || radius)) {
       if (node.style.bgFilter) {
@@ -749,10 +787,39 @@ function initCanvasEngine(ast) {
 
     maxScroll = Math.max(0, contentRoot.totalHeight - viewH + 40);
 
-    ctx.save();
-    ctx.translate(0, -scrollY);
-    normalChildren.forEach(drawNode);
-    ctx.restore();
+    const needRebuild = _contentLayerDirty || !_contentLayer
+      || _contentLayerW !== Math.ceil(viewW * pr)
+      || _contentLayerH !== Math.ceil((contentRoot.totalHeight + 40) * pr);
+
+    if (needRebuild) {
+      const lw = Math.ceil(viewW * pr);
+      const lh = Math.ceil((contentRoot.totalHeight + 40) * pr);
+      if (!_contentLayer || _contentLayer.width !== lw || _contentLayer.height !== lh) {
+        _contentLayer = document.createElement('canvas');
+        _contentLayer.width = lw;
+        _contentLayer.height = lh;
+      }
+      const lctx = _contentLayer.getContext('2d');
+      lctx.setTransform(pr, 0, 0, pr, 0, 0);
+      lctx.clearRect(0, 0, lw, lh);
+      lctx.fillStyle = THEME.body.bg;
+      lctx.fillRect(0, 0, viewW, contentRoot.totalHeight + 40);
+
+      const savedCtx = ctx;
+      ctx = lctx;
+      normalChildren.forEach(drawNode);
+      ctx = savedCtx;
+
+      _contentLayerW = lw;
+      _contentLayerH = lh;
+      _contentLayerDirty = false;
+      _contentLayerScrollY = scrollY;
+    }
+
+    ctx.drawImage(_contentLayer,
+      0, Math.floor(scrollY * pr), Math.ceil(viewW * pr), Math.ceil(viewH * pr),
+      0, 0, viewW, viewH
+    );
 
     fixedChildren.forEach((child) => {
       measureNode(child, viewW);
@@ -856,6 +923,7 @@ function initCanvasEngine(ast) {
 
   function scheduleRender() {
     dirty = true;
+    _contentLayerDirty = true;
   }
 
   function findNodeAt(node, mx, my) {

@@ -124,8 +124,18 @@ document.getElementById('htmlEditor').addEventListener('keydown', function(e) {
     }
 });
 
+document.getElementById('codeOutput').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        var start = this.selectionStart;
+        var end = this.selectionEnd;
+        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 2;
+    }
+});
+
 function runCode() {
-    var code = javascript.javascriptGenerator.workspaceToCode(workspace);
+    var code = document.getElementById('codeOutput').value;
     var doc = getPlaygroundDoc();
     
     try {
