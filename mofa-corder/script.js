@@ -1238,5 +1238,186 @@ async function runUIScript() {
 }
 window.runUIScript = runUIScript;
 
+const PROJECT_FILES = [
+    'index.html',
+    'style.css',
+    'script.js',
+    'mofa-lang.js',
+    'uiscript-engine.js',
+    'wasm-wrapper.js',
+    'kwangya_engine.js'
+];
+
+let isModified = false;
+
+function toggleFileMenu() {
+    const dropdown = document.getElementById('fileMenuDropdown');
+    dropdown.classList.toggle('show');
+}
+
+function closeFileMenu() {
+    const dropdown = document.getElementById('fileMenuDropdown');
+    dropdown.classList.remove('show');
+}
+
+document.addEventListener('click', function(e) {
+    const menu = document.querySelector('.file-menu');
+    if (!menu.contains(e.target)) {
+        closeFileMenu();
+    }
+});
+
+async function downloadProject() {
+    closeFileMenu();
+    
+    const zip = new JSZip();
+    
+    for (const file of PROJECT_FILES) {
+        try {
+            if (file.endsWith('.wasm')) {
+                const response = await fetch(file);
+                const buffer = await response.arrayBuffer();
+                zip.file(file, buffer);
+            } else {
+                const response = await fetch(file);
+                const text = await response.text();
+                zip.file(file, text);
+            }
+        } catch (err) {
+            console.warn(`Failed to fetch ${file}:`, err);
+        }
+    }
+    
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'project.mf1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    isModified = false;
+}
+
+function loadProject() {
+    closeFileMenu();
+    
+    if (isModified) {
+        showModal(
+            '読み込みの確認',
+            '保存されていない内容が削除されます。よろしいですか？',
+            function() {
+                triggerFileInput();
+            }
+        );
+    } else {
+        triggerFileInput();
+    }
+}
+
+function triggerFileInput() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.mf1';
+    input.onchange = handleFileLoad;
+    input.click();
+}
+
+async function handleFileLoad(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(arrayBuffer);
+        
+        for (const fileName of PROJECT_FILES) {
+            const zipEntry = zip.file(fileName);
+            if (!zipEntry) continue;
+            
+            if (fileName === 'index.html') {
+                const content = await zipEntry.async('string');
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(content, 'text/html');
+                
+                const codeOutput = doc.getElementById('codeOutput');
+                const uiscriptEditor = doc.getElementById('uiscriptEditor');
+                
+                if (codeOutput) {
+                    document.getElementById('codeOutput').value = codeOutput.textContent || codeOutput.value || '';
+                }
+                if (uiscriptEditor) {
+                    document.getElementById('uiscriptEditor').value = uiscriptEditor.textContent || uiscriptEditor.value || '';
+                }
+            }
+        }
+        
+        const codeContent = await zip.file('script.js')?.async('string');
+        if (codeContent) {
+            const match = codeContent.match(/DEFAULT_CODE\s*=\s*`([\s\S]*?)`/);
+            if (match) {
+                document.getElementById('codeOutput').value = match[1];
+            }
+        }
+        
+        const uiscriptContent = await zip.file('uiscript-engine.js')?.async('string');
+        if (uiscriptContent) {
+            const match = uiscriptContent.match(/DEFAULT_UISCRIPT\s*=\s*`([\s\S]*?)`/);
+            if (match) {
+                document.getElementById('uiscriptEditor').value = match[1];
+            }
+        }
+        
+        codeToBlocks(document.getElementById('codeOutput').value);
+        isModified = false;
+        
+    } catch (err) {
+        console.error('Failed to load project:', err);
+        alert('ファイルの読み込みに失敗しました。');
+    }
+}
+
+function showModal(title, content, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+        <div class="modal">
+            <div class="modal-title">${title}</div>
+            <div class="modal-content">${content}</div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn--text" onclick="this.closest('.modal-overlay').remove()">キャンセル</button>
+                <button class="modal-btn modal-btn--primary" id="modalConfirmBtn">OK</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    requestAnimationFrame(() => {
+        overlay.classList.add('show');
+    });
+    
+    overlay.querySelector('#modalConfirmBtn').addEventListener('click', function() {
+        overlay.remove();
+        if (onConfirm) onConfirm();
+    });
+    
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            overlay.remove();
+        }
+    });
+}
+
+window.toggleFileMenu = toggleFileMenu;
+window.downloadProject = downloadProject;
+window.loadProject = loadProject;
+
+workspace.addChangeListener(function() {
+    isModified = true;
+});
+
 codeToBlocks(DEFAULT_CODE);
 runUIScript();
