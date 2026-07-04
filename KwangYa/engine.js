@@ -784,6 +784,10 @@ function initCanvasEngine(ast) {
     normalChildren.forEach(drawNode);
     ctx.restore();
 
+    fixedChildren.forEach((child) => {
+      measureNode(child, viewW);
+      layoutNode(child, 0, 0, viewW, viewH);
+    });
     fixedChildren.forEach(drawNode);
 
     if (headerNode && headerHeight > 0) {
