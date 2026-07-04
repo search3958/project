@@ -10,37 +10,29 @@ const PRIMARY = PRIMARY_HEX;
 const HOVER_MS = 150;
 const DIALOG_MS = 150;
 
-let _pathCache = new Map();
-
 function getSmoothPath(w, h, cornerRadius) {
   if (!cornerRadius || cornerRadius <= 0) return null;
   const r = Math.min(cornerRadius, w / 2, h / 2);
-  const cacheKey = `${r.toFixed(2)}_${w.toFixed(2)}_${h.toFixed(2)}`;
-  let path = _pathCache.get(cacheKey);
-  if (!path) {
-    const pts = wasmComputeBezierRect(0, 0, w, h, r);
-    path = new Path2D();
-    path.moveTo(pts[0], pts[1]);
-    path.lineTo(pts[2], pts[3]);
-    path.bezierCurveTo(pts[4], pts[5], pts[6], pts[7], pts[8], pts[9]);
-    path.bezierCurveTo(pts[10], pts[11], pts[12], pts[13], pts[14], pts[15]);
-    path.bezierCurveTo(pts[16], pts[17], pts[18], pts[19], pts[20], pts[21]);
-    path.lineTo(pts[22], pts[23]);
-    path.bezierCurveTo(pts[24], pts[25], pts[26], pts[27], pts[28], pts[29]);
-    path.bezierCurveTo(pts[30], pts[31], pts[32], pts[33], pts[34], pts[35]);
-    path.bezierCurveTo(pts[36], pts[37], pts[38], pts[39], pts[40], pts[41]);
-    path.lineTo(pts[42], pts[43]);
-    path.bezierCurveTo(pts[44], pts[45], pts[46], pts[47], pts[48], pts[49]);
-    path.bezierCurveTo(pts[50], pts[51], pts[52], pts[53], pts[54], pts[55]);
-    path.bezierCurveTo(pts[56], pts[57], pts[58], pts[59], pts[60], pts[61]);
-    path.lineTo(pts[62], pts[63]);
-    path.bezierCurveTo(pts[64], pts[65], pts[66], pts[67], pts[68], pts[69]);
-    path.bezierCurveTo(pts[70], pts[71], pts[72], pts[73], pts[74], pts[75]);
-    path.bezierCurveTo(pts[76], pts[77], pts[78], pts[79], pts[80], pts[81]);
-    path.closePath();
-    if (_pathCache.size > 100) _pathCache.clear();
-    _pathCache.set(cacheKey, path);
-  }
+  const pts = wasmComputeBezierRect(0, 0, w, h, r);
+  const path = new Path2D();
+  path.moveTo(pts[0], pts[1]);
+  path.lineTo(pts[2], pts[3]);
+  path.bezierCurveTo(pts[4], pts[5], pts[6], pts[7], pts[8], pts[9]);
+  path.bezierCurveTo(pts[10], pts[11], pts[12], pts[13], pts[14], pts[15]);
+  path.bezierCurveTo(pts[16], pts[17], pts[18], pts[19], pts[20], pts[21]);
+  path.lineTo(pts[22], pts[23]);
+  path.bezierCurveTo(pts[24], pts[25], pts[26], pts[27], pts[28], pts[29]);
+  path.bezierCurveTo(pts[30], pts[31], pts[32], pts[33], pts[34], pts[35]);
+  path.bezierCurveTo(pts[36], pts[37], pts[38], pts[39], pts[40], pts[41]);
+  path.lineTo(pts[42], pts[43]);
+  path.bezierCurveTo(pts[44], pts[45], pts[46], pts[47], pts[48], pts[49]);
+  path.bezierCurveTo(pts[50], pts[51], pts[52], pts[53], pts[54], pts[55]);
+  path.bezierCurveTo(pts[56], pts[57], pts[58], pts[59], pts[60], pts[61]);
+  path.lineTo(pts[62], pts[63]);
+  path.bezierCurveTo(pts[64], pts[65], pts[66], pts[67], pts[68], pts[69]);
+  path.bezierCurveTo(pts[70], pts[71], pts[72], pts[73], pts[74], pts[75]);
+  path.bezierCurveTo(pts[76], pts[77], pts[78], pts[79], pts[80], pts[81]);
+  path.closePath();
   return path;
 }
 
@@ -206,14 +198,6 @@ function initCanvasEngine(ast, container) {
   const dialogAnim = { value: 0, from: 0, to: 0, elapsed: 0 };
   const offscreen = document.createElement('canvas');
   const offCtx = offscreen.getContext('2d');
-  const _backdropCache = new Map();
-  let _headerBlurCache = null;
-  let _headerScrollY = -1;
-  let _contentLayer = null;
-  let _contentLayerDirty = true;
-  let _contentLayerScrollY = -1;
-  let _contentLayerW = 0;
-  let _contentLayerH = 0;
 
   const _eventListeners = { click: [], input: [], change: [] };
 
@@ -464,34 +448,6 @@ function initCanvasEngine(ast, container) {
   }
 
   function drawNodeBody(node, theme, pad, radius) {
-    const isStatic = !node.hovered && !node.focused && !node.selected
-      && !node.style.bgFilter && !node.style.fgFilter && !node.clickAction;
-
-    if (isStatic && node.width > 0 && node.height > 0) {
-      const childSig = node.children.length > 0
-        ? node.children.map(c => `${c.type}${c.text || ''}`).join('')
-        : '';
-      const key = `${node.type}_${node.text || ''}_${childSig}_${node.style.bgColor || ''}_${node.style.fgColor || ''}_${Math.round(node.width)}_${Math.round(node.height)}_${node.style.size || ''}`;
-      if (node._layerKey === key && node._layerCanvas) {
-        ctx.drawImage(node._layerCanvas, node.x, node.y);
-        return;
-      }
-      const lw = Math.ceil(node.width);
-      const lh = Math.ceil(node.height);
-      const lc = document.createElement('canvas');
-      lc.width = lw;
-      lc.height = lh;
-      const lctx = lc.getContext('2d');
-      const savedCtx = ctx;
-      ctx = lctx;
-      ctx.translate(-node.x, -node.y);
-      drawNodeBodyInner(node, theme, pad, radius);
-      ctx = savedCtx;
-      node._layerKey = key;
-      node._layerCanvas = lc;
-      ctx.drawImage(lc, node.x, node.y);
-      return;
-    }
     drawNodeBodyInner(node, theme, pad, radius);
   }
 
@@ -502,28 +458,18 @@ function initCanvasEngine(ast, container) {
         const capY = Math.max(0, Math.floor(node.y));
         const capW = Math.ceil(node.width);
         const capH = Math.ceil(node.height);
-        const cacheKey = `${capX}_${capY}_${capW}_${capH}_${node.style.bgFilter}`;
-        let cached = _backdropCache.get(cacheKey);
-        if (!cached) {
-          const tmpCanvas = document.createElement('canvas');
-          tmpCanvas.width = capW;
-          tmpCanvas.height = capH;
-          const tmpCtx = tmpCanvas.getContext('2d');
-          tmpCtx.drawImage(canvas, capX, capY, capW, capH, 0, 0, capW, capH);
-          const filteredCanvas = document.createElement('canvas');
-          filteredCanvas.width = capW;
-          filteredCanvas.height = capH;
-          const filteredCtx = filteredCanvas.getContext('2d');
-          filteredCtx.filter = node.style.bgFilter;
-          filteredCtx.drawImage(tmpCanvas, 0, 0);
-          cached = { canvas: filteredCanvas, key: cacheKey };
-          if (_backdropCache.size > 20) {
-            const firstKey = _backdropCache.keys().next().value;
-            _backdropCache.delete(firstKey);
-          }
-          _backdropCache.set(cacheKey, cached);
-        }
-        ctx.drawImage(cached.canvas, capX, capY);
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = capW;
+        tmpCanvas.height = capH;
+        const tmpCtx = tmpCanvas.getContext('2d');
+        tmpCtx.drawImage(canvas, capX, capY, capW, capH, 0, 0, capW, capH);
+        const filteredCanvas = document.createElement('canvas');
+        filteredCanvas.width = capW;
+        filteredCanvas.height = capH;
+        const filteredCtx = filteredCanvas.getContext('2d');
+        filteredCtx.filter = node.style.bgFilter;
+        filteredCtx.drawImage(tmpCanvas, 0, 0);
+        ctx.drawImage(filteredCanvas, capX, capY);
       }
       ctx.fillStyle = node.style.bgColor || 'rgba(255,255,255,0.9)';
       fillSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
@@ -808,39 +754,10 @@ function initCanvasEngine(ast, container) {
 
     maxScroll = Math.max(0, contentRoot.totalHeight - viewH + 40);
 
-    const needRebuild = _contentLayerDirty || !_contentLayer
-      || _contentLayerW !== Math.ceil(viewW * pr)
-      || _contentLayerH !== Math.ceil((contentRoot.totalHeight + 40) * pr);
-
-    if (needRebuild) {
-      const lw = Math.ceil(viewW * pr);
-      const lh = Math.ceil((contentRoot.totalHeight + 40) * pr);
-      if (!_contentLayer || _contentLayer.width !== lw || _contentLayer.height !== lh) {
-        _contentLayer = document.createElement('canvas');
-        _contentLayer.width = lw;
-        _contentLayer.height = lh;
-      }
-      const lctx = _contentLayer.getContext('2d');
-      lctx.setTransform(pr, 0, 0, pr, 0, 0);
-      lctx.clearRect(0, 0, lw, lh);
-      lctx.fillStyle = THEME.body.bg;
-      lctx.fillRect(0, 0, viewW, contentRoot.totalHeight + 40);
-
-      const savedCtx = ctx;
-      ctx = lctx;
-      normalChildren.forEach(drawNode);
-      ctx = savedCtx;
-
-      _contentLayerW = lw;
-      _contentLayerH = lh;
-      _contentLayerDirty = false;
-      _contentLayerScrollY = scrollY;
-    }
-
-    ctx.drawImage(_contentLayer,
-      0, Math.floor(scrollY * pr), Math.ceil(viewW * pr), Math.ceil(viewH * pr),
-      0, 0, viewW, viewH
-    );
+    ctx.save();
+    ctx.translate(0, -scrollY);
+    normalChildren.forEach(drawNode);
+    ctx.restore();
 
     fixedChildren.forEach((child) => {
       measureNode(child, viewW);
@@ -852,33 +769,28 @@ function initCanvasEngine(ast, container) {
       const capW = Math.ceil(viewW * pr);
       const capH = Math.ceil(headerHeight * pr);
 
-      const slicesChanged = Math.abs(scrollY - _headerScrollY) > 2;
-      if (slicesChanged || !_headerBlurCache) {
-        offscreen.width = capW;
-        offscreen.height = capH;
-        offCtx.clearRect(0, 0, capW, capH);
-        offCtx.drawImage(canvas, 0, 0, capW, capH, 0, 0, capW, capH);
+      offscreen.width = capW;
+      offscreen.height = capH;
+      offCtx.clearRect(0, 0, capW, capH);
+      offCtx.drawImage(canvas, 0, 0, capW, capH, 0, 0, capW, capH);
 
-        const maxBlur = THEME.header.blur || 20;
-        const steps = 8;
+      const maxBlur = THEME.header.blur || 20;
+      const steps = 8;
 
-        const slices = [];
-        for (let i = 0; i < steps; i++) {
-          const blurAmount = maxBlur * (1 - i / steps);
-          const tmp = document.createElement('canvas');
-          tmp.width = capW;
-          tmp.height = capH;
-          const tmpCtx = tmp.getContext('2d');
-          tmpCtx.filter = `blur(${blurAmount}px)`;
-          tmpCtx.drawImage(offscreen, 0, 0);
-          slices.push(tmp);
-        }
-        _headerBlurCache = { slices, capW, capH };
-        _headerScrollY = scrollY;
+      const slices = [];
+      for (let i = 0; i < steps; i++) {
+        const blurAmount = maxBlur * (1 - i / steps);
+        const tmp = document.createElement('canvas');
+        tmp.width = capW;
+        tmp.height = capH;
+        const tmpCtx = tmp.getContext('2d');
+        tmpCtx.filter = `blur(${blurAmount}px)`;
+        tmpCtx.drawImage(offscreen, 0, 0);
+        slices.push(tmp);
       }
 
-      const { slices, capW: cw, capH: ch } = _headerBlurCache;
-      const steps = slices.length;
+      const cw = capW;
+      const ch = capH;
       const blend = 2;
 
       for (let i = 0; i < steps; i++) {
@@ -943,7 +855,6 @@ function initCanvasEngine(ast, container) {
 
   function scheduleRender() {
     dirty = true;
-    _contentLayerDirty = true;
   }
 
   function findNodeAt(node, mx, my) {
@@ -1183,7 +1094,6 @@ function initCanvasEngine(ast, container) {
 
     scrollY += e.deltaY * 0.7;
     scrollY = Math.max(0, Math.min(scrollY, maxScroll));
-    _backdropCache.clear();
     render();
   }, { passive: false });
 
@@ -1196,8 +1106,6 @@ function initCanvasEngine(ast, container) {
     canvas.width = Math.round(viewW * pixelRatio);
     canvas.height = Math.round(viewH * pixelRatio);
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    _backdropCache.clear();
-    _contentLayerDirty = true;
     render();
   }
 
@@ -1266,7 +1174,7 @@ function initCanvasEngine(ast, container) {
     },
     setText(id, text) {
       const node = findNodeById(ast, id);
-      if (node) { node.text = text; node._layerKey = null; scheduleRender(); }
+      if (node) { node.text = text; scheduleRender(); }
       return api;
     },
     getText(id) {
@@ -1275,7 +1183,7 @@ function initCanvasEngine(ast, container) {
     },
     setStyle(id, prop, value) {
       const node = findNodeById(ast, id);
-      if (node) { node.style[prop] = value; node._layerKey = null; scheduleRender(); }
+      if (node) { node.style[prop] = value; scheduleRender(); }
       return api;
     },
     getStyle(id, prop) {
@@ -1284,7 +1192,7 @@ function initCanvasEngine(ast, container) {
     },
     setSelected(id, selected) {
       const node = findNodeById(ast, id);
-      if (node) { node.selected = selected; node._layerKey = null; scheduleRender(); }
+      if (node) { node.selected = selected; scheduleRender(); }
       return api;
     },
     isSelected(id) {
@@ -1302,7 +1210,7 @@ function initCanvasEngine(ast, container) {
     },
     setAttribute(id, key, value) {
       const node = findNodeById(ast, id);
-      if (node) { node[key] = value; node._layerKey = null; scheduleRender(); }
+      if (node) { node[key] = value; scheduleRender(); }
       return api;
     },
     getAttribute(id, key) {
@@ -1333,3 +1241,16 @@ function initCanvasEngine(ast, container) {
 }
 
 export { parseCustomSyntax, initCanvasEngine, findNodeById, collectAllNodes };
+
+const sourceEl = document.querySelector('source-code');
+if (sourceEl) {
+  const sourceText = sourceEl.textContent;
+  const ast = parseCustomSyntax(sourceText);
+  if (ast) {
+    initWasm().then(() => {
+      const container = document.body;
+      container.innerHTML = '';
+      initCanvasEngine(ast, container);
+    });
+  }
+}
