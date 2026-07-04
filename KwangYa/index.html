@@ -81,6 +81,66 @@ body {
   img { "プロダクトバナーのモックプレースホルダー" }
 
   br { "" }
+
+  h3 { "新しいスタイルプロパティ" }
+  p { "size, bgFilter(backdrop-filter), fgFilter(filter), shadow, position:fixed のデモ" }
+  .size:18px
+
+  br { "" }
+  h3 { "size（フォントサイズ）" }
+  p { "このテキストは size:22px です" }
+  .size:22px
+  p { "このテキストは size:12px です" }
+  .size:12px
+
+  br { "" }
+  h3 { "bgFilter（backdrop-filter）" }
+  div { "blur(4px) の背景（背後にぼかし）" }
+  .bgColor:rgba(255,255,255,0.6)
+  .bgFilter:blur(4px)
+  .padding:20px
+  .radius:12px
+
+  br { "" }
+  div { "brightness(1.3) の背景" }
+  .bgColor:rgba(255,100,150,0.6)
+  .bgFilter:brightness(1.3)
+  .padding:20px
+  .radius:12px
+
+  br { "" }
+  h3 { "fgFilter（filter: 背景+テキスト両方に適用）" }
+  div { "blur(1px) のフィルター" }
+  .fgFilter:blur(1px)
+  .bgColor:#e0e0ff
+  .padding:16px
+  .radius:8px
+
+  br { "" }
+  div { "grayscale(1) のフィルター" }
+  .fgFilter:grayscale(1)
+  .bgColor:#ffe0e0
+  .padding:16px
+  .radius:8px
+
+  br { "" }
+  h3 { "shadow（カスタムシャドウ）" }
+  button { "シャドウ付きボタン" }
+  .shadow:0px 8px 24px rgba(255,100,0,0.5)
+  .bgColor:#ff6600
+
+  br { "" }
+  div { "シャドウ付きカード" }
+  .shadow:4px 4px 20px rgba(0,100,255,0.4)
+  .bgColor:#e8f4ff
+  .padding:24px
+  .radius:16px
+
+  br { "" }
+  h3 { "position:fixed（ビューポート固定）" }
+  p { "スクロールしてみてください。下の固定要素が追従します。" }
+
+  br { "" }
   h3 { "スクロール検証" }
   p { "ここから下にスクロールできます。" }
 
@@ -98,6 +158,18 @@ body {
   button { "デモボタン 11" }
   button { "デモボタン 12" }
   button { "最下部のボタン" }
+
+  div { "固定フローティングバー" }
+  .position:fixed
+  .bottom:20px
+  .left:20px
+  .right:20px
+  .bgColor:rgba(30,30,30,0.85)
+  .fgColor:#ffffff
+  .bgFilter:blur(10px)
+  .padding:16px
+  .radius:16px
+  .shadow:0px 4px 20px rgba(0,0,0,0.3)
 }
 .padding:24px
 </source-code>

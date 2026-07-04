@@ -1,0 +1,87 @@
+body { 
+    font-family: 'Segoe UI', sans-serif; 
+    margin: 0; 
+    background-color: #1e1e1e;
+    color: #333;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    font-size: 20px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.editor-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-right: 2px solid #ccc;
+}
+
+.tabs {
+    display: flex;
+    background: #f0f0f0;
+    border-bottom: 1px solid #ccc;
+}
+.tab-btn {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: bold;
+    color: #666;
+}
+.tab-btn.active {
+    background: #ffffff;
+    color: #4CAF50;
+    border-bottom: 3px solid #4CAF50;
+}
+
+#blocklyDiv { flex: 1; position: relative; }
+#codeDiv { flex: 1; display: none; padding: 20px; background: #f8fafc; overflow-y: auto; }
+#codeOutput { width: 100%; height: 100%; border: none; background: transparent; font-family: monospace; resize: none; font-size: 14px;}
+
+.stage-panel {
+    width: 400px;
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+}
+.stage-header {
+    padding: 10px;
+    background: #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    border-bottom: 1px solid #ccc;
+}
+.run-btn {
+    background: #ffbf00;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.run-btn:hover { background: #e6ac00; }
+
+.blocklyToolbox,.blocklyFlyoutBackground{
+    box-shadow: 10px 0 32px #0002;
+    background-color: #ffffff7d;
+    backdrop-filter:blur(32px)
+}

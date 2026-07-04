@@ -131,6 +131,15 @@ function parseCustomSyntax(text) {
         if (prop === 'bgColor') target.style.bgColor = val;
         if (prop === 'fgColor') target.style.fgColor = val;
         if (prop === 'align') target.style.align = val;
+        if (prop === 'size') target.style.size = numVal;
+        if (prop === 'bgFilter') target.style.bgFilter = val;
+        if (prop === 'fgFilter') target.style.fgFilter = val;
+        if (prop === 'shadow') target.style.shadow = val;
+        if (prop === 'position') target.style.position = val;
+        if (prop === 'top') target.style.top = numVal;
+        if (prop === 'left') target.style.left = numVal;
+        if (prop === 'right') target.style.right = numVal;
+        if (prop === 'bottom') target.style.bottom = numVal;
       }
       return;
     }
@@ -235,8 +244,51 @@ function initCanvasEngine(ast) {
 
   function setFont(node) {
     const t = THEME[node.type] || {};
-    const fs = t.fontSize || 15;
+    const fs = node.style.size !== undefined ? node.style.size : (t.fontSize || 15);
     ctx.font = `${t.bold ? 'bold ' : ''}${fs}px ${FONT_FAMILY}`;
+  }
+
+  function getShadowProps(node) {
+    const s = node.style.shadow;
+    if (!s) return null;
+    const props = {};
+    const parts = s.split(/\s+/);
+    let i = 0;
+    while (i < parts.length) {
+      const p = parts[i];
+      if (p.endsWith('px')) {
+        const v = parseFloat(p);
+        if (i === 0) { props.offsetX = v; }
+        else if (i === 1) { props.offsetY = v; }
+        else if (i === 2) { props.blur = v; }
+        else if (i === 3) { props.spread = v; }
+      } else if (p.startsWith('rgb') || p.startsWith('#') || p === 'transparent') {
+        props.color = p;
+      } else if (p === 'inset') {
+        props.inset = true;
+      }
+      i++;
+    }
+    if (props.offsetX === undefined && parts.length >= 1 && parts[0].endsWith('px')) props.offsetX = parseFloat(parts[0]);
+    if (props.offsetY === undefined && parts.length >= 2 && parts[1].endsWith('px')) props.offsetY = parseFloat(parts[1]);
+    if (props.blur === undefined && parts.length >= 3 && parts[2].endsWith('px')) props.blur = parseFloat(parts[2]);
+    return props;
+  }
+
+  function applyShadow(node) {
+    const p = getShadowProps(node);
+    if (!p) return;
+    ctx.shadowOffsetX = p.offsetX || 0;
+    ctx.shadowOffsetY = p.offsetY || 0;
+    ctx.shadowBlur = p.blur || 0;
+    ctx.shadowColor = p.color || 'rgba(0,0,0,0.2)';
+  }
+
+  function clearShadow() {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
   }
 
   function shadowFor(node, focused = false) {
@@ -307,7 +359,7 @@ function initCanvasEngine(ast) {
       node.height = THEME.img.height || 160;
     } else if (node.type === 'button' || node.type === 'input') {
       setFont(node);
-      const fs = (THEME[node.type] || {}).fontSize || 15;
+      const fs = node.style.size !== undefined ? node.style.size : ((THEME[node.type] || {}).fontSize || 15);
       node.height = fs + pad * 2;
       if (node.style.width === 'full') {
         node.width = availWidth;
@@ -320,13 +372,13 @@ function initCanvasEngine(ast) {
       const marker = 20;
       const metrics = ctx.measureText(node.text || '');
       node.width = metrics.width + pad * 2 + marker + 12;
-      const fs = (THEME[node.type] || {}).fontSize || 15;
+      const fs = node.style.size !== undefined ? node.style.size : ((THEME[node.type] || {}).fontSize || 15);
       node.height = Math.max(22, fs + pad * 2);
     } else if (node.text !== undefined) {
       setFont(node);
       const metrics = ctx.measureText(node.text);
       const extraW = (node.type === 'li') ? 24 : 0;
-      const fs = (THEME[node.type] || {}).fontSize || 15;
+      const fs = node.style.size !== undefined ? node.style.size : ((THEME[node.type] || {}).fontSize || 15);
       node.width = metrics.width + pad * 2 + extraW;
       node.height = fs + pad * 2;
     } else {
@@ -363,7 +415,23 @@ function initCanvasEngine(ast) {
     node.totalHeight = node.height + mt + mb;
   }
 
-  function layoutNode(node, x, y) {
+  function layoutNode(node, x, y, viewW, viewH) {
+    if (node.style.position === 'fixed') {
+      const pad = node.pad || 0;
+      node.x = node.style.left !== undefined ? node.style.left : (node.style.right !== undefined ? viewW - (node.style.right || 0) - node.width : x);
+      node.y = node.style.top !== undefined ? node.style.top : (node.style.bottom !== undefined ? viewH - (node.style.bottom || 0) - node.height : y);
+      const gap = getGap(node);
+      const display = node.style.display || 'block';
+      let childX = node.x + pad;
+      let childY = node.y + pad;
+      node.children.forEach((child) => {
+        layoutNode(child, childX, childY, viewW, viewH);
+        if (display === 'flex') { childX += child.totalWidth + gap; }
+        else { childY += child.totalHeight + gap; }
+      });
+      return;
+    }
+
     node.x = x;
     node.y = y + (node.marginTopVal || 0);
 
@@ -386,7 +454,7 @@ function initCanvasEngine(ast) {
       if (node.style.align === 'center' && display === 'block') {
         cx = node.x + (node.width - child.totalWidth) / 2;
       }
-      layoutNode(child, cx, childY);
+      layoutNode(child, cx, childY, viewW, viewH);
       if (display === 'flex') {
         childX += child.totalWidth + gap;
       } else {
@@ -402,42 +470,53 @@ function initCanvasEngine(ast) {
 
     ctx.save();
 
+    if (node.style.fgFilter) { ctx.filter = node.style.fgFilter; }
+
     if (node.type === 'div' && (pad || radius)) {
+      if (node.style.bgFilter) {
+        const capX = Math.max(0, Math.floor(node.x));
+        const capY = Math.max(0, Math.floor(node.y));
+        const capW = Math.ceil(node.width);
+        const capH = Math.ceil(node.height);
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = capW;
+        tmpCanvas.height = capH;
+        const tmpCtx = tmpCanvas.getContext('2d');
+        tmpCtx.drawImage(canvas, capX, capY, capW, capH, 0, 0, capW, capH);
+        ctx.save();
+        ctx.filter = node.style.bgFilter;
+        ctx.drawImage(tmpCanvas, 0, 0, capW, capH, capX, capY, capW, capH);
+        ctx.restore();
+      }
       ctx.fillStyle = node.style.bgColor || 'rgba(255,255,255,0.9)';
       drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
       ctx.fill();
-      ctx.shadowColor = shadowFor(node);
-      ctx.shadowBlur = node.hovered ? 18 : 8;
-      ctx.shadowOffsetY = node.hovered ? 8 : 4;
+      if (node.style.shadow) { applyShadow(node); }
+      else { ctx.shadowColor = shadowFor(node); ctx.shadowBlur = node.hovered ? 18 : 8; ctx.shadowOffsetY = node.hovered ? 8 : 4; }
       ctx.strokeStyle = 'rgba(0,0,0,0.06)';
       ctx.lineWidth = 1;
+      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
       ctx.stroke();
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
+      clearShadow();
     }
 
     if (node.type === 'button') {
       const hover = node.hoverAmount || 0;
       const baseColor = node.style.bgColor || PRIMARY;
       const hoverColor = node.style.bgColor ? mixHex(node.style.bgColor, '#000000', 0.15) : '#0050D8';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.16)';
-      ctx.shadowBlur = 10;
-      ctx.shadowOffsetY = 4;
+      if (node.style.shadow) { applyShadow(node); }
+      else { ctx.shadowColor = 'rgba(0, 0, 0, 0.16)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4; }
       ctx.fillStyle = mixHex(baseColor, hoverColor, hover);
       drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       ctx.fill();
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
+      clearShadow();
     }
 
     if (node.type === 'option') {
       const hover = node.hoverAmount || 0;
       const baseColor = node.style.bgColor || (theme.bg || '#E5E5E5');
-      ctx.shadowColor = shadowFor(node);
-      ctx.shadowBlur = 6 + hover * 10;
-      ctx.shadowOffsetY = 3 + hover * 5;
+      if (node.style.shadow) { applyShadow(node); }
+      else { ctx.shadowColor = shadowFor(node); ctx.shadowBlur = 6 + hover * 10; ctx.shadowOffsetY = 3 + hover * 5; }
       ctx.fillStyle = node.selected ? (node.style.bgColor || PRIMARY) : mixHex(baseColor, '#D9D9DE', hover);
       drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       ctx.fill();
@@ -446,36 +525,32 @@ function initCanvasEngine(ast) {
         ctx.lineWidth = 1;
         ctx.stroke();
       }
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
+      clearShadow();
     }
 
     if (node.type === 'input') {
-      ctx.fillStyle = theme.bg || '#FFFFFF';
-      ctx.shadowColor = shadowFor(node, node.focused);
+      ctx.fillStyle = node.style.bgColor || theme.bg || '#FFFFFF';
+      if (node.style.shadow) { applyShadow(node); }
+      else { ctx.shadowColor = shadowFor(node, node.focused); }
       const hover = node.hoverAmount || 0;
-      ctx.shadowBlur = node.focused ? 20 : (8 + hover * 10);
-      ctx.shadowOffsetY = node.focused ? 10 : (4 + hover * 4);
+      if (!node.style.shadow) { ctx.shadowBlur = node.focused ? 20 : (8 + hover * 10); ctx.shadowOffsetY = node.focused ? 10 : (4 + hover * 4); }
       drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       ctx.fill();
       ctx.strokeStyle = node.focused ? PRIMARY : mixHex((theme.border || '#D2D2D7'), '#8DB2FF', hover);
       ctx.lineWidth = 1.5;
       ctx.stroke();
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
+      clearShadow();
     }
 
     if (node.type === 'radio') {
       const boxSize = 20;
       const cx = node.x + pad;
       const cy = node.y + node.height / 2;
-      ctx.shadowColor = shadowFor(node);
+      if (node.style.shadow) { applyShadow(node); }
+      else { ctx.shadowColor = shadowFor(node); }
       const hover = node.hoverAmount || 0;
-      ctx.shadowBlur = 5 + hover * 8;
-      ctx.shadowOffsetY = 2 + hover * 4;
-      ctx.fillStyle = '#FFFFFF';
+      if (!node.style.shadow) { ctx.shadowBlur = 5 + hover * 8; ctx.shadowOffsetY = 2 + hover * 4; }
+      ctx.fillStyle = node.style.bgColor || '#FFFFFF';
       drawSmoothRect(ctx, cx, cy - boxSize / 2, boxSize, boxSize, 9999);
       ctx.fill();
       ctx.strokeStyle = node.selected ? PRIMARY : mixHex((theme.border || '#D2D2D7'), '#8DB2FF', hover);
@@ -487,9 +562,7 @@ function initCanvasEngine(ast) {
         ctx.arc(cx + boxSize / 2, cy, 5.5, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
+      clearShadow();
     }
 
     if (node.type === 'img') {
@@ -516,7 +589,7 @@ function initCanvasEngine(ast) {
 
     if (node.text !== undefined && node.type !== 'img') {
       setFont(node);
-      const fs = theme.fontSize || 15;
+      const fs = node.style.size !== undefined ? node.style.size : (theme.fontSize || 15);
       const hover = node.hoverAmount || 0;
       const textLift = hover * 1.5;
       const textAlpha = 0.90 + hover * 0.10;
@@ -601,6 +674,7 @@ function initCanvasEngine(ast) {
         ctx.fillText(node.text, node.x + pad, node.y + pad - textLift);
         ctx.globalAlpha = 1;
       }
+
     }
 
     node.children.forEach(drawNode);
@@ -688,25 +762,29 @@ function initCanvasEngine(ast) {
 
     const headerNode = ast.children.find(c => c.type === 'header');
     const contentChildren = ast.children.filter(c => c.type !== 'header');
+    const fixedChildren = contentChildren.filter(c => c.style.position === 'fixed');
+    const normalChildren = contentChildren.filter(c => c.style.position !== 'fixed');
     const headerHeight = headerNode ? (THEME.header.height || 56) : 0;
 
     if (headerNode) {
       measureNode(headerNode, viewW);
       headerNode.x = 0;
       headerNode.y = 0;
-      layoutNode(headerNode, 0, 0);
+      layoutNode(headerNode, 0, 0, viewW, viewH);
     }
 
-    const contentRoot = { type: 'root', children: contentChildren, style: { ...ast.style } };
+    const contentRoot = { type: 'root', children: normalChildren, style: { ...ast.style } };
     measureNode(contentRoot, viewW);
-    layoutNode(contentRoot, 0, headerHeight);
+    layoutNode(contentRoot, 0, headerHeight, viewW, viewH);
 
     maxScroll = Math.max(0, contentRoot.totalHeight - viewH + 40);
 
     ctx.save();
     ctx.translate(0, -scrollY);
-    contentChildren.forEach(drawNode);
+    normalChildren.forEach(drawNode);
     ctx.restore();
+
+    fixedChildren.forEach(drawNode);
 
     if (headerNode && headerHeight > 0) {
       const capW = Math.ceil(viewW * pr);
@@ -841,8 +919,16 @@ function initCanvasEngine(ast) {
     }
     if (!hit) {
       const contentChildren = ast.children.filter(c => c.type !== 'header');
-      for (let i = contentChildren.length - 1; i >= 0; i--) {
-        hit = findNodeAt(contentChildren[i], worldX, worldY);
+      const fixedChildren = contentChildren.filter(c => c.style.position === 'fixed');
+      for (let i = fixedChildren.length - 1; i >= 0; i--) {
+        hit = findNodeAt(fixedChildren[i], mx, my);
+        if (hit) break;
+      }
+    }
+    if (!hit) {
+      const scrollChildren = ast.children.filter(c => c.type !== 'header' && c.style.position !== 'fixed');
+      for (let i = scrollChildren.length - 1; i >= 0; i--) {
+        hit = findNodeAt(scrollChildren[i], worldX, worldY);
         if (hit) break;
       }
     }
@@ -892,8 +978,16 @@ function initCanvasEngine(ast) {
     }
     if (!hit) {
       const contentChildren = ast.children.filter(c => c.type !== 'header');
-      for (let i = contentChildren.length - 1; i >= 0; i--) {
-        hit = findNodeAt(contentChildren[i], worldX, worldY);
+      const fixedChildren = contentChildren.filter(c => c.style.position === 'fixed');
+      for (let i = fixedChildren.length - 1; i >= 0; i--) {
+        hit = findNodeAt(fixedChildren[i], mx, my);
+        if (hit) break;
+      }
+    }
+    if (!hit) {
+      const scrollChildren = ast.children.filter(c => c.type !== 'header' && c.style.position !== 'fixed');
+      for (let i = scrollChildren.length - 1; i >= 0; i--) {
+        hit = findNodeAt(scrollChildren[i], worldX, worldY);
         if (hit) break;
       }
     }
