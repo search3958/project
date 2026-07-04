@@ -1,82 +1,69 @@
+import {
+  initWasm, isWasmReady,
+  wasmBlendHex, wasmEaseCubic, wasmStepAnimation,
+  wasmParseShadow, wasmComputeBezierRect
+} from './wasm-wrapper.js';
+
 const FONT_FAMILY = 'LINE Seed JP';
 const PRIMARY_HEX = '#0066ff';
 const PRIMARY = PRIMARY_HEX;
 const HOVER_MS = 150;
 const DIALOG_MS = 150;
 
-function drawSmoothRect(ctx, x, y, w, h, cornerRadius) {
-  if (!cornerRadius || cornerRadius <= 0) {
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    return;
-  }
+let _pathCache = new Map();
 
+function getSmoothPath(w, h, cornerRadius) {
+  if (!cornerRadius || cornerRadius <= 0) return null;
   const r = Math.min(cornerRadius, w / 2, h / 2);
-  const lx = Math.min(w / 2, 1.528665 * r);
-  const ly = Math.min(h / 2, 1.528665 * r);
-
-  const cx3 = 0.63148 * r;
-  const cx4 = 0.37282 * r;
-  const cx5 = 0.16905 * r;
-  const cx6 = 0.07491 * r;
-  const cy3 = cx3;
-  const cy4 = cx4;
-  const cy5 = cx5;
-  const cy6 = cx6;
-
-  const d1x = 0.04 * r + 0.75697 * (lx - r);
-  const d2x = 0.18 * r + 0.90847 * (lx - r);
-  const d1y = 0.04 * r + 0.75697 * (ly - r);
-  const d2y = 0.18 * r + 0.90847 * (ly - r);
-
-  ctx.beginPath();
-  ctx.moveTo(x + w, y + h / 2);
-  ctx.lineTo(x + w, y + h - ly);
-  ctx.bezierCurveTo(x + w, y + h - ly + d1y, x + w, y + h - ly + d2y, x + w - cx6, y + h - cy3);
-  ctx.bezierCurveTo(x + w - cx5, y + h - cy4, x + w - cx4, y + h - cy5, x + w - cx3, y + h - cy6);
-  ctx.bezierCurveTo(x + w - lx + d2x, y + h, x + w - lx + d1x, y + h, x + w - lx, y + h);
-
-  ctx.lineTo(x + lx, y + h);
-  ctx.bezierCurveTo(x + lx - d1x, y + h, x + lx - d2x, y + h, x + cx3, y + h - cy6);
-  ctx.bezierCurveTo(x + cx4, y + h - cy5, x + cx5, y + h - cy4, x + cx6, y + h - cy3);
-  ctx.bezierCurveTo(x, y + h - ly + d2y, x, y + h - ly + d1y, x, y + h - ly);
-
-  ctx.lineTo(x, y + ly);
-  ctx.bezierCurveTo(x, y + ly - d1y, x, y + ly - d2y, x + cx6, y + cy3);
-  ctx.bezierCurveTo(x + cx5, y + cy4, x + cx4, y + cy5, x + cx3, y + cy6);
-  ctx.bezierCurveTo(x + lx - d2x, y, x + lx - d1x, y, x + lx, y);
-
-  ctx.lineTo(x + w - lx, y);
-  ctx.bezierCurveTo(x + w - lx + d1x, y, x + w - lx + d2x, y, x + w - cx3, y + cy6);
-  ctx.bezierCurveTo(x + w - cx4, y + cy5, x + w - cx5, y + cy4, x + w - cx6, y + cy3);
-  ctx.bezierCurveTo(x + w, y + ly - d2y, x + w, y + ly - d1y, x + w, y + ly);
-
-  ctx.closePath();
+  const cacheKey = `${r.toFixed(2)}_${w.toFixed(2)}_${h.toFixed(2)}`;
+  let path = _pathCache.get(cacheKey);
+  if (!path) {
+    const pts = wasmComputeBezierRect(0, 0, w, h, r);
+    path = new Path2D();
+    path.moveTo(pts[0], pts[1]);
+    path.lineTo(pts[2], pts[3]);
+    path.bezierCurveTo(pts[4], pts[5], pts[6], pts[7], pts[8], pts[9]);
+    path.bezierCurveTo(pts[10], pts[11], pts[12], pts[13], pts[14], pts[15]);
+    path.lineTo(pts[16], pts[17]);
+    path.bezierCurveTo(pts[18], pts[19], pts[20], pts[21], pts[22], pts[23]);
+    path.bezierCurveTo(pts[24], pts[25], pts[26], pts[27], pts[28], pts[29]);
+    path.lineTo(pts[30], pts[31]);
+    path.bezierCurveTo(pts[32], pts[33], pts[34], pts[35], pts[36], pts[37]);
+    path.bezierCurveTo(pts[38], pts[39], pts[40], pts[41], pts[42], pts[43]);
+    path.lineTo(pts[44], pts[45]);
+    path.bezierCurveTo(pts[46], pts[47], pts[48], pts[49], pts[50], pts[51]);
+    path.bezierCurveTo(pts[52], pts[53], pts[54], pts[55], pts[56], pts[57]);
+    path.closePath();
+    if (_pathCache.size > 100) _pathCache.clear();
+    _pathCache.set(cacheKey, path);
+  }
+  return path;
 }
 
-function hexToRgb(hex) {
-  const normalized = hex.replace('#', '');
-  if (normalized.length !== 6) return { r: 0, g: 0, b: 0 };
-  return {
-    r: parseInt(normalized.slice(0, 2), 16),
-    g: parseInt(normalized.slice(2, 4), 16),
-    b: parseInt(normalized.slice(4, 6), 16)
-  };
+function fillSmoothRect(ctx, x, y, w, h, cornerRadius) {
+  if (!cornerRadius || cornerRadius <= 0) { ctx.fillRect(x, y, w, h); return; }
+  const path = getSmoothPath(w, h, cornerRadius);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fill(path);
+  ctx.restore();
+}
+
+function strokeSmoothRect(ctx, x, y, w, h, cornerRadius) {
+  if (!cornerRadius || cornerRadius <= 0) { ctx.strokeRect(x, y, w, h); return; }
+  const path = getSmoothPath(w, h, cornerRadius);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.stroke(path);
+  ctx.restore();
 }
 
 function mixHex(a, b, t) {
-  const c1 = hexToRgb(a);
-  const c2 = hexToRgb(b);
-  const clamped = Math.max(0, Math.min(1, t));
-  const r = Math.round(c1.r + (c2.r - c1.r) * clamped);
-  const g = Math.round(c1.g + (c2.g - c1.g) * clamped);
-  const b2 = Math.round(c1.b + (c2.b - c1.b) * clamped);
-  return `rgb(${r}, ${g}, ${b2})`;
+  return wasmBlendHex(a, b, t);
 }
 
 function easeOutCubic(t) {
-  const x = Math.max(0, Math.min(1, t));
-  return 1 - Math.pow(1 - x, 3);
+  return wasmEaseCubic(t);
 }
 
 function parseCustomSyntax(text) {
@@ -188,6 +175,7 @@ function initCanvasEngine(ast) {
   let scrollY = 0;
   let maxScroll = 0;
   let activeDialog = null;
+  let dirty = true;
   const dialogAnim = { value: 0, from: 0, to: 0, elapsed: 0 };
   const offscreen = document.createElement('canvas');
   const offCtx = offscreen.getContext('2d');
@@ -248,40 +236,17 @@ function initCanvasEngine(ast) {
     ctx.font = `${t.bold ? 'bold ' : ''}${fs}px ${FONT_FAMILY}`;
   }
 
-  function getShadowProps(node) {
-    const s = node.style.shadow;
-    if (!s) return null;
-    const props = {};
-    const parts = s.split(/\s+/);
-    let i = 0;
-    while (i < parts.length) {
-      const p = parts[i];
-      if (p.endsWith('px')) {
-        const v = parseFloat(p);
-        if (i === 0) { props.offsetX = v; }
-        else if (i === 1) { props.offsetY = v; }
-        else if (i === 2) { props.blur = v; }
-        else if (i === 3) { props.spread = v; }
-      } else if (p.startsWith('rgb') || p.startsWith('#') || p === 'transparent') {
-        props.color = p;
-      } else if (p === 'inset') {
-        props.inset = true;
-      }
-      i++;
-    }
-    if (props.offsetX === undefined && parts.length >= 1 && parts[0].endsWith('px')) props.offsetX = parseFloat(parts[0]);
-    if (props.offsetY === undefined && parts.length >= 2 && parts[1].endsWith('px')) props.offsetY = parseFloat(parts[1]);
-    if (props.blur === undefined && parts.length >= 3 && parts[2].endsWith('px')) props.blur = parseFloat(parts[2]);
-    return props;
-  }
-
   function applyShadow(node) {
-    const p = getShadowProps(node);
-    if (!p) return;
-    ctx.shadowOffsetX = p.offsetX || 0;
-    ctx.shadowOffsetY = p.offsetY || 0;
-    ctx.shadowBlur = p.blur || 0;
-    ctx.shadowColor = p.color || 'rgba(0,0,0,0.2)';
+    const s = node.style.shadow;
+    if (!s) return;
+    const p = wasmParseShadow(s);
+    ctx.shadowOffsetX = p.offsetX;
+    ctx.shadowOffsetY = p.offsetY;
+    ctx.shadowBlur = p.blur;
+    const r = Math.round(p.colorR * 255);
+    const g = Math.round(p.colorG * 255);
+    const b = Math.round(p.colorB * 255);
+    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, ${p.colorA})`;
   }
 
   function clearShadow() {
@@ -299,25 +264,12 @@ function initCanvasEngine(ast) {
   }
 
   function stepTimedAnimation(state, target, dtMs, durationMs) {
-    let changed = false;
-    if (state.to !== target) {
-      state.from = state.value;
-      state.to = target;
-      state.elapsed = 0;
-      changed = true;
-    }
-
-    if (state.value !== state.to || state.from !== state.to) {
-      state.elapsed = Math.min(durationMs, state.elapsed + dtMs);
-      const eased = easeOutCubic(durationMs <= 0 ? 1 : state.elapsed / durationMs);
-      const next = state.from + (state.to - state.from) * eased;
-      if (Math.abs(next - state.value) > 0.0001) changed = true;
-      state.value = next;
-      if (state.elapsed >= durationMs) {
-        state.value = state.to;
-      }
-    }
-
+    const r = wasmStepAnimation(state.value, state.from, state.to, state.elapsed, dtMs, durationMs, target);
+    const changed = Math.abs(r.value - state.value) > 0.0001 || state.to !== target;
+    state.value = r.value;
+    state.from = r.from;
+    state.to = r.to;
+    state.elapsed = r.elapsed;
     return changed;
   }
 
@@ -489,26 +441,23 @@ function initCanvasEngine(ast) {
         ctx.restore();
       }
       ctx.fillStyle = node.style.bgColor || 'rgba(255,255,255,0.9)';
-      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
-      ctx.fill();
+      fillSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
       if (node.style.shadow) { applyShadow(node); }
       else { ctx.shadowColor = shadowFor(node); ctx.shadowBlur = node.hovered ? 18 : 8; ctx.shadowOffsetY = node.hovered ? 8 : 4; }
       ctx.strokeStyle = 'rgba(0,0,0,0.06)';
       ctx.lineWidth = 1;
-      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
-      ctx.stroke();
+      strokeSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
       clearShadow();
     }
 
     if (node.type === 'button') {
       const hover = node.hoverAmount || 0;
       const baseColor = node.style.bgColor || PRIMARY;
-      const hoverColor = node.style.bgColor ? mixHex(node.style.bgColor, '#000000', 0.15) : '#0050D8';
+      const hoverColor = node.style.bgColor ? wasmBlendHex(node.style.bgColor, '#000000', 0.15) : '#0050D8';
       if (node.style.shadow) { applyShadow(node); }
       else { ctx.shadowColor = 'rgba(0, 0, 0, 0.16)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4; }
       ctx.fillStyle = mixHex(baseColor, hoverColor, hover);
-      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
-      ctx.fill();
+      fillSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       clearShadow();
     }
 
@@ -518,12 +467,11 @@ function initCanvasEngine(ast) {
       if (node.style.shadow) { applyShadow(node); }
       else { ctx.shadowColor = shadowFor(node); ctx.shadowBlur = 6 + hover * 10; ctx.shadowOffsetY = 3 + hover * 5; }
       ctx.fillStyle = node.selected ? (node.style.bgColor || PRIMARY) : mixHex(baseColor, '#D9D9DE', hover);
-      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
-      ctx.fill();
+      fillSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       if (!node.selected) {
         ctx.strokeStyle = 'rgba(0,0,0,0.05)';
         ctx.lineWidth = 1;
-        ctx.stroke();
+        strokeSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       }
       clearShadow();
     }
@@ -534,11 +482,10 @@ function initCanvasEngine(ast) {
       else { ctx.shadowColor = shadowFor(node, node.focused); }
       const hover = node.hoverAmount || 0;
       if (!node.style.shadow) { ctx.shadowBlur = node.focused ? 20 : (8 + hover * 10); ctx.shadowOffsetY = node.focused ? 10 : (4 + hover * 4); }
-      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
-      ctx.fill();
+      fillSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       ctx.strokeStyle = node.focused ? PRIMARY : mixHex((theme.border || '#D2D2D7'), '#8DB2FF', hover);
       ctx.lineWidth = 1.5;
-      ctx.stroke();
+      strokeSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       clearShadow();
     }
 
@@ -551,11 +498,10 @@ function initCanvasEngine(ast) {
       const hover = node.hoverAmount || 0;
       if (!node.style.shadow) { ctx.shadowBlur = 5 + hover * 8; ctx.shadowOffsetY = 2 + hover * 4; }
       ctx.fillStyle = node.style.bgColor || '#FFFFFF';
-      drawSmoothRect(ctx, cx, cy - boxSize / 2, boxSize, boxSize, 9999);
-      ctx.fill();
+      fillSmoothRect(ctx, cx, cy - boxSize / 2, boxSize, boxSize, 9999);
       ctx.strokeStyle = node.selected ? PRIMARY : mixHex((theme.border || '#D2D2D7'), '#8DB2FF', hover);
       ctx.lineWidth = 1.5;
-      ctx.stroke();
+      strokeSmoothRect(ctx, cx, cy - boxSize / 2, boxSize, boxSize, 9999);
       if (node.selected) {
         ctx.fillStyle = PRIMARY;
         ctx.beginPath();
@@ -567,10 +513,12 @@ function initCanvasEngine(ast) {
 
     if (node.type === 'img') {
       ctx.save();
-      drawSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
+      ctx.translate(node.x, node.y);
+      const imgPath = getSmoothPath(node.width, node.height, radius);
       ctx.fillStyle = theme.bg || '#E2E2E7';
-      ctx.fill();
-      ctx.clip();
+      ctx.fill(imgPath);
+      ctx.clip(imgPath);
+      ctx.restore();
 
       ctx.strokeStyle = '#C7C7CC';
       ctx.lineWidth = 1.5;
@@ -584,7 +532,6 @@ function initCanvasEngine(ast) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(node.text || 'Image', node.x + node.width / 2, node.y + node.height / 2);
-      ctx.restore();
     }
 
     if (node.text !== undefined && node.type !== 'img') {
@@ -707,8 +654,7 @@ function initCanvasEngine(ast) {
     ctx.shadowBlur = 24;
     ctx.shadowOffsetY = 10;
     ctx.fillStyle = '#FFFFFF';
-    drawSmoothRect(ctx, dx, dy, dw, dh, 28);
-    ctx.fill();
+    fillSmoothRect(ctx, dx, dy, dw, dh, 28);
     ctx.restore();
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -736,8 +682,7 @@ function initCanvasEngine(ast) {
     ctx.shadowBlur = 8;
     ctx.shadowOffsetY = 4;
     ctx.fillStyle = mixHex(PRIMARY, '#0050D8', buttonHover);
-    drawSmoothRect(ctx, bx, by, bw, bh, 9999);
-    ctx.fill();
+    fillSmoothRect(ctx, bx, by, bw, bh, 9999);
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
@@ -878,7 +823,7 @@ function initCanvasEngine(ast) {
   }
 
   function scheduleRender() {
-    render();
+    dirty = true;
   }
 
   function findNodeAt(node, mx, my) {
@@ -1135,9 +1080,10 @@ function initCanvasEngine(ast) {
   function frame(ts) {
     const dtMs = Math.max(0, ts - lastFrameTs);
     lastFrameTs = ts;
-    updateAnimation(ast, dtMs);
+    const animDirty = updateAnimation(ast, dtMs);
 
     const desiredDialogTarget = activeDialog && !activeDialog.closing ? 1 : 0;
+    let dialogDirty = false;
     if (activeDialog) {
       const current = activeDialog.buttonHoverAmount || 0;
       const target = activeDialog.buttonHoverTarget || 0;
@@ -1146,18 +1092,23 @@ function initCanvasEngine(ast) {
       }
       if (stepTimedAnimation(activeDialog.buttonHoverAnim, target, dtMs, HOVER_MS)) {
         activeDialog.buttonHoverAmount = activeDialog.buttonHoverAnim.value;
+        dialogDirty = true;
       } else {
         activeDialog.buttonHoverAmount = activeDialog.buttonHoverAnim.value;
       }
-      stepTimedAnimation(dialogAnim, desiredDialogTarget, dtMs, DIALOG_MS);
+      if (stepTimedAnimation(dialogAnim, desiredDialogTarget, dtMs, DIALOG_MS)) dialogDirty = true;
     }
 
     if (activeDialog && activeDialog.closing && dialogAnim.value <= 0.001) {
       activeDialog = null;
       dialogAnim.value = 0;
+      dialogDirty = true;
     }
 
-    render();
+    if (dirty || animDirty || dialogDirty) {
+      dirty = false;
+      render();
+    }
     if (rafRunning) requestAnimationFrame(frame);
   }
 
@@ -1166,8 +1117,9 @@ function initCanvasEngine(ast) {
 }
 
 class SourceCodeElement extends HTMLElement {
-  connectedCallback() {
+  async connectedCallback() {
     const ast = parseCustomSyntax(this.textContent);
+    await initWasm();
     const fontCheck = document.fonts.load('16px "' + FONT_FAMILY + '"');
     const fallback = new Promise(r => setTimeout(r, 2000));
     Promise.race([fontCheck, fallback]).then(() => {
