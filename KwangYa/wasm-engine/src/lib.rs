@@ -470,13 +470,21 @@ pub fn compute_bezier_rect(x: f64, y: f64, w: f64, h: f64, cr: f64) -> Vec<f64> 
         x + w - cx6, y + h - cy3,
 
         x + w - cx5, y + h - cy4,
+        x + w - cx4, y + h - cy5,
+        x + w - cx3, y + h - cy6,
+
+        x + w - lx + d2x, y + h,
         x + w - lx + d1x, y + h,
         x + w - lx, y + h,
 
         x + lx, y + h,
 
         x + lx - d1x, y + h,
+        x + lx - d2x, y + h,
+        x + cx3, y + h - cy6,
+
         x + cx4, y + h - cy5,
+        x + cx5, y + h - cy4,
         x + cx6, y + h - cy3,
 
         x, y + h - ly + d2y,
@@ -486,8 +494,12 @@ pub fn compute_bezier_rect(x: f64, y: f64, w: f64, h: f64, cr: f64) -> Vec<f64> 
         x, y + ly,
 
         x, y + ly - d1y,
-        x + cx4, y + cy5,
+        x, y + ly - d2y,
         x + cx6, y + cy3,
+
+        x + cx5, y + cy4,
+        x + cx4, y + cy5,
+        x + cx3, y + cy6,
 
         x + lx - d2x, y,
         x + lx - d1x, y,
@@ -496,7 +508,11 @@ pub fn compute_bezier_rect(x: f64, y: f64, w: f64, h: f64, cr: f64) -> Vec<f64> 
         x + w - lx, y,
 
         x + w - lx + d1x, y,
+        x + w - lx + d2x, y,
+        x + w - cx3, y + cy6,
+
         x + w - cx4, y + cy5,
+        x + w - cx5, y + cy4,
         x + w - cx6, y + cy3,
 
         x + w, y + ly - d2y,
