@@ -57,6 +57,22 @@ header {
 #codeDiv { flex: 1; display: none; padding: 20px; background: #f8fafc; overflow-y: auto; }
 #codeOutput { width: 100%; height: 100%; border: none; background: #1e1e1e; color: #d4d4d4; font-family: monospace; resize: none; font-size: 14px; padding: 10px; tab-size: 2; box-sizing: border-box; }
 
+#uiscriptDiv { flex: 1; display: none; }
+#uiscriptEditor {
+    width: 100%;
+    height: 100%;
+    border: none;
+    padding: 10px;
+    font-family: 'LINE Seed JP', monospace;
+    font-size: 14px;
+    resize: none;
+    background: #0d1117;
+    color: #c9d1d9;
+    tab-size: 2;
+    box-sizing: border-box;
+    line-height: 1.6;
+}
+
 .stage-panel {
     width: 400px;
     background: #f9f9f9;
@@ -79,6 +95,13 @@ header {
     cursor: pointer;
 }
 .run-btn:hover { background: #e6ac00; }
+
+#playground {
+    flex: 1;
+    background: #F5F5F7;
+    overflow: hidden;
+    position: relative;
+}
 
 .blocklyToolbox,.blocklyFlyoutBackground{
     box-shadow: 10px 0 32px #0002;

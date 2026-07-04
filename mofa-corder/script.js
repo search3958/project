@@ -1,80 +1,204 @@
-var defaultPlaygroundHTML = [
-    '<style>',
-    'body { font-family: sans-serif; margin: 0; padding: 20px; }',
-    '.box {',
-    '    width: 100px; height: 100px;',
-    '    background-color: #3b82f6; color: white;',
-    '    display: flex; align-items: center; justify-content: center;',
-    '    border-radius: 8px; cursor: pointer; margin-bottom: 10px; user-select: none;',
-    '}',
-    '.box:active { transform: scale(0.95); }',
-    '.circle { background-color: #ef4444; border-radius: 50%; }',
-    '</style>',
-    '<p>下の図形をクリックしてみてね</p>',
-    '<div class="box target-box">target-box<br>クラス</div>',
-    '<div class="box circle target-circle">target-circle<br>クラス</div>'
-].join('\n');
+import { parseCustomSyntax, initCanvasEngine } from './uiscript-engine.js';
+import { initWasm } from './wasm-wrapper.js';
 
-function initPlayground() {
-    var iframe = document.getElementById('playground');
-    var doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open();
-    doc.write(defaultPlaygroundHTML);
-    doc.close();
-}
+const DEFAULT_UISCRIPT = `body {
+  header {
+    p {"Mofa Coder"}
+  }
+  h1 {" UIScript デモ "}
+  p { "UIScriptで作られたUIです。" }
+  br { "" }
+  button { "ボタン A" }
+  .id:btn-a
+  br { "" }
+  div {
+    option { "選択肢 1" }
+    option { "選択肢 2" }
+    option { "選択肢 3" }
+  }
+  .flex
+  .gap:10px
+  .radius:8px
+  br { "" }
+  p { "テキスト入力：" }
+  input { "ここに入力..." }
+  .id:my-input
+  .width:full
+}`;
 
-function getPlaygroundDoc() {
-    var iframe = document.getElementById('playground');
-    return iframe.contentDocument || iframe.contentWindow.document;
-}
+let currentEngine = null;
 
-function syncHTMLtoEditor() {
-    var doc = getPlaygroundDoc();
-    document.getElementById('htmlEditor').value = doc.body.innerHTML;
-}
+document.getElementById('uiscriptEditor').value = DEFAULT_UISCRIPT;
 
-Blockly.Blocks['event_class_clicked'] = {
+document.getElementById('uiscriptEditor').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        var start = this.selectionStart;
+        var end = this.selectionEnd;
+        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 2;
+    }
+});
+
+document.getElementById('codeOutput').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        var start = this.selectionStart;
+        var end = this.selectionEnd;
+        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 2;
+    }
+});
+
+Blockly.Blocks['uiscript_button'] = {
     init: function() {
         this.appendDummyInput()
-            .appendField("「")
-            .appendField(new Blockly.FieldTextInput("target-box"), "CLASS_NAME")
-            .appendField("」が押されたとき");
+            .appendField("ボタン")
+            .appendField(new Blockly.FieldTextInput("テキスト"), "TEXT")
+            .appendField(" ID:")
+            .appendField(new Blockly.FieldTextInput("my-btn"), "ID");
+        this.setColour('#4C97FF');
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+    }
+};
+
+Blockly.Blocks['uiscript_text'] = {
+    init: function() {
+        this.appendDummyInput()
+            .appendField("テキスト")
+            .appendField(new Blockly.FieldTextInput("メッセージ"), "TEXT")
+            .appendField(" ID:")
+            .appendField(new Blockly.FieldTextInput("my-text"), "ID");
+        this.setColour('#4C97FF');
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+    }
+};
+
+Blockly.Blocks['uiscript_heading'] = {
+    init: function() {
+        this.appendDummyInput()
+            .appendField("見出し")
+            .appendField(new Blockly.FieldDropdown([["H1","h1"],["H3","h3"]]), "LEVEL")
+            .appendField(new Blockly.FieldTextInput("タイトル"), "TEXT")
+            .appendField(" ID:")
+            .appendField(new Blockly.FieldTextInput("my-heading"), "ID");
+        this.setColour('#4C97FF');
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+    }
+};
+
+Blockly.Blocks['uiscript_input'] = {
+    init: function() {
+        this.appendDummyInput()
+            .appendField("入力欄")
+            .appendField(new Blockly.FieldTextInput("プレースホルダ"), "TEXT")
+            .appendField(" ID:")
+            .appendField(new Blockly.FieldTextInput("my-input"), "ID");
+        this.setColour('#4C97FF');
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+    }
+};
+
+Blockly.Blocks['uiscript_on_click'] = {
+    init: function() {
+        this.appendDummyInput()
+            .appendField("要素「")
+            .appendField(new Blockly.FieldTextInput("my-btn"), "ID")
+            .appendField("」がクリックされたとき");
         this.appendStatementInput("DO").setCheck(null);
-        this.setColour('#FFBF00');
+        this.setColour('#FF6B6B');
         this.setPreviousStatement(false);
         this.setNextStatement(false);
     }
 };
 
-Blockly.Blocks['action_alert'] = {
+Blockly.Blocks['uiscript_set_text'] = {
     init: function() {
-        this.appendValueInput("MESSAGE")
+        this.appendValueInput("VALUE")
             .setCheck("String")
-            .appendField("ポップアップで");
+            .appendField("要素「")
+            .appendField(new Blockly.FieldTextInput("my-text"), "ID")
+            .appendField("」のテキストを");
         this.appendDummyInput()
-            .appendField("と表示する");
-        this.setColour('#4C97FF');
-        this.setPreviousStatement(true, null);
-        this.setNextStatement(true, null);
+            .appendField("に変更する");
+        this.setColour('#FF6B6B');
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
     }
 };
 
-javascript.javascriptGenerator.forBlock['event_class_clicked'] = function(block, generator) {
-    var className = block.getFieldValue('CLASS_NAME');
-    var statements_do = generator.statementToCode(block, 'DO');
-    
-    var code = `
-        document.querySelectorAll('.${className}').forEach(function(el) {
-            el.addEventListener('click', function() {
-                ${statements_do}
-            });
-        });\n`;
-    return code;
+Blockly.Blocks['uiscript_get_text'] = {
+    init: function() {
+        this.appendDummyInput()
+            .appendField("要素「")
+            .appendField(new Blockly.FieldTextInput("my-input"), "ID")
+            .appendField("」のテキスト");
+        this.setOutput(true, "String");
+        this.setColour('#FF6B6B');
+    }
 };
 
-javascript.javascriptGenerator.forBlock['action_alert'] = function(block, generator) {
-    var value_message = generator.valueToCode(block, 'MESSAGE', javascript.Order.ATOMIC) || "''";
-    return 'alert(' + value_message + ');\n';
+Blockly.Blocks['uiscript_alert'] = {
+    init: function() {
+        this.appendValueInput("MESSAGE")
+            .setCheck("String")
+            .appendField("アラートで");
+        this.appendDummyInput()
+            .appendField("と表示する");
+        this.setColour('#FF6B6B');
+        this.setPreviousStatement(true);
+        this.setNextStatement(true);
+    }
+};
+
+javascript.javascriptGenerator.forBlock['uiscript_button'] = function(block) {
+    var text = block.getFieldValue('TEXT');
+    var id = block.getFieldValue('ID');
+    return `ui.setText("${id}", "${text}");\n`;
+};
+
+javascript.javascriptGenerator.forBlock['uiscript_text'] = function(block) {
+    var text = block.getFieldValue('TEXT');
+    var id = block.getFieldValue('ID');
+    return `ui.setText("${id}", "${text}");\n`;
+};
+
+javascript.javascriptGenerator.forBlock['uiscript_heading'] = function(block) {
+    var level = block.getFieldValue('LEVEL');
+    var text = block.getFieldValue('TEXT');
+    var id = block.getFieldValue('ID');
+    return `ui.setText("${id}", "${text}");\n`;
+};
+
+javascript.javascriptGenerator.forBlock['uiscript_input'] = function(block) {
+    return '';
+};
+
+javascript.javascriptGenerator.forBlock['uiscript_on_click'] = function(block) {
+    var id = block.getFieldValue('ID');
+    var statements = javascript.javascriptGenerator.statementToCode(block, 'DO');
+    return `ui.on("click", function(e) {\n  if (e.id === "${id}") {\n${statements}  }\n});\n`;
+};
+
+javascript.javascriptGenerator.forBlock['uiscript_set_text'] = function(block) {
+    var id = block.getFieldValue('ID');
+    var value = javascript.javascriptGenerator.valueToCode(block, 'VALUE', javascript.Order.ATOMIC) || "''";
+    return `ui.setText("${id}", ${value});\n`;
+};
+
+javascript.javascriptGenerator.forBlock['uiscript_get_text'] = function(block) {
+    var id = block.getFieldValue('ID');
+    var code = `ui.getText("${id}")`;
+    return [code, javascript.Order.MEMBER];
+};
+
+javascript.javascriptGenerator.forBlock['uiscript_alert'] = function(block) {
+    var value = javascript.javascriptGenerator.valueToCode(block, 'MESSAGE', javascript.Order.ATOMIC) || "''";
+    return `alert(${value});\n`;
 };
 
 var workspace = Blockly.inject('blocklyDiv', {
@@ -96,59 +220,45 @@ function switchTab(tabName) {
     
     document.getElementById('blocklyDiv').style.display = 'none';
     document.getElementById('codeDiv').style.display = 'none';
-    document.getElementById('htmlDiv').style.display = 'none';
+    document.getElementById('uiscriptDiv').style.display = 'none';
     
     if (tabName === 'blocks') {
         document.getElementById('blocklyDiv').style.display = 'block';
     } else if (tabName === 'code') {
         document.getElementById('codeDiv').style.display = 'block';
-    } else if (tabName === 'html') {
-        syncHTMLtoEditor();
-        document.getElementById('htmlDiv').style.display = 'flex';
-        document.getElementById('htmlDiv').style.flexDirection = 'column';
+    } else if (tabName === 'uiscript') {
+        document.getElementById('uiscriptDiv').style.display = 'block';
     }
 }
+window.switchTab = switchTab;
 
-document.getElementById('htmlEditor').addEventListener('input', function() {
-    var doc = getPlaygroundDoc();
-    doc.body.innerHTML = this.value;
-});
+async function runUIScript() {
+    const code = document.getElementById('codeOutput').value;
+    const uscript = document.getElementById('uiscriptEditor').value;
+    const container = document.getElementById('playground');
 
-document.getElementById('htmlEditor').addEventListener('keydown', function(e) {
-    if (e.key === 'Tab') {
-        e.preventDefault();
-        var start = this.selectionStart;
-        var end = this.selectionEnd;
-        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
-        this.selectionStart = this.selectionEnd = start + 2;
+    if (currentEngine) {
+        currentEngine.destroy();
+        currentEngine = null;
     }
-});
+    container.innerHTML = '';
 
-document.getElementById('codeOutput').addEventListener('keydown', function(e) {
-    if (e.key === 'Tab') {
-        e.preventDefault();
-        var start = this.selectionStart;
-        var end = this.selectionEnd;
-        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
-        this.selectionStart = this.selectionEnd = start + 2;
-    }
-});
+    await initWasm();
 
-function runCode() {
-    var code = document.getElementById('codeOutput').value;
-    var doc = getPlaygroundDoc();
-    
     try {
-        var fn = new Function(code);
-        fn.call(doc.defaultView);
-        console.log("プログラムを反映しました。");
+        const ast = parseCustomSyntax(uscript);
+        currentEngine = initCanvasEngine(ast, container);
+
+        if (code.trim()) {
+            const sandbox = { ui: currentEngine, alert: alert };
+            const fn = new Function('ui', 'alert', code);
+            fn(currentEngine, alert);
+        }
     } catch (e) {
-        alert('エラー: ' + e);
-    }
-    
-    if (document.getElementById('htmlDiv').style.display !== 'none') {
-        syncHTMLtoEditor();
+        container.innerHTML = '<div style="padding:20px;color:red;font-family:monospace;">' + e.message + '</div>';
+        console.error(e);
     }
 }
+window.runUIScript = runUIScript;
 
-initPlayground();
+runUIScript();
