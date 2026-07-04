@@ -4,13 +4,12 @@ import { MofaLang } from './mofa-lang.js';
 
 const DEFAULT_UISCRIPT = `body {
   header {
-    p {"Hello"}
+    p {"Hello Mofa"}
   }
-  p {"UI Script と Blockly の往復を確認するためのサンプルです。"}
   div {
-    button {"スタート"}
+    button {"+1"}
     .id:counter
-    button {"キャンセル"}
+    button {"リセット"}
     .id:reset
   }
   .flex
@@ -18,11 +17,12 @@ const DEFAULT_UISCRIPT = `body {
   .radius:14px
   .padding:16px
   .bgColor:#ffffff
-}`;
+}
+.padding:16px`;
 
-const DEFAULT_CODE = `event.clicked:#count{
-  control.role:#count{
-    var.counter:([(counter) + 1])
+const DEFAULT_CODE = `event.clicked:#counter{
+  control.role:#counter{
+    var.counter:[counter + 1]
     effect.bgColor:#ff4d4f
     control.wait:0.2
     effect.bgColor:#0066ff
@@ -37,9 +37,149 @@ event.clicked:#reset{
 
 let currentEngine = null;
 let currentLang = new MofaLang();
+let variableViewer = null;
+let variableWindow = null;
+let variableWindowHeader = null;
+let variableWindowState = { x: 0, y: 0, visible: false };
+let variableDragState = null;
+
+function renderVariableViewer(vars = currentLang.variables) {
+    if (!variableViewer) return;
+
+    const entries = Object.entries(vars || {});
+    if (entries.length === 0) {
+        variableViewer.innerHTML = '<div class="variable-monitor__empty">まだ変数はありません。</div>';
+        return;
+    }
+
+    variableViewer.innerHTML = entries
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([name, value]) => `
+            <div class="variable-item">
+                <div class="variable-item__name">${escapeHtml(name)}</div>
+                <div class="variable-item__value">${escapeHtml(formatVariableValue(value))}</div>
+            </div>
+        `)
+        .join('');
+}
+
+function formatVariableValue(value) {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    try {
+        return JSON.stringify(value);
+    } catch (e) {
+        return String(value);
+    }
+}
+
+function escapeHtml(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function openVariableViewer() {
+    if (!variableWindow) return;
+    variableWindowState.visible = true;
+    variableWindow.classList.remove('is-hidden');
+    renderVariableViewer(currentLang.variables);
+    persistVariableWindowState();
+}
+
+function closeVariableViewer() {
+    if (!variableWindow) return;
+    variableWindowState.visible = false;
+    variableWindow.classList.add('is-hidden');
+    persistVariableWindowState();
+}
+
+function toggleVariableViewer() {
+    if (variableWindowState.visible) closeVariableViewer();
+    else openVariableViewer();
+}
+
+function applyVariableWindowPosition() {
+    if (!variableWindow) return;
+    variableWindow.style.left = `${variableWindowState.x}px`;
+    variableWindow.style.top = `${variableWindowState.y}px`;
+    variableWindow.style.right = 'auto';
+}
+
+function restoreVariableWindowPosition() {
+    if (!variableWindow) return;
+    const saved = localStorage.getItem('mofa.variableWindow');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (typeof parsed.x === 'number') variableWindowState.x = parsed.x;
+            if (typeof parsed.y === 'number') variableWindowState.y = parsed.y;
+            if (typeof parsed.visible === 'boolean') variableWindowState.visible = parsed.visible;
+        } catch (e) {
+            // ignore malformed persisted state
+        }
+    }
+    applyVariableWindowPosition();
+    variableWindow.classList.toggle('is-hidden', !variableWindowState.visible);
+}
+
+function persistVariableWindowState() {
+    try {
+        localStorage.setItem('mofa.variableWindow', JSON.stringify(variableWindowState));
+    } catch (e) {
+        // ignore storage issues
+    }
+}
+
+function bindVariableWindowDragging() {
+    if (!variableWindowHeader || !variableWindow) return;
+
+    variableWindowHeader.addEventListener('pointerdown', function(e) {
+        if (!variableWindowState.visible) return;
+        variableDragState = {
+            startX: e.clientX,
+            startY: e.clientY,
+            originX: variableWindowState.x,
+            originY: variableWindowState.y
+        };
+        variableWindowHeader.setPointerCapture(e.pointerId);
+        variableWindowHeader.style.cursor = 'grabbing';
+    });
+
+    variableWindowHeader.addEventListener('pointermove', function(e) {
+        if (!variableDragState) return;
+        variableWindowState.x = variableDragState.originX + (e.clientX - variableDragState.startX);
+        variableWindowState.y = variableDragState.originY + (e.clientY - variableDragState.startY);
+        applyVariableWindowPosition();
+        persistVariableWindowState();
+    });
+
+    function stopDrag() {
+        if (!variableDragState) return;
+        variableDragState = null;
+        variableWindowHeader.style.cursor = 'grab';
+        persistVariableWindowState();
+    }
+
+    variableWindowHeader.addEventListener('pointerup', stopDrag);
+    variableWindowHeader.addEventListener('pointercancel', stopDrag);
+    variableWindowHeader.addEventListener('lostpointercapture', stopDrag);
+}
 
 document.getElementById('uiscriptEditor').value = DEFAULT_UISCRIPT;
 document.getElementById('codeOutput').value = DEFAULT_CODE;
+variableViewer = document.getElementById('variableViewer');
+variableWindow = document.getElementById('variableWindow');
+variableWindowHeader = document.getElementById('variableWindowHeader');
+currentLang.onVariablesChanged = renderVariableViewer;
+renderVariableViewer({});
+restoreVariableWindowPosition();
+bindVariableWindowDragging();
 
 document.getElementById('uiscriptEditor').addEventListener('keydown', function(e) {
     if (e.key === 'Tab') {
@@ -501,7 +641,18 @@ javascript.javascriptGenerator.forBlock['control_role'] = function(block) {
 
 javascript.javascriptGenerator.forBlock['var_set'] = function(block) {
     var name = block.getFieldValue('NAME');
-    var value = javascript.javascriptGenerator.valueToCode(block, 'VALUE', javascript.Order.ATOMIC) || '0';
+    var inputBlock = block.getInputTargetBlock('VALUE');
+    var value = '0';
+
+    if (inputBlock) {
+        if (inputBlock.type === 'math_binop' || inputBlock.type === 'logic_compare' || inputBlock.type === 'logic_operation' || inputBlock.type === 'logic_not' || inputBlock.type === 'math_long' || inputBlock.type === 'math_include') {
+            value = javascript.javascriptGenerator.blockToCode(inputBlock);
+            if (Array.isArray(value)) value = value[0];
+        } else {
+            value = javascript.javascriptGenerator.valueToCode(block, 'VALUE', javascript.Order.ATOMIC) || '0';
+        }
+    }
+
     return `var.${name}:${value}\n`;
 };
 
@@ -834,6 +985,11 @@ function codeToBlocks(code) {
 
 function parseValueToBlock(str) {
     str = str.trim();
+    str = stripOuterPairs(str);
+
+    if (str.startsWith('[') && str.endsWith(']')) {
+        return parseExpressionToBlock(str.slice(1, -1));
+    }
 
     if (str.match(/^-?\d+(\.\d+)?$/)) {
         var block = workspace.newBlock('var_number');
@@ -857,6 +1013,131 @@ function parseValueToBlock(str) {
     var block = workspace.newBlock('var_get');
     block.getField('NAME').setValue(str);
     return block;
+}
+
+function parseExpressionToBlock(str) {
+    str = stripOuterPairs(str.trim());
+
+    var compOps = ['<=', '>=', '!=', '=', '<', '>'];
+    for (var i = 0; i < compOps.length; i++) {
+        var op = compOps[i];
+        var parts = splitTopLevelExpr(str, op);
+        if (parts.length === 2) {
+            var compareBlock = workspace.newBlock('logic_compare');
+            compareBlock.getField('OP').setValue(op);
+            var leftBlock = parseExpressionToBlock(parts[0]);
+            var rightBlock = parseExpressionToBlock(parts[1]);
+            if (leftBlock) {
+                leftBlock.initSvg();
+                leftBlock.render();
+                compareBlock.getInput('A').connection.connect(leftBlock.outputConnection);
+            }
+            if (rightBlock) {
+                rightBlock.initSvg();
+                rightBlock.render();
+                compareBlock.getInput('B').connection.connect(rightBlock.outputConnection);
+            }
+            return compareBlock;
+        }
+    }
+
+    var addParts = splitTopLevelExpr(str, ' + ');
+    if (addParts.length > 1) {
+        return buildMathChain('math_binop', '+', addParts);
+    }
+
+    var subParts = splitTopLevelExpr(str, ' - ');
+    if (subParts.length > 1) {
+        return buildMathChain('math_binop', '-', subParts);
+    }
+
+    var mulParts = splitTopLevelExpr(str, ' * ');
+    if (mulParts.length > 1) {
+        return buildMathChain('math_binop', '*', mulParts);
+    }
+
+    var divParts = splitTopLevelExpr(str, ' / ');
+    if (divParts.length > 1) {
+        return buildMathChain('math_binop', '/', divParts);
+    }
+
+    if (str.startsWith('(') && str.endsWith(')')) {
+        return parseValueToBlock(str.slice(1, -1));
+    }
+
+    return parseValueToBlock(str);
+}
+
+function buildMathChain(blockType, op, parts) {
+    var block = null;
+    for (var i = 0; i < parts.length - 1; i++) {
+        var target = workspace.newBlock(blockType);
+        target.getField('OP').setValue(op);
+
+        var left = i === 0 ? parseValueToBlock(parts[i]) : block;
+        var right = parseValueToBlock(parts[i + 1]);
+
+        if (left) {
+            left.initSvg();
+            left.render();
+            target.getInput('A').connection.connect(left.outputConnection);
+        }
+        if (right) {
+            right.initSvg();
+            right.render();
+            target.getInput('B').connection.connect(right.outputConnection);
+        }
+
+        block = target;
+    }
+    return block;
+}
+
+function splitTopLevelExpr(str, sep) {
+    var parts = [];
+    var depth = 0;
+    var current = '';
+
+    for (var i = 0; i < str.length; i++) {
+        var ch = str[i];
+        if (ch === '(' || ch === '[') depth++;
+        else if (ch === ')' || ch === ']') depth--;
+        if (depth === 0 && str.substring(i, i + sep.length) === sep) {
+            parts.push(current.trim());
+            current = '';
+            i += sep.length - 1;
+            continue;
+        }
+        current += ch;
+    }
+
+    parts.push(current.trim());
+    return parts;
+}
+
+function stripOuterPairs(str) {
+    var changed = true;
+    while (changed && str.length >= 2) {
+        changed = false;
+        if ((str.startsWith('(') && str.endsWith(')')) || (str.startsWith('[') && str.endsWith(']'))) {
+            var depth = 0;
+            var wrapped = true;
+            for (var i = 0; i < str.length; i++) {
+                var ch = str[i];
+                if (ch === '(' || ch === '[') depth++;
+                else if (ch === ')' || ch === ']') depth--;
+                if (depth === 0 && i < str.length - 1) {
+                    wrapped = false;
+                    break;
+                }
+            }
+            if (wrapped) {
+                str = str.slice(1, -1).trim();
+                changed = true;
+            }
+        }
+    }
+    return str;
 }
 
 function parseConditionToBlock(str) {
@@ -921,6 +1202,8 @@ function switchTab(tabName) {
     }
 }
 window.switchTab = switchTab;
+window.toggleVariableViewer = toggleVariableViewer;
+window.closeVariableViewer = closeVariableViewer;
 
 async function runUIScript() {
     const code = document.getElementById('codeOutput').value;
@@ -944,6 +1227,8 @@ async function runUIScript() {
 
         const blocks = currentLang.parse(code);
         currentLang.execute(blocks);
+        renderVariableViewer(currentLang.variables);
+        openVariableViewer();
 
         console.log('Mofa Lang: 実行開始');
     } catch (e) {

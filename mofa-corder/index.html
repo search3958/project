@@ -38,6 +38,17 @@
         <div class="stage-panel">
             <div class="stage-header">
                 <button class="run-btn" onclick="runUIScript()">▶ 実行</button>
+                <button class="run-btn run-btn--secondary" onclick="toggleVariableViewer()">変数ビューア</button>
+            </div>
+            <div id="variableWindow" class="variable-window is-hidden">
+                <div id="variableWindowHeader" class="variable-window__header">
+                    <span>変数ビューア</span>
+                    <div class="variable-window__controls">
+                        <span class="variable-window__badge">Drag</span>
+                        <button class="variable-window__close" onclick="closeVariableViewer()" aria-label="閉じる">×</button>
+                    </div>
+                </div>
+                <div id="variableViewer" class="variable-window__list"></div>
             </div>
             <div id="playground"></div>
         </div>

@@ -11,6 +11,7 @@ class MofaLang {
     this.hoveredElements = new Set();
     this.clickedElement = null;
     this.date = new Date();
+    this.onVariablesChanged = null;
   }
 
   setUI(ui) {
@@ -690,6 +691,7 @@ class MofaLang {
         const count = this.evaluate(block.count);
         for (let i = 0; i < count && this.running; i++) {
           this.variables['i'] = i;
+          this.notifyVariablesChanged();
           await this.execute(block.body);
         }
         break;
@@ -732,10 +734,17 @@ class MofaLang {
   setVariable(block) {
     const value = this.evaluate(block.value);
     this.variables[block.name] = value;
+    this.notifyVariablesChanged();
 
     if (this.ui && block.name.startsWith('ui_')) {
       const targetId = block.name.replace('ui_', '');
       this.ui.setText(targetId, String(value));
+    }
+  }
+
+  notifyVariablesChanged() {
+    if (typeof this.onVariablesChanged === 'function') {
+      this.onVariablesChanged({ ...this.variables });
     }
   }
 
@@ -749,6 +758,7 @@ class MofaLang {
     this.stop();
     this.variables = {};
     this.messages = {};
+    this.notifyVariablesChanged();
   }
 }
 
