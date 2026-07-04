@@ -4,42 +4,35 @@ import { MofaLang } from './mofa-lang.js';
 
 const DEFAULT_UISCRIPT = `body {
   header {
-    p {"Mofa Coder"}
+    p {"Hello"}
   }
-  h1 {"UIScript / Mofa Lang デモ"}
   p {"UI Script と Blockly の往復を確認するためのサンプルです。"}
   div {
     button {"スタート"}
-    .id:btn-a
+    .id:counter
     button {"キャンセル"}
-    .id:btn-cancel
+    .id:reset
   }
   .flex
   .gap:12px
   .radius:14px
   .padding:16px
   .bgColor:#ffffff
-  p {"入力欄"}
-  input {"ここに入力..."}
-  .id:my-input
-  .width:full
 }`;
 
-const DEFAULT_CODE = `event.loaded{
-  control.role:#btn-a{
+const DEFAULT_CODE = `event.clicked:#count{
+  control.role:#count{
+    var.counter:([(counter) + 1])
+    effect.bgColor:#ff4d4f
+    control.wait:0.2
     effect.bgColor:#0066ff
-    effect.fgColor:#ffffff
   }
 }
 
-event.clicked:#btn-a{
-  control.role:#btn-a{
-    effect.bgColor:#ff4d4f
-    effect.fgColor:#ffffff
-    control.wait:1
-    effect.bgColor:#0066ff
-  }
+event.clicked:#reset{
+  var.counter:0
 }
+
 `;
 
 let currentEngine = null;
