@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/blockly/msg/ja.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script type="module" src="https://search3958.github.io/project/uiscript/v2/wasm-wrapper.js"></script>
     
     <link rel="stylesheet" href="style.css">
 </head>
@@ -30,13 +31,21 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                         </svg>
-                        ダウンロード
+                        ダウンロード (.mf1)
                     </button>
                     <button class="file-menu-item" onclick="loadProject()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
                         </svg>
-                        読み込み
+                        読み込み (.mf1)
+                    </button>
+                    <div class="file-menu-divider"></div>
+                    <button class="file-menu-item" onclick="exportHTML()" style="display:none">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                        </svg>
+                        HTMLとして書き出し
                     </button>
                 </div>
             </div>
