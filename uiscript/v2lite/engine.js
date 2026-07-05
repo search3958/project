@@ -284,9 +284,6 @@ function initCanvasEngine(ast, container) {
   }
 
   function shadowFor(node, focused = false) {
-    if ((node.hoverAmount || 0) > 0.01 || focused) {
-      return 'rgba(0, 0, 0, 0.18)';
-    }
     return 'rgba(0, 0, 0, 0.10)';
   }
 
@@ -455,7 +452,7 @@ function initCanvasEngine(ast, container) {
       ctx.fillStyle = node.style.bgColor || 'rgba(255,255,255,0.9)';
       fillSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
       if (node.style.shadow) { applyShadow(node); }
-      else { ctx.shadowColor = shadowFor(node); ctx.shadowBlur = node.hovered ? 18 : 8; ctx.shadowOffsetY = node.hovered ? 8 : 4; }
+      else { ctx.shadowColor = shadowFor(node); ctx.shadowBlur = 8; ctx.shadowOffsetY = 4; }
       ctx.strokeStyle = 'rgba(0,0,0,0.06)';
       ctx.lineWidth = 1;
       strokeSmoothRect(ctx, node.x, node.y, node.width, node.height, radius || 16);
@@ -477,7 +474,7 @@ function initCanvasEngine(ast, container) {
       const hover = node.hoverAmount || 0;
       const baseColor = node.style.bgColor || (theme.bg || '#E5E5E5');
       if (node.style.shadow) { applyShadow(node); }
-      else { ctx.shadowColor = shadowFor(node); ctx.shadowBlur = 6 + hover * 10; ctx.shadowOffsetY = 3 + hover * 5; }
+      else { ctx.shadowColor = shadowFor(node); ctx.shadowBlur = 6; ctx.shadowOffsetY = 3; }
       ctx.fillStyle = node.selected ? (node.style.bgColor || PRIMARY) : mixHex(baseColor, '#D9D9DE', hover);
       fillSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       if (!node.selected) {
@@ -492,10 +489,9 @@ function initCanvasEngine(ast, container) {
       ctx.fillStyle = node.style.bgColor || theme.bg || '#FFFFFF';
       if (node.style.shadow) { applyShadow(node); }
       else { ctx.shadowColor = shadowFor(node, node.focused); }
-      const hover = node.hoverAmount || 0;
-      if (!node.style.shadow) { ctx.shadowBlur = node.focused ? 20 : (8 + hover * 10); ctx.shadowOffsetY = node.focused ? 10 : (4 + hover * 4); }
+      if (!node.style.shadow) { ctx.shadowBlur = node.focused ? 20 : 8; ctx.shadowOffsetY = node.focused ? 10 : 4; }
       fillSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
-      ctx.strokeStyle = node.focused ? PRIMARY : mixHex((theme.border || '#D2D2D7'), '#8DB2FF', hover);
+      ctx.strokeStyle = node.focused ? PRIMARY : mixHex((theme.border || '#D2D2D7'), '#8DB2FF', node.hoverAmount || 0);
       ctx.lineWidth = 1.5;
       strokeSmoothRect(ctx, node.x, node.y, node.width, node.height, radius);
       clearShadow();
@@ -508,7 +504,7 @@ function initCanvasEngine(ast, container) {
       if (node.style.shadow) { applyShadow(node); }
       else { ctx.shadowColor = shadowFor(node); }
       const hover = node.hoverAmount || 0;
-      if (!node.style.shadow) { ctx.shadowBlur = 5 + hover * 8; ctx.shadowOffsetY = 2 + hover * 4; }
+      if (!node.style.shadow) { ctx.shadowBlur = 5; ctx.shadowOffsetY = 2; }
       ctx.fillStyle = node.style.bgColor || '#FFFFFF';
       fillSmoothRect(ctx, cx, cy - boxSize / 2, boxSize, boxSize, 9999);
       ctx.strokeStyle = node.selected ? PRIMARY : mixHex((theme.border || '#D2D2D7'), '#8DB2FF', hover);
@@ -550,7 +546,6 @@ function initCanvasEngine(ast, container) {
       setFont(node);
       const fs = node.style.size !== undefined ? node.style.size : (theme.fontSize || 15);
       const hover = node.hoverAmount || 0;
-      const textLift = hover * 1.5;
       const textAlpha = 0.90 + hover * 0.10;
 
       if (node.type === 'button') {
@@ -558,21 +553,21 @@ function initCanvasEngine(ast, container) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.globalAlpha = textAlpha;
-        ctx.fillText(node.text, node.x + node.width / 2, node.y + node.height / 2 - textLift);
+        ctx.fillText(node.text, node.x + node.width / 2, node.y + node.height / 2);
         ctx.globalAlpha = 1;
       } else if (node.type === 'option' && node.selected) {
         ctx.fillStyle = node.style.fgColor || '#FFFFFF';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.globalAlpha = textAlpha;
-        ctx.fillText(node.text, node.x + node.width / 2, node.y + node.height / 2 - textLift);
+        ctx.fillText(node.text, node.x + node.width / 2, node.y + node.height / 2);
         ctx.globalAlpha = 1;
       } else if (node.type === 'option') {
         ctx.fillStyle = node.style.fgColor || '#1D1D1F';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.globalAlpha = textAlpha;
-        ctx.fillText(node.text, node.x + node.width / 2, node.y + node.height / 2 - textLift);
+        ctx.fillText(node.text, node.x + node.width / 2, node.y + node.height / 2);
         ctx.globalAlpha = 1;
       } else if (node.type === 'input') {
         ctx.fillStyle = node.style.fgColor || theme.fg || '#1D1D1F';
@@ -580,7 +575,7 @@ function initCanvasEngine(ast, container) {
         ctx.textAlign = 'left';
         const text = node.text || '';
         ctx.globalAlpha = textAlpha;
-        ctx.fillText(text, node.x + pad, node.y + node.height / 2 - textLift);
+        ctx.fillText(text, node.x + pad, node.y + node.height / 2);
         ctx.globalAlpha = 1;
         if (node.focused) {
           const before = text.slice(0, node.caret);
@@ -597,7 +592,7 @@ function initCanvasEngine(ast, container) {
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
         ctx.globalAlpha = textAlpha;
-        ctx.fillText(node.text, node.x + pad, node.y + pad - textLift);
+        ctx.fillText(node.text, node.x + pad, node.y + pad);
         ctx.globalAlpha = 1;
 
         const metrics = ctx.measureText(node.text);
@@ -622,14 +617,14 @@ function initCanvasEngine(ast, container) {
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'left';
         ctx.globalAlpha = textAlpha;
-        ctx.fillText(node.text, node.x + pad + 32, node.y + node.height / 2 - textLift);
+        ctx.fillText(node.text, node.x + pad + 32, node.y + node.height / 2);
         ctx.globalAlpha = 1;
       } else {
         ctx.fillStyle = node.style.fgColor || theme.color || '#000000';
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
         ctx.globalAlpha = textAlpha;
-        ctx.fillText(node.text, node.x + pad, node.y + pad - textLift);
+        ctx.fillText(node.text, node.x + pad, node.y + pad);
         ctx.globalAlpha = 1;
       }
     }
@@ -756,7 +751,7 @@ function initCanvasEngine(ast, container) {
       offCtx.drawImage(canvas, 0, 0, capW, capH, 0, 0, capW, capH);
 
       const maxBlur = THEME.header.blur || 20;
-      const steps = 8;
+      const steps = 4;
 
       const slices = [];
       for (let i = 0; i < steps; i++) {
@@ -772,7 +767,8 @@ function initCanvasEngine(ast, container) {
 
       const cw = capW;
       const ch = capH;
-      const blend = 2;
+      const blend = 3;
+      const blendHeight = 6;
 
       for (let i = 0; i < steps; i++) {
         const y0 = Math.floor(headerHeight * i / steps);
@@ -788,17 +784,19 @@ function initCanvasEngine(ast, container) {
         if (i < steps - 1) {
           for (let p = 0; p < blend; p++) {
             const alpha = (p + 1) / (blend + 1);
+            const segY = y1 - blendHeight + (p * blendHeight / blend);
+            const segH = blendHeight / blend;
             ctx.save();
             ctx.globalAlpha = 1 - alpha;
             ctx.beginPath();
-            ctx.rect(0, y1 - blend + p, viewW, 1);
+            ctx.rect(0, segY, viewW, segH);
             ctx.clip();
             ctx.drawImage(slices[i], 0, 0, cw, ch, 0, 0, viewW, headerHeight);
             ctx.restore();
             ctx.save();
             ctx.globalAlpha = alpha;
             ctx.beginPath();
-            ctx.rect(0, y1 - blend + p, viewW, 1);
+            ctx.rect(0, segY, viewW, segH);
             ctx.clip();
             ctx.drawImage(slices[i + 1], 0, 0, cw, ch, 0, 0, viewW, headerHeight);
             ctx.restore();
