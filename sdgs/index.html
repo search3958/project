@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDGs Demo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <nav class="sidebar" id="tabs"></nav>
+  <main class="content" id="content"></main>
+</div>
+
+<script>
+const items = [
+  { id: 'discover', title: '発見' },
+  { id: 'knowledge', title: '知識' },
+  { id: 'post', title: '投稿' },
+];
+
+const tabsEl = document.getElementById('tabs');
+const contentEl = document.getElementById('content');
+
+items.forEach((item, i) => {
+  const btn = document.createElement('button');
+  btn.textContent = item.title;
+  btn.dataset.target = item.id;
+  if (i === 0) btn.classList.add('active');
+  tabsEl.appendChild(btn);
+
+  const panel = document.createElement('section');
+  panel.className = 'panel' + (i === 0 ? ' active' : '');
+  panel.id = item.id;
+  panel.innerHTML = `<h2>${item.title}</h2><p>${item.title}のコンテンツ</p>`;
+  contentEl.appendChild(panel);
+});
+
+tabsEl.addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  tabsEl.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  contentEl.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById(e.target.dataset.target).classList.add('active');
+});
+</script>
+
+</body>
+</html>
