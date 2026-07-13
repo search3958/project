@@ -48,6 +48,74 @@ body { font-family: sans-serif; height: 100vh; overflow: hidden; }
   corner-shape: superellipse(1.6);
   border-radius:48px;
   padding:16px;
+  width:100%;
+  max-width:350px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.answer-card-header{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+}
+
+.answer-card-title{
+  font-size:1.1rem;
+  font-weight:600;
+}
+
+.answer-card-desc{
+  font-size:0.75rem;
+  color:#7D7D7D;
+  text-align:left;
+}
+
+.answer-card-slider{
+  width:100%;
+  -webkit-appearance:none;
+  appearance:none;
+  height:35px;
+  background:white;
+  border-radius:24.5px;
+  outline:none;
+  margin:0;
+}
+
+.answer-card-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:67px;
+  height:35px;
+  background:var(--thumb-color, #05F380);
+  border-radius:17.5px;
+  cursor:pointer;
+  box-shadow:none;
+}
+
+.answer-card-slider::-moz-range-thumb{
+  width:67px;
+  height:35px;
+  background:var(--thumb-color, #05F380);
+  border-radius:17.5px;
+  cursor:pointer;
+  border:none;
+  box-shadow:none;
+}
+
+.answer-card-slider::-webkit-slider-runnable-track{
+  height:43px;
+  background:white;
+  border-radius:24.5px;
+  padding:4px;
+}
+
+.answer-card-slider::-moz-range-track{
+  height:49px;
+  background:white;
+  border-radius:24.5px;
+  border:none;
 }
 
 .answer-m3btn{
