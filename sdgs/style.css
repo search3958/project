@@ -1,6 +1,13 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+@font-face {
+  font-family: 'HarmonyOS Sans SC';
+  src: url('MPLUS2-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
 
-body { font-family: sans-serif; height: 100vh; overflow: hidden; }
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'M PLUS 2', sans-serif;}
+
+body {  height: 100vh; overflow: hidden; }
 
 .container {
   display: flex;
