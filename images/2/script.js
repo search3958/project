@@ -27,7 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const showListButton = document.getElementById('show-list-button');
     const loadingStatus = document.getElementById('loading-status');
     const currentWallpaperImage = document.getElementById('current-wallpaper-image');
+    const currentWallpaperMeta = document.getElementById('current-wallpaper-meta');
     const backToHomeButton = document.getElementById('back-to-home');
+    const setThemeRandomButton = document.getElementById('set-theme-random-button');
 
     // ★ 完了ダイアログ要素の取得
     const completionDialog = document.getElementById('completion-dialog');
@@ -41,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 現在選択中の画像のデータ
     let selectedImage = null;
+    let selectedGenre = null;
 
 
     // --- IndexedDB 関連のヘルパー関数 ---
@@ -99,6 +102,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function saveRecordToIndexedDB(key, value) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const request = transaction.objectStore(STORE_NAME).put(value, key);
+            request.onsuccess = () => resolve();
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    async function clearOtherWallpaperSettings() {
+        await Promise.all(['newtab', 'light', 'dark'].map(deleteFromIndexedDB));
+    }
+
+    async function saveRandomWallpaperSet(source, name, wallpapers) {
+        if (!wallpapers.length) throw new Error('保存できる画像がありません。');
+        await saveRecordToIndexedDB('newtabRandom', {
+            mode: 'random',
+            source,
+            name,
+            wallpapers
+        });
+        await clearOtherWallpaperSettings();
+    }
+
     async function deleteFromIndexedDB(key) {
         let db;
         try {
@@ -150,6 +178,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const nameElement = document.getElementById('current-wallpaper-name');
         if (!nameElement) return;
 
+        const randomSet = await getFromIndexedDB('newtabRandom');
+        if (randomSet?.wallpapers?.length) {
+            const first = randomSet.wallpapers[0];
+            const blob = first.light || first.dark;
+            if (blob) {
+                const url = URL.createObjectURL(blob);
+                currentWallpaperImage.style.backgroundImage = `url('${url}')`;
+                nameElement.textContent = randomSet.name || 'ランダム壁紙';
+                if (currentWallpaperMeta) {
+                    const sourceLabel = randomSet.source === 'upload' ? 'アップロード画像' : 'デフォルトテーマ';
+                    currentWallpaperMeta.textContent = `${sourceLabel}・${randomSet.wallpapers.length}枚からランダム`;
+                }
+                return;
+            }
+        }
+
         // Priority: newtab > light > dark
         const keys = ['newtab', 'light', 'dark'];
         for (const key of keys) {
@@ -163,11 +207,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     key === 'light' ? 'ライトテーマ壁紙' : 'ダークテーマ壁紙');
 
                 nameElement.textContent = name;
+                if (currentWallpaperMeta) currentWallpaperMeta.textContent = '固定表示';
                 return;
             }
         }
         currentWallpaperImage.style.backgroundImage = 'none';
         nameElement.textContent = 'デフォルト';
+        if (currentWallpaperMeta) currentWallpaperMeta.textContent = '標準の壁紙を表示';
     }
 
     // ★ 完了ダイアログを表示する関数
@@ -500,6 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     await deleteFromIndexedDB('light');
                     await deleteFromIndexedDB('dark');
+                    await deleteFromIndexedDB('newtabRandom');
 
                     const mode = darkBlob ? 'ライト・ダーク両方' : 'ライトのみ';
                     dialogTitle = '設定完了！';
@@ -511,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await saveToIndexedDB('light', lightBlob, null, name);
                     await deleteFromIndexedDB('newtab');
                     await deleteFromIndexedDB('dark');
+                    await deleteFromIndexedDB('newtabRandom');
                     dialogTitle = '設定完了！';
                     dialogMessage = `Newtab用の壁紙を設定しました。`;
                     break;
@@ -520,6 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await saveToIndexedDB('dark', darkBlob, null, name);
                     await deleteFromIndexedDB('newtab');
                     await deleteFromIndexedDB('light');
+                    await deleteFromIndexedDB('newtabRandom');
                     dialogTitle = '設定完了！';
                     dialogMessage = `Newtab用の壁紙を設定しました。`;
                     break;
@@ -563,6 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imageGallery.innerHTML = '';
 
         const images = allWallpaperData[genre];
+        selectedGenre = genre;
         galleryTitleHeader.textContent = `${genre}`;
 
         images.forEach(image => {
@@ -626,6 +676,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    setThemeRandomButton.addEventListener('click', async () => {
+        const images = selectedGenre && allWallpaperData?.[selectedGenre];
+        if (!images?.length) return;
+
+        setThemeRandomButton.disabled = true;
+        try {
+            const wallpapers = images
+                .filter(image => image.lightBlob || image.darkBlob)
+                .map(image => ({
+                    name: image.name,
+                    light: image.lightBlob || image.darkBlob,
+                    dark: image.darkBlob || null
+                }));
+            await saveRandomWallpaperSet('theme', selectedGenre, wallpapers);
+            await updateCurrentWallpaperPreview();
+            showCompletionDialog('テーマを設定しました', `「${selectedGenre}」の${wallpapers.length}枚から、Newtabを開くたびにランダムで表示します。`);
+        } catch (e) {
+            console.error('テーマ設定エラー:', e);
+            alert('テーマの保存中にエラーが発生しました。');
+        } finally {
+            setThemeRandomButton.disabled = false;
+        }
+    });
+
 
     // --- 初期化処理 ---
 
@@ -636,20 +710,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ファイル選択時の処理
     fileInput.addEventListener('change', async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
 
-        if (!file.type.startsWith('image/')) {
+        if (files.some(file => !file.type.startsWith('image/'))) {
             alert('画像ファイルを選択してください。');
             return;
         }
 
         try {
-            await saveToIndexedDB('newtab', file, null, file.name);
-            await deleteFromIndexedDB('light');
-            await deleteFromIndexedDB('dark');
+            const wallpapers = files.map(file => ({
+                name: file.name,
+                light: file,
+                dark: null
+            }));
+            const setName = files.length === 1 ? files[0].name : `アップロードした画像（${files.length}枚）`;
+            await saveRandomWallpaperSet('upload', setName, wallpapers);
             await updateCurrentWallpaperPreview();
-            showCompletionDialog('アップロード完了', '選択した画像を壁紙に設定しました。');
+            showCompletionDialog('アップロード完了', `${files.length}枚の画像を保存しました。Newtabを開くたびにランダムで表示します。`);
+            fileInput.value = '';
         } catch (e) {
             console.error('アップロードエラー:', e);
             alert('アップロード中にエラーが発生しました。');

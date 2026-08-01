@@ -36,24 +36,27 @@
                 <div id="current-wallpaper-details">
                     <div class="label">現在の壁紙</div>
                     <div id="current-wallpaper-name">読み込み中...</div>
+                    <div id="current-wallpaper-meta">設定を確認しています</div>
                 </div>
             </div>
 
             <div id="upload-panel" class="grid-card">
                 <div class="panel-content">
-                    <span class="material-symbols-outlined panel-icon">upload_file</span>
-                    <h2>ファイルからアップロード</h2>
+                    <span class="material-symbols-outlined panel-icon">photo_library</span>
+                    <h2>自分の写真を使う</h2>
+                    <p>画像は複数枚まとめてアップロードできます。Newtabを開くたびに、その中からランダムで1枚を表示します。</p>
                     <md-filled-button id="upload-button">
-                        ファイルを選択
-                        <input type="file" id="file-input" accept="image/*" style="display: none;">
+                        画像を選択
+                        <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
                     </md-filled-button>
                 </div>
             </div>
 
             <div id="list-panel" class="grid-card">
                 <div class="panel-content">
-                    <span class="material-symbols-outlined panel-icon">grid_view</span>
-                    <h2>一覧を表示</h2>
+                    <span class="material-symbols-outlined panel-icon">auto_awesome_mosaic</span>
+                    <h2>デフォルトテーマから選ぶ</h2>
+                    <p>好きなテーマ（フォルダ）を1つ選ぶと、収録された壁紙をランダムで表示します。</p>
                     <div id="loading-status">
                         <div id="loading-bar-container">
                             <div id="loading-bar">0%</div>
@@ -61,7 +64,7 @@
                         <p id="loading-text">準備中...</p>
                     </div>
                     <md-filled-button id="show-list-button" style="display: none;">
-                        一覧を表示
+                        テーマを見る
                     </md-filled-button>
                 </div>
             </div>
@@ -85,6 +88,10 @@
             <span id="back-button" class="material-symbols-outlined"
                 style="display:inline-flex;"><md-ripple></md-ripple>arrow_back</span>
             <h1 id="gallery-title-header"></h1>
+            <md-filled-button id="set-theme-random-button">
+                <span slot="icon" class="material-symbols-outlined">shuffle</span>
+                このテーマをランダム設定
+            </md-filled-button>
         </header>
         <div id="gallery-content">
             <div id="image-gallery">
