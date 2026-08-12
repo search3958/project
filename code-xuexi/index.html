@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>代码言然</title>
+  <title>CODE言然</title>
   <link rel="icon" type="image/png" href="icon.png" />
   <link rel="apple-touch-icon" href="icon.png" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -1094,7 +1094,7 @@
       function selectedText() {
         if (!state.selected.size) return "";
         const indices = [...state.selected].sort((a,b)=>a-b);
-        return `${indices.map(i => state.lines[i] ?? "").join("\n")}\n\nこのコードを小さい単位で簡単に解説してください。丁寧だが簡潔にお願いします`;
+        return `${indices.map(i => state.lines[i] ?? "").join("\n")}\n\nこのコードを小さい単位で簡単に解説してください。丁寧だが簡潔にお願いします。コードがしてることは1行程度で解説して，このコードがどのような文法で書かれているかのような今後の学習知識をつける形で一番最初にまとめて。例えば変数ならば"，この部分は変数の定義で，変数はこのように書くからこれはこんな意味になる"というような。`;
       }
 
       function selectionLabel() {
