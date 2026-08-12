@@ -3,7 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>代码言然 — Code viewer</title>
+  <title>代码言然</title>
+  <link rel="icon" type="image/png" href="icon.png" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0900FF" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- ZIP展開用。アプリ本体はビルド不要の単一HTMLです。 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -34,7 +41,7 @@
       --radius-lg:8px;
       --radius-md:8px;
       --split:58%;
-      --topbar-h:72px;
+      --topbar-h:calc(72px + env(safe-area-inset-top));
       font-family: Inter, "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -63,7 +70,7 @@
       }
     }
 
-    *{box-sizing:border-box}
+    *{box-sizing:border-box;user-select:none;-webkit-user-select:none}
     html,body{height:100%;margin:0;overflow:hidden;background:var(--md-surface);color:var(--md-on-surface)}
     button,input{font:inherit}
     button{color:inherit}
@@ -82,7 +89,7 @@
       display:flex;
       align-items:center;
       gap:12px;
-      padding:12px 18px;
+      padding:calc(12px + env(safe-area-inset-top)) 18px 12px;
       border-bottom:0;
       background:var(--md-surface-container);
       box-shadow:0 2px 4px rgba(0,0,0,.16);
@@ -104,6 +111,7 @@
       box-shadow:0 2px 4px rgba(0,0,0,.2);
       flex:none;
     }
+    .brand-mark img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
     .brand-copy{min-width:0}
     .brand-title{font-weight:730;letter-spacing:-.02em;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .brand-sub{font-size:12px;color:var(--md-on-surface-variant);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -282,6 +290,8 @@
       border-right:1px solid var(--md-outline-variant);
       user-select:none;
       z-index:2;
+      touch-action:none;
+      -webkit-user-select:none;
     }
     .code-row.selected .line-no{
       color:var(--md-primary);
@@ -292,7 +302,8 @@
       white-space:pre;
       padding:0 22px 0 16px;
       color:var(--md-on-surface);
-      user-select:text;
+      user-select:none;
+      -webkit-user-select:none;
     }
     .line-code::selection{background:var(--md-primary);color:var(--md-on-primary)}
 
@@ -463,8 +474,8 @@
     }
 
     @media(max-width:720px){
-      :root{--topbar-h:66px}
-      .topbar{padding:9px 12px}
+      :root{--topbar-h:calc(66px + env(safe-area-inset-top))}
+      .topbar{padding:calc(9px + env(safe-area-inset-top)) 12px 9px}
       .brand-sub{display:none}
       .brand-mark{width:40px;height:40px}
       .upload-label{display:none}
@@ -484,14 +495,11 @@
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M14 3.8V8h4.2M9 12h6M9 15.5h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
+          <img src="icon.png" alt="" width="42" height="42" />
         </div>
         <div class="brand-copy">
           <div class="brand-title">代码言然</div>
-          <div class="brand-sub" id="zipName">ZIPを開いて、コードを閲覧</div>
+          <div class="brand-sub" id="zipName">Sentaro</div>
         </div>
       </div>
 
@@ -1086,7 +1094,7 @@
       function selectedText() {
         if (!state.selected.size) return "";
         const indices = [...state.selected].sort((a,b)=>a-b);
-        return indices.map(i => state.lines[i] ?? "").join("\n");
+        return `${indices.map(i => state.lines[i] ?? "").join("\n")}\n\nこのコードを小さい単位で簡単に解説してください。丁寧だが簡潔にお願いします`;
       }
 
       function selectionLabel() {
@@ -1176,7 +1184,7 @@
           toast(`${file.name} を開きました`);
         } catch (err) {
           console.error(err);
-          els.zipName.textContent = "ZIPを開いて、コードを閲覧";
+          els.zipName.textContent = "Sentaro";
           toast("ZIPファイルを読み込めませんでした");
         } finally {
           els.zipInput.value = "";

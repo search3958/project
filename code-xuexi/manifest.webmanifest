@@ -1,0 +1,20 @@
+{
+  "name": "代码言然",
+  "short_name": "代码言然",
+  "description": "ZIP内のソースコードを閲覧するコードビューア",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "background_color": "#000000",
+  "theme_color": "#0900FF",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
