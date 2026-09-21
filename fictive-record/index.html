@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="虚実録 — 存在しないFAQ、架空の商品レビュー、未来のWikipedia、どこかおかしい記録を投稿して楽しむテキストサービス。">
+  <meta name="theme-color" content="#f7f7f5">
+  <title>虚実録 — ありそうで存在しない記録</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://alexbsoft.github.io/win95.css/assets/win95.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .vr-app-shell {
+      min-height: 100vh;
+    }
+
+    .vr-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 52px;
+      min-height: 52px;
+      padding: 0;
+    }
+
+    .vr-header-inner {
+      width: min(960px, calc(100% - 32px));
+      height: 52px;
+      min-height: 52px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .vr-brand {
+      appearance: none;
+      border: 0;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .vr-header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vr-view-switches {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .vr-view-switch {
+      min-width: 74px;
+    }
+
+    .vr-main {
+      width: min(960px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 72px;
+    }
+
+    .vr-feed {
+      display: grid;
+      gap: 12px;
+    }
+
+    .vr-card {
+      overflow: hidden;
+    }
+
+    .vr-card-inner {
+      display: grid;
+      grid-template-columns: 94px 1fr;
+    }
+
+    .vr-vote-rail {
+      padding: 10px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .vr-vote-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .vr-type-icon {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      flex: 0 0 auto;
+    }
+
+    .vr-inline-icon {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      flex: 0 0 auto;
+      vertical-align: middle;
+    }
+
+    .vr-loading-icon,
+    .vr-confirm-icon {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      flex: 0 0 auto;
+    }
+
+    .vr-loading-content,
+    .vr-dialog-title-content {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vr-vote-button {
+      width: 40px;
+      min-height: 32px;
+      padding: 0;
+    }
+
+    .vr-score {
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .vr-content {
+      min-width: 0;
+      padding: 8px;
+    }
+
+    .vr-meta {
+      opacity:0.8;
+      padding-left:8px;
+    }
+
+    .vr-chip {
+      display: inline-block;
+    }
+
+    .vr-card-title {
+      margin: 10px 0 8px;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .vr-body-text {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .vr-review-text {
+      margin-top: 10px;
+    }
+
+    .vr-future-date {
+      margin-bottom: 10px;
+    }
+
+    .vr-faq {
+      display: grid;
+      gap: 9px;
+    }
+
+    .vr-faq-line {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .vr-faq-label {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      font-weight: bold;
+    }
+
+    .vr-rating {
+      white-space: nowrap;
+    }
+
+    .vr-loading,
+    .vr-empty,
+    .vr-error {
+      padding: 28px 20px;
+      text-align: center;
+    }
+
+    .vr-load-more-wrap {
+      display: flex;
+      justify-content: center;
+      padding-top: 18px;
+    }
+
+    .vr-dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+      overflow: auto;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .vr-dialog-backdrop.is-open {
+      display: flex;
+    }
+
+    .vr-composer-window {
+      width: min(660px, 100%);
+      max-height: min(88vh, 860px);
+      overflow: auto;
+      margin: 0;
+    }
+
+    .vr-dialog-backdrop-confirm {
+      z-index: 50;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .vr-confirm-window {
+      width: min(440px, 100%);
+    }
+
+    .vr-close-button {
+      line-height: 1;
+      font-size: 16px;
+      min-width: 28px;
+      min-height: 28px;
+    }
+
+    .vr-confirm-message {
+      margin: 0;
+    }
+
+    .vr-confirm-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
+    .vr-form-panel {
+      display: none;
+    }
+
+    .vr-form-panel.is-active {
+      display: block;
+    }
+
+    .vr-type-options {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .vr-type-option,
+    .vr-rating-option {
+      margin: 0;
+    }
+
+    .vr-rating-options {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+    }
+
+    .vr-rating-label {
+      cursor: pointer;
+    }
+
+    .vr-field {
+      margin-top: 14px;
+    }
+
+    .vr-field:first-child {
+      margin-top: 0;
+    }
+
+    .vr-input,
+    .vr-textarea {
+      width: 100%;
+    }
+
+    .vr-textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .vr-counter {
+      text-align: right;
+    }
+
+    .vr-form-note {
+      margin-top: 12px;
+    }
+
+    .vr-form-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
+    .vr-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 100;
+      max-width: calc(100% - 28px);
+      padding: 8px 12px;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .vr-toast.is-visible {
+      opacity: 1;
+    }
+
+    input[type="radio"], input[type="checkbox"]{
+      position:relative!important;
+      left:0px!important;
+    }
+
+    .card-header{
+      padding:2px!important;
+    }
+
+    @media (min-width: 721px) {
+      .vr-dialog-backdrop:not(.vr-dialog-backdrop-confirm) {
+        align-items: center;
+        padding: 22px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .vr-header-inner {
+        width: min(calc(100% - 20px), 960px);
+        height: 52px;
+        min-height: 52px;
+        gap: 8px;
+      }
+
+      .vr-header-actions {
+        gap: 6px;
+      }
+
+      .vr-view-switch {
+        min-width: 0;
+      }
+
+      .vr-main {
+        width: min(calc(100% - 20px), 960px);
+        padding-top: 18px;
+      }
+
+      .vr-card-inner {
+        grid-template-columns: 86px 1fr;
+      }
+
+      .vr-content {
+        padding: 14px;
+      }
+
+      .vr-vote-button {
+        width: 34px;
+      }
+
+      .vr-dialog-backdrop {
+        padding: 0;
+      }
+
+      .vr-confirm-window {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .vr-brand {
+        font-size: 14px;
+      }
+
+      .vr-view-switch {
+        min-width: 58px;
+        padding-inline: 8px;
+      }
+
+      .vr-header-actions > .btn {
+        padding-inline: 8px;
+      }
+
+      .vr-card-title {
+        font-size: 17px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="vr-app-shell">
+    <header class="vr-header navbar navbar-light navbar-95">
+      <div class="vr-header-inner">
+        <button class="vr-brand" id="vrBrandButton" type="button" aria-label="虚実録のトップへ">
+          虚実録
+        </button>
+          <div class="vr-view-switches" aria-label="投稿の並び順">
+            <button class="btn vr-view-switch" id="vrTabRecommended" type="button" aria-pressed="true" disabled>
+              人気
+            </button>
+            <button class="btn vr-view-switch" id="vrTabLatest" type="button" aria-pressed="false">
+              最新
+            </button>
+          </div>
+
+        <div class="vr-header-actions">
+          <button class="btn" id="vrOpenComposer" type="button">
+            <img class="vr-inline-icon" src="https://win98icons.alexmeub.com/icons/png/address_book_pad_users.png" alt="" aria-hidden="true">
+            <span>投稿する</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="vr-main">
+      <div class="card" style="margin-bottom:16px;padding:6px;">
+        虚実録Beta版へようこそ。<br>ここに書いてある情報は全て嘘です。<br>おそらく...
+      </div>
+
+      <section id="vrFeed" class="vr-feed" aria-live="polite"></section>
+      <div id="vrLoadState" class="vr-loading" hidden>
+        <span class="vr-loading-content">
+          <img class="vr-loading-icon" src="https://win98icons.alexmeub.com/icons/png/application_hourglass-0.png" alt="" aria-hidden="true">
+          <span>読み込み中…</span>
+        </span>
+      </div>
+      <div id="vrLoadMoreWrap" class="vr-load-more-wrap" hidden>
+        <button id="vrLoadMore" class="btn btn-primary" type="button">さらに読み込む</button>
+      </div>
+      
+    </main>
+  </div>
+
+  <div id="vrDialogBackdrop" class="vr-dialog-backdrop" aria-hidden="true">
+    <section class="card vr-composer-window" role="dialog" aria-modal="true" aria-labelledby="vrDialogTitle">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h1 class="h5 mb-0" id="vrDialogTitle">新しい記録をつくる</h1>
+        <button class="btn p-0 vr-close-button" id="vrCloseComposer" type="button" aria-label="閉じる">×</button>
+      </div>
+      <div class="card-body">
+
+<fieldset class="vr-fieldset vr-field" aria-labelledby="vrTypeLegend"> <legend id="vrTypeLegend">記録モード</legend> <div class="vr-type-options" id="vrTypeGrid"> <label class="vr-type-option" for="vrTypeFaq"> <input id="vrTypeFaq" type="radio" name="record_type" value="faq" checked style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span>存在しないFAQ</span> </label> <label class="vr-type-option" for="vrTypeReview"> <input id="vrTypeReview" type="radio" name="record_type" value="review" style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span>架空の商品レビュー</span> </label> <label class="vr-type-option" for="vrTypeFutureWikipedia"> <input id="vrTypeFutureWikipedia" type="radio" name="record_type" value="future_wikipedia" style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span>未来のWikipedia</span> </label> <label class="vr-type-option" for="vrTypeOddRecord"> <input id="vrTypeOddRecord" type="radio" name="record_type" value="odd_record" style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span>どこかおかしい記録</span> </label> </div> </fieldset>
+
+
+        <form id="vrPostForm">
+          <div class="vr-form-panel is-active" data-form-type="faq">
+            <div class="vr-field">
+              <label for="vrFaqQuestion">Q</label>
+              <input class="vr-input" id="vrFaqQuestion" name="faq_question" type="text" maxlength="100" autocomplete="off" placeholder="会社の時計が毎週月曜日だけ遅れるのですが、故障ですか？">
+              <div class="vr-counter"><span data-counter-for="vrFaqQuestion">0</span> / 100</div>
+            </div>
+            <div class="vr-field">
+              <label for="vrFaqAnswer">A</label>
+              <input class="vr-input" id="vrFaqAnswer" name="faq_answer" type="text" maxlength="100" autocomplete="off" placeholder="時計にも月曜日が嫌な時期がありますよね？">
+              <div class="vr-counter"><span data-counter-for="vrFaqAnswer">0</span> / 100</div>
+            </div>
+          </div>
+
+          <div class="vr-form-panel" data-form-type="review">
+            <div class="vr-field">
+              <label for="vrProductName">商品名</label>
+              <input class="vr-input" id="vrProductName" name="product_name" type="text" maxlength="50" autocomplete="off" placeholder="静かな目覚まし時計">
+              <div class="vr-counter"><span data-counter-for="vrProductName">0</span> / 50</div>
+            </div>
+            
+<fieldset class="vr-fieldset vr-field" id="vrRatingInput"> <legend>評価</legend> <div class="vr-rating-options" role="radiogroup" aria-label="星評価"> <label class="vr-rating-option" for="vrRating1"> <input id="vrRating1" type="radio" name="rating" value="1" style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span class="vr-rating-label">★☆☆☆☆</span> </label> <label class="vr-rating-option" for="vrRating2"> <input id="vrRating2" type="radio" name="rating" value="2" style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span class="vr-rating-label">★★☆☆☆</span> </label> <label class="vr-rating-option" for="vrRating3"> <input id="vrRating3" type="radio" name="rating" value="3" style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span class="vr-rating-label">★★★☆☆</span> </label> <label class="vr-rating-option" for="vrRating4"> <input id="vrRating4" type="radio" name="rating" value="4" style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span class="vr-rating-label">★★★★☆</span> </label> <label class="vr-rating-option" for="vrRating5"> <input id="vrRating5" type="radio" name="rating" value="5" checked style="appearance:auto !important;-webkit-appearance:radio !important;display:inline-block !important;width:auto !important;height:auto !important;margin:0 6px 0 0;padding:0;" > <span class="vr-rating-label">★★★★★</span> </label> </div> </fieldset>
+
+            <div class="vr-field">
+              <label for="vrReviewText">レビュー</label>
+              <textarea class="vr-textarea" id="vrReviewText" name="review_text" maxlength="200" rows="4" placeholder="音が出ないので、毎朝出勤できません。でも、なぜかいつも休日になったことには感謝したいです。"></textarea>
+              <div class="vr-counter"><span data-counter-for="vrReviewText">0</span> / 200・3行まで</div>
+            </div>
+          </div>
+
+          <div class="vr-form-panel" data-form-type="future_wikipedia">
+            <div class="vr-field">
+              <label for="vrFutureDate">日付</label>
+              <input class="vr-input" id="vrFutureDate" name="future_date" type="text" maxlength="10" autocomplete="off" placeholder="2047.16.38">
+              <div class="vr-counter"><span data-counter-for="vrFutureDate">0</span> / 10</div>
+            </div>
+            <div class="vr-field">
+              <label for="vrFutureEvent">出来事</label>
+              <textarea class="vr-textarea" id="vrFutureEvent" name="future_event" maxlength="300" rows="6" placeholder="人類史上初めて、存在しない曜日「木曜日Ⅱ」が確認される。専門家は「たぶん木曜日ではない」とコメントした。"></textarea>
+              <div class="vr-counter"><span data-counter-for="vrFutureEvent">0</span> / 300・5行まで</div>
+            </div>
+          </div>
+
+          <div class="vr-form-panel" data-form-type="odd_record">
+            <div class="vr-field">
+              <label for="vrOddEvent">出来事</label>
+              <textarea class="vr-textarea" id="vrOddEvent" name="odd_event" maxlength="300" rows="6" placeholder="昨日、コンビニに行ったら店員が3人とも犬だった。レジ袋くださいと言ったら全員が尻尾を振ったので、たぶん品切れだった。"></textarea>
+              <div class="vr-counter"><span data-counter-for="vrOddEvent">0</span> / 300・5行まで</div>
+            </div>
+          </div>
+
+          <div class="vr-form-note">※ 個人情報や実在人物への中傷、本当の情報などは投稿しないでください。</div>
+          <div class="vr-form-actions">
+            <button class="btn" id="vrCancelComposer" type="button">キャンセル</button>
+            <button class="btn btn-primary" id="vrSubmitPost" type="submit">投稿する</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <div id="vrConfirmBackdrop" class="vr-dialog-backdrop vr-dialog-backdrop-confirm" aria-hidden="true">
+    <section class="card vr-confirm-window" role="dialog" aria-modal="true" aria-labelledby="vrConfirmTitle">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h1 class="h5 mb-0" id="vrConfirmTitle">
+          <span class="vr-dialog-title-content">
+            <img class="vr-confirm-icon" src="https://win98icons.alexmeub.com/icons/png/chm-2.png" alt="" aria-hidden="true">
+            <span>記録モードを切り替えますか？</span>
+          </span>
+        </h1>
+        <button class="btn p-0 vr-close-button" id="vrCloseTypeConfirm" type="button" aria-label="閉じる">×</button>
+      </div>
+      <div class="card-body">
+        <p class="vr-confirm-message">
+          記録モードを切り替えると、現在入力されている内容が削除されます。
+          このまま切り替えますか？
+        </p>
+        <section class="field-row vr-confirm-actions">
+          <button class="btn" id="vrCancelTypeConfirm" type="button">キャンセル</button>
+          <button class="btn btn-primary" id="vrConfirmTypeChange" type="button">切り替える</button>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <div class="vr-toast" id="vrToast" role="status" aria-live="polite"></div>
+  
+
+  <script src="script.js"></script>
+
+  <script src="https://search3958.github.io/check.js"></script>
+</body>
+</html>
