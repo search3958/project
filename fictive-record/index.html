@@ -5,13 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="虚実録 — 存在しないFAQ、架空の商品レビュー、未来のWikipedia、どこかおかしい記録を投稿して楽しむテキストサービス。">
   <meta name="theme-color" content="#f7f7f5">
+  <link rel="icon" href="icon.svg">
   <title>虚実録 — ありそうで存在しない記録</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://alexbsoft.github.io/win95.css/assets/win95.css">
 
   <style>
     * {
       box-sizing: border-box;
+      font-family: "DotGothic16", sans-serif;
+      -webkit-font-smoothing: none;
     }
 
     html {
@@ -443,14 +449,44 @@
         font-size: 17px;
       }
     }
+
+    #vrSplash {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: teal;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      opacity: 1;
+      transition: none;
+    }
+
+    #vrSplash img {
+      width: 88px;
+      height: 88px;
+    }
+
+    #vrSplash .vr-splash-text {
+      color: white;
+      font-size: 24px;
+      font-family: "DotGothic16", sans-serif;
+    }
+
+    .vr-card {
+      opacity: 0;
+    }
   </style>
 </head>
 <body>
+  <div id="vrSplash"><img src="icon.svg" alt=""><span class="vr-splash-text">虚実録へようこそ</span></div>
   <div class="vr-app-shell">
     <header class="vr-header navbar navbar-light navbar-95">
       <div class="vr-header-inner">
         <button class="vr-brand" id="vrBrandButton" type="button" aria-label="虚実録のトップへ">
-          虚実録
+          <img src="icon.svg">虚実録
         </button>
           <div class="vr-view-switches" aria-label="投稿の並び順">
             <button class="btn vr-view-switch" id="vrTabRecommended" type="button" aria-pressed="true" disabled>
@@ -493,7 +529,7 @@
     <section class="card vr-composer-window" role="dialog" aria-modal="true" aria-labelledby="vrDialogTitle">
       <div class="card-header d-flex align-items-center justify-content-between">
         <h1 class="h5 mb-0" id="vrDialogTitle">新しい記録をつくる</h1>
-        <button class="btn p-0 vr-close-button" id="vrCloseComposer" type="button" aria-label="閉じる">×</button>
+        <button class="btn p-0 vr-close-button" id="vrCloseComposer" type="button" aria-label="閉じる">キャンセル</button>
       </div>
       <div class="card-body">
 
@@ -551,7 +587,7 @@
             </div>
           </div>
 
-          <div class="vr-form-note">※ 個人情報や実在人物への中傷、本当の情報などは投稿しないでください。</div>
+          <div class="vr-form-note">※ 個人情報やあらゆる物事への中傷、真実などは投稿しないでください。</div>
           <div class="vr-form-actions">
             <button class="btn" id="vrCancelComposer" type="button">キャンセル</button>
             <button class="btn btn-primary" id="vrSubmitPost" type="submit">投稿する</button>
@@ -591,5 +627,6 @@
   <script src="script.js"></script>
 
   <script src="https://search3958.github.io/check.js"></script>
+  <script>var s=document.getElementById('vrSplash');if(s){setTimeout(function(){var step=0;var interval=setInterval(function(){step++;s.style.opacity=(1-step*0.333).toString();if(step>=3){clearInterval(interval);s.style.pointerEvents='none';setTimeout(function(){if(s&&s.parentNode)s.parentNode.removeChild(s);},100);}},100);},500);}</script>
 </body>
 </html>

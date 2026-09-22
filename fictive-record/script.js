@@ -172,6 +172,19 @@
     const fragment = document.createDocumentFragment();
     posts.forEach(post => fragment.appendChild(createPostCard(post)));
     feed.appendChild(fragment);
+
+    const cards = feed.querySelectorAll(".vr-card");
+    cards.forEach(function(card, i) {
+        card.style.opacity = "0";
+        setTimeout(function() {
+            var step = 0;
+            var iv = setInterval(function() {
+                step++;
+                card.style.opacity = (step * 0.333).toString();
+                if (step >= 3) clearInterval(iv);
+            }, 100);
+        }, i * 100);
+    });
     }
 
     function renderError(message) {
