@@ -78,16 +78,26 @@
         .replaceAll("'", "&#039;");
     }
 
-    function formatRelativeTime(epochMs) {
-    const diff = Math.max(0, Date.now() - Number(epochMs));
-    const minute = 60 * 1000;
-    const hour = 60 * minute;
-    const day = 24 * hour;
-    if (diff < minute) return "たった今";
-    if (diff < hour) return `${Math.floor(diff / minute)}分前`;
-    if (diff < day) return `${Math.floor(diff / hour)}時間前`;
-    return `${Math.floor(diff / day)}日前`;
-    }
+     function formatRelativeTime(epochMs) {
+     const diff = Math.max(0, Date.now() - Number(epochMs));
+     const minute = 60 * 1000;
+     const hour = 60 * minute;
+     const day = 24 * hour;
+     if (diff < minute) return "たった今";
+     if (diff < hour) return `${Math.floor(diff / minute)}分前`;
+     if (diff < day) return `${Math.floor(diff / hour)}時間前`;
+     return `${Math.floor(diff / day)}日前`;
+     }
+
+     function formatDate(epochMs) {
+     const d = new Date(Number(epochMs));
+     const y = String(d.getFullYear()).slice(-2);
+     const m = String(d.getMonth() + 1).padStart(2, "0");
+     const day = String(d.getDate()).padStart(2, "0");
+     const h = String(d.getHours()).padStart(2, "0");
+     const min = String(d.getMinutes()).padStart(2, "0");
+     return `${y}.${m}.${day} ${h}:${min}`;
+     }
 
     function showToast(message) {
     const toast = $("#vrToast");
@@ -217,8 +227,57 @@
         body = `<p class="vr-body-text">${escapeHTML(post.odd_event)}</p>`;
     }
 
-    const title = post.type === "review" ? escapeHTML(post.product_name) : "";
-    card.innerHTML = ` <div class="card-header"> ${escapeHTML(TYPES[post.type] || "記録")}  <span class="vr-meta">${escapeHTML(meta.split(" · ")[1])}</span> </div> <div class="vr-card-inner"> <aside class="vr-vote-rail" aria-label="投票"> <div class="vr-vote-controls"> <button class="btn vr-vote-button ${userVote === 1 ? "btn-primary is-up" : ""}" data-vote="1" type="button" aria-label="アップボーン" >▲</button> <div class="vr-score">${score}</div> <button class="btn vr-vote-button ${userVote === -1 ? "btn-primary is-down" : ""}" data-vote="-1" type="button" aria-label="ダウントーン" >▼</button> </div> <img class="vr-type-icon" src="${escapeHTML(TYPE_ICONS[post.type] || TYPE_ICONS.odd_record)}" alt="" aria-hidden="true" > </aside> <div class="vr-content">  ${title ? `<h2 class="vr-card-title">${title}</h2>` : ""} ${body} </div> </div>`;
+     const title = post.type === "review" ? escapeHTML(post.product_name) : "";
+     card.innerHTML = ` <div class="card-header"> ${escapeHTML(TYPES[post.type] || "記録")}  <span class="vr-meta">${escapeHTML(meta.split(" · ")[1])}</span> <button class="btn vr-save-button" type="button" aria-label="PNGで保存">保存</button> </div> <div class="vr-card-inner"> <aside class="vr-vote-rail" aria-label="投票"> <div class="vr-vote-controls"> <button class="btn vr-vote-button ${userVote === 1 ? "btn-primary is-up" : ""}" data-vote="1" type="button" aria-label="アップボーン" >▲</button> <div class="vr-score">${score}</div> <button class="btn vr-vote-button ${userVote === -1 ? "btn-primary is-down" : ""}" data-vote="-1" type="button" aria-label="ダウントーン" >▼</button> </div> <img class="vr-type-icon" src="${escapeHTML(TYPE_ICONS[post.type] || TYPE_ICONS.odd_record)}" alt="" aria-hidden="true" > </aside> <div class="vr-content">  ${title ? `<h2 class="vr-card-title">${title}</h2>` : ""} ${body} </div> </div>`;
+
+      const saveButton = $(".vr-save-button", card);
+      if (saveButton) {
+          saveButton.addEventListener("click", function() {
+              if (typeof html2canvas === "undefined") {
+                  showToast("保存機能が利用できません");
+                  return;
+              }
+              var wrapper = document.createElement("div");
+              wrapper.style.width = "450px";
+              wrapper.style.position = "fixed";
+              wrapper.style.left = "-9999px";
+              wrapper.style.top = "0";
+              wrapper.style.overflow = "hidden";
+               var clone = card.cloneNode(true);
+               clone.style.width = "100%";
+               clone.style.boxSizing = "border-box";
+               clone.style.maxWidth = "100%";
+               var metaEl = $(".vr-meta", clone);
+               if (metaEl) metaEl.textContent = formatDate(post.created_at);
+               wrapper.appendChild(clone);
+               document.body.appendChild(wrapper);
+               html2canvas(wrapper, { backgroundColor: null, useCORS: true }).then(function(canvas) {
+                  document.body.removeChild(wrapper);
+                  var marginX = 48;
+                  var marginY = 120;
+                  var pw = canvas.width + marginX * 2;
+                  var ph = canvas.height + marginY * 2;
+                  var out = document.createElement("canvas");
+                  out.width = pw;
+                  out.height = ph;
+                  var ctx = out.getContext("2d");
+                  ctx.fillStyle = "teal";
+                  ctx.fillRect(0, 0, pw, ph);
+                  ctx.drawImage(canvas, marginX, marginY);
+                  ctx.fillStyle = "white";
+                  ctx.font = 'bold 48px "DotGothic16", sans-serif';
+                  ctx.textAlign = "center";
+                  ctx.fillText("虚実録", pw / 2, marginY / 2 + 12);
+                  ctx.font = '24px "DotGothic16", sans-serif';
+                  ctx.fillText("search3958.github.io/project/fictive-record/", pw / 2, ph - marginY / 2 + 16);
+                  var link = document.createElement("a");
+                  link.download = "post-" + post.id + ".png";
+                  link.href = out.toDataURL("image/png");
+                  link.click();
+                  showToast("保存済み");
+              });
+          });
+      }
 
     const voteButtons = $$("[data-vote]", card);
     voteButtons.forEach(button => {

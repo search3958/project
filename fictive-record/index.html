@@ -107,6 +107,15 @@
       overflow: hidden;
     }
 
+    .card-header {
+      display: flex;
+      align-items: center;
+    }
+
+    .card-header .vr-save-button {
+      margin-left: auto;
+    }
+
     .vr-card-inner {
       display: grid;
       grid-template-columns: 94px 1fr;
@@ -475,8 +484,9 @@
       font-family: "DotGothic16", sans-serif;
     }
 
-    .vr-card {
-      opacity: 0;
+    .vr-save-button {
+      padding: 2px 8px;
+      font-size: 12px;
     }
   </style>
 </head>
@@ -508,7 +518,7 @@
 
     <main class="vr-main">
       <div class="card" style="margin-bottom:16px;padding:6px;">
-        虚実録Beta版へようこそ。<br>ここに書いてある情報は全て嘘です。<br>おそらく...
+        虚実録Beta版へようこそ。<br>機能が欲しければ商品名"虚実録"でレビューしてください。<br>共に虚実録を作りましょう！
       </div>
 
       <section id="vrFeed" class="vr-feed" aria-live="polite"></section>
@@ -627,6 +637,7 @@
   <script src="script.js"></script>
 
   <script src="https://search3958.github.io/check.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>var s=document.getElementById('vrSplash');if(s){setTimeout(function(){var step=0;var interval=setInterval(function(){step++;s.style.opacity=(1-step*0.333).toString();if(step>=3){clearInterval(interval);s.style.pointerEvents='none';setTimeout(function(){if(s&&s.parentNode)s.parentNode.removeChild(s);},100);}},100);},500);}</script>
 </body>
 </html>
