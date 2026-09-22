@@ -247,11 +247,36 @@
                clone.style.width = "100%";
                clone.style.boxSizing = "border-box";
                clone.style.maxWidth = "100%";
+
+               // 保存画像では外部サイトのアイコンを使用しない。
+               // アイコン分の横幅を消して、その分を本文領域に使う。
+               var cloneIcon = $(".vr-type-icon", clone);
+               if (cloneIcon) cloneIcon.remove();
+
+               var cloneInner = $(".vr-card-inner", clone);
+               var cloneVoteRail = $(".vr-vote-rail", clone);
+               var cloneContent = $(".vr-content", clone);
+               if (cloneInner) {
+                   cloneInner.style.display = "flex";
+               }
+               if (cloneVoteRail) {
+                   cloneVoteRail.style.flex = "0 0 auto";
+               }
+               if (cloneContent) {
+                   cloneContent.style.flex = "1 1 auto";
+                   cloneContent.style.minWidth = "0";
+               }
+
                var metaEl = $(".vr-meta", clone);
                if (metaEl) metaEl.textContent = formatDate(post.created_at);
                wrapper.appendChild(clone);
                document.body.appendChild(wrapper);
-               html2canvas(wrapper, { backgroundColor: null, useCORS: true }).then(function(canvas) {
+               html2canvas(wrapper, {
+                   backgroundColor: null,
+                   useCORS: true,
+                   allowTaint: false,
+                   imageTimeout: 10000
+               }).then(function(canvas) {
                   document.body.removeChild(wrapper);
                   var marginX = 48;
                   var marginY = 120;
